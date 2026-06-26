@@ -1,0 +1,549 @@
+"use client";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import jsPDF from "jspdf";
+
+interface Profile {
+  id: string;
+  company_name: string | null;
+  account_type: "meseriaș" | "pro" | null;
+  cui: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  bank: string | null;
+  iban: string | null;
+  vat_rate: number;
+}
+
+interface Company {
+  id: string;
+  name: string;
+  cui: string | null;
+  reg_com: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  bank: string | null;
+  iban: string | null;
+  vat_rate: number;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  cui: string | null;
+  address: string | null;
+  contact_person: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
+interface QuoteItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+}
+
+interface Quote {
+  id: string;
+  quote_number: string;
+  created_at: string;
+  status: string;
+  vat_rate: number;
+  vat_amount: number;
+  total_with_vat: number;
+  clients: Client;
+  quote_items: QuoteItem[];
+}
+
+interface Service {
+  id: string;
+  name: string;
+  unit: string;
+  price_per_unit: number;
+}
+
+interface NewRow {
+  service_id: string;
+  description: string;
+  quantity: string;
+  unit_price: string;
+}
+
+interface Emitent {
+  name: string;
+  cui: string | null;
+  reg_com?: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  bank: string | null;
+  iban: string | null;
+  vat_rate: number;
+}
+
+const fmt = (val: number) =>
+  new Intl.NumberFormat("ro-RO", { minimumFractionDigits: 2 }).format(val) + " RON";
+
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("ro-RO", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+const emptyRow = (): NewRow => ({ service_id: "", description: "", quantity: "1", unit_price: "" });
+
+// ─── PDF ───────────────────────────────────────────────────────────────────────
+
+function exportPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: number, discountType: "pct" | "val") {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const W = 210; const margin = 15; let y = 20;
+
+  const addLine = (text: string, size = 10, bold = false, color: [number, number, number] = [30, 30, 30]) => {
+    doc.setFontSize(size); doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setTextColor(...color); doc.text(text, margin, y); y += size * 0.45;
+  };
+
+  const subtotalBrut = quote.quote_items.reduce((s, i) => s + i.total, 0);
+  const discountVal = discountType === "pct" ? subtotalBrut * discount / 100 : discount;
+  const subtotalNet = subtotalBrut - discountVal;
+  const vatAmount = isPro ? Math.round(subtotalNet * (quote.vat_rate / 100) * 100) / 100 : 0;
+  const total = subtotalNet + vatAmount;
+
+  doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.setTextColor(20, 20, 20);
+  doc.text(emitent.name, margin, y);
+  doc.setFontSize(11); doc.setTextColor(59, 130, 246);
+  doc.text(`DEVIZ ${quote.quote_number}`, W - margin, y, { align: "right" }); y += 6;
+
+  if (isPro && emitent.cui) addLine(`CUI: ${emitent.cui}`, 9, false, [80, 80, 80]);
+  if (isPro && emitent.reg_com) addLine(`Reg. Com.: ${emitent.reg_com}`, 9, false, [80, 80, 80]);
+  if (emitent.address) addLine(emitent.address, 9, false, [80, 80, 80]);
+  if (emitent.phone) addLine(`Tel: ${emitent.phone}`, 9, false, [80, 80, 80]);
+  if (emitent.email) addLine(`Email: ${emitent.email}`, 9, false, [80, 80, 80]);
+  if (isPro && emitent.iban) addLine(`IBAN: ${emitent.iban}`, 9, false, [80, 80, 80]);
+  y += 2;
+
+  doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(100, 100, 100);
+  doc.text(`Data: ${fmtDate(quote.created_at)}`, W - margin, y, { align: "right" }); y += 5;
+
+  doc.setDrawColor(200, 200, 200); doc.line(margin, y, W - margin, y); y += 6;
+
+  doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(80, 80, 80);
+  doc.text("BENEFICIAR", margin, y); y += 5;
+
+  const c = quote.clients;
+  addLine(c.name, 10, true, [20, 20, 20]);
+  if (c.cui) addLine(`CUI: ${c.cui}`, 9, false, [80, 80, 80]);
+  if (c.address) addLine(c.address, 9, false, [80, 80, 80]);
+  if (c.contact_person) addLine(`Contact: ${c.contact_person}`, 9, false, [80, 80, 80]);
+  if (c.phone) addLine(`Tel: ${c.phone}`, 9, false, [80, 80, 80]);
+  y += 4;
+
+  doc.line(margin, y, W - margin, y); y += 7;
+
+  const colX = [margin, 95, 120, 150, 178];
+  doc.setFillColor(245, 247, 250); doc.rect(margin, y - 4, W - 2 * margin, 7, "F");
+  doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(60, 60, 60);
+  ["Descriere", "Cant.", "Pret unit.", "Total"].forEach((h, i) => doc.text(h, colX[i], y));
+  y += 5; doc.setDrawColor(220, 220, 220); doc.line(margin, y, W - margin, y); y += 4;
+
+  doc.setFont("helvetica", "normal");
+  quote.quote_items.forEach((item, idx) => {
+    if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6, "F"); }
+    doc.setTextColor(30, 30, 30);
+    const lines = doc.splitTextToSize(item.description, 70);
+    doc.text(lines, colX[0], y);
+    doc.text(String(item.quantity), colX[1], y);
+    doc.text(fmt(item.unit_price), colX[2], y);
+    doc.text(fmt(item.total), colX[3], y);
+    y += Math.max(5.5, lines.length * 4.5);
+    if (y > 260) { doc.addPage(); y = 20; }
+  });
+
+  y += 3; doc.setDrawColor(180, 180, 180); doc.line(margin, y, W - margin, y); y += 6;
+
+  const rows: [string, number][] = [];
+  if (discount > 0) rows.push([`Discount${discountType === "pct" ? ` ${discount}%` : ""}`, -discountVal]);
+  if (isPro) { rows.push(["Subtotal (fara TVA)", subtotalNet]); rows.push([`TVA ${quote.vat_rate}%`, vatAmount]); }
+
+  rows.forEach(([label, val]) => {
+    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(80, 80, 80);
+    doc.text(label, W - margin - 55, y);
+    doc.text(fmt(val), W - margin, y, { align: "right" }); y += 5.5;
+  });
+
+  doc.setFillColor(59, 130, 246); doc.rect(W - margin - 62, y - 4, 62, 8, "F");
+  doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.setTextColor(255, 255, 255);
+  doc.text("TOTAL", W - margin - 52, y + 0.5);
+  doc.text(fmt(total), W - margin, y + 0.5, { align: "right" }); y += 12;
+
+  doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(160, 160, 160);
+  doc.text("Document generat de Tarifator • Tarifator.ro", W / 2, 290, { align: "center" });
+  doc.save(`fisa-${quote.quote_number}.pdf`);
+}
+
+// ─── Page ──────────────────────────────────────────────────────────────────────
+
+export default function QuoteDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [rows, setRows] = useState<NewRow[]>([emptyRow()]);
+  const [saving, setSaving] = useState(false);
+  const [discount, setDiscount] = useState<string>("0");
+  const [discountType, setDiscountType] = useState<"pct" | "val">("pct");
+
+  const loadQuote = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.push("/login"); return; }
+
+    const activeCompanyId = localStorage.getItem("activeCompanyId") || "";
+
+    const [{ data: prof }, { data: comp }, { data: q, error: qErr }, { data: svcs }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).single(),
+      activeCompanyId
+        ? supabase.from("companies").select("*").eq("id", activeCompanyId).single()
+        : Promise.resolve({ data: null }),
+      supabase.from("quotes").select(`
+        id, quote_number, created_at, status,
+        vat_rate, vat_amount, total_with_vat,
+        clients ( id, name, cui, address, contact_person, phone, email ),
+        quote_items ( id, description, quantity, unit_price, total )
+      `).eq("id", id).single(),
+Promise.resolve({ data: null }),
+    ]);
+
+    if (qErr || !q) { setError("Devizul nu a putut fi incarcat."); }
+else {
+  // aici ai q disponibil
+const companyId = (q as any)?.company_id
+const { data: svcs } = companyId
+  ? await supabase.from("services").select("*").eq("company_id", companyId).order("name")
+  : await supabase.from("services").select("*").is("company_id", null).order("name")
+setServices(svcs || [])
+  
+  setQuote(q as unknown as Quote);
+  setProfile(prof as Profile);
+  setCompany(comp as Company | null);
+
+   
+    }
+    setLoading(false);
+  }, [id]);
+
+  useEffect(() => { loadQuote(); }, [loadQuote]);
+
+  // Emitent dinamic: Pro → firma activa, Meseriaș → profil
+  function getEmitent(): Emitent {
+    const isPro = profile?.account_type === "pro";
+    if (isPro && company) {
+      return {
+        name: company.name,
+        cui: company.cui,
+        reg_com: company.reg_com,
+        address: company.address,
+        phone: company.phone,
+        email: company.email,
+        bank: company.bank,
+        iban: company.iban,
+        vat_rate: company.vat_rate,
+      };
+    }
+    return {
+      name: profile?.company_name || "—",
+      cui: profile?.cui || null,
+      address: profile?.address || null,
+      phone: profile?.phone || null,
+      email: profile?.email || null,
+      bank: profile?.bank || null,
+      iban: profile?.iban || null,
+      vat_rate: profile?.vat_rate || 0,
+    };
+  }
+
+  function handleServiceSelect(idx: number, serviceId: string) {
+    const svc = services.find(s => s.id === serviceId);
+    const updated = [...rows];
+    updated[idx] = svc
+      ? { service_id: svc.id, description: svc.name, quantity: "1", unit_price: String(svc.price_per_unit) }
+      : { ...updated[idx], service_id: "" };
+    setRows(updated);
+  }
+
+  function updateRow(idx: number, field: keyof NewRow, value: string) {
+    const updated = [...rows];
+    updated[idx] = { ...updated[idx], [field]: value };
+    setRows(updated);
+  }
+
+  function addRow() { setRows(r => [...r, emptyRow()]); }
+  function removeRow(idx: number) { setRows(r => r.filter((_, i) => i !== idx)); }
+
+  async function handleSave() {
+    if (!quote || !profile) return;
+    const validRows = rows.filter(r => r.description.trim() && parseFloat(r.quantity) > 0 && parseFloat(r.unit_price) > 0);
+    if (!validRows.length) return;
+    setSaving(true);
+
+    for (const row of validRows) {
+      const qty = parseFloat(row.quantity);
+      const price = parseFloat(row.unit_price);
+      await supabase.from("quote_items").insert({
+        quote_id: quote.id,
+        service_id: row.service_id || null,
+        description: row.description.trim(),
+        quantity: qty,
+        unit_price: price,
+      });
+    }
+
+    const { data: allItems } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote.id);
+    const subtotalBrut = (allItems || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
+    const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
+    const subtotalNet = subtotalBrut - dVal;
+    const isPro = profile.account_type === "pro";
+    const emitent = getEmitent();
+    const vatRate = isPro ? emitent.vat_rate : 0;
+    const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
+
+    await supabase.from("quotes").update({
+      total: subtotalNet,
+      vat_rate: vatRate,
+      vat_amount: vatAmount,
+      total_with_vat: subtotalNet + vatAmount,
+    }).eq("id", quote.id);
+
+    setRows([emptyRow()]);
+    setSaving(false);
+    await loadQuote();
+  }
+
+  async function handleDeleteItem(itemId: string) {
+    await supabase.from("quote_items").delete().eq("id", itemId);
+    await loadQuote();
+  }
+
+  const shareWhatsApp = () => {
+    if (!quote || !profile) return;
+    const isPro = profile.account_type === "pro";
+    const subtotalBrut = quote.quote_items.reduce((s, i) => s + i.total, 0);
+    const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
+    const subtotalNet = subtotalBrut - dVal;
+    const vatAmount = isPro ? Math.round(subtotalNet * quote.vat_rate / 100 * 100) / 100 : 0;
+    const total = subtotalNet + vatAmount;
+    const c = quote.clients;
+    const text = encodeURIComponent(
+      `*DEVIZ ${quote.quote_number}*\nData: ${fmtDate(quote.created_at)}\nClient: ${c.name}\n\n` +
+      quote.quote_items.map(i => `• ${i.description}: ${i.quantity} buc x ${fmt(i.unit_price)} = ${fmt(i.total)}`).join("\n") +
+      (parseFloat(discount || "0") > 0 ? `\nDiscount: -${fmt(dVal)}` : "") +
+      (isPro ? `\nTVA ${quote.vat_rate}%: ${fmt(vatAmount)}` : "") +
+      `\n*TOTAL: ${fmt(total)}*`
+    );
+    window.open(`https://wa.me/?text=${text}`, "_blank");
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Se incarca...</p></div>;
+  if (error || !quote || !profile) return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6">
+      <p className="text-red-500">{error || "Fisa Servicii negasit."}</p>
+      <button onClick={() => router.push("/quotes")} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold">Inapoi</button>
+    </div>
+  );
+
+  const isPro = profile.account_type === "pro";
+  const emitent = getEmitent();
+  const st = ({ draft: { label: "Schita", color: "bg-gray-100 text-gray-600" }, sent: { label: "Trimis", color: "bg-blue-100 text-blue-700" }, accepted: { label: "Acceptat", color: "bg-green-100 text-green-700" }, rejected: { label: "Respins", color: "bg-red-100 text-red-700" } } as Record<string, { label: string; color: string }>)[quote.status] ?? { label: quote.status, color: "bg-gray-100 text-gray-600" };
+  const c = quote.clients;
+  const subtotalBrut = quote.quote_items.reduce((s, i) => s + i.total, 0);
+  const discountVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
+  const subtotalNet = subtotalBrut - discountVal;
+  const vatAmount = isPro ? Math.round(subtotalNet * quote.vat_rate / 100 * 100) / 100 : 0;
+  const total = subtotalNet + vatAmount;
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-32">
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
+        <button onClick={() => router.push("/quotes")} className="flex items-center gap-2 text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+          <span className="text-xl">‹</span> Fise Servicii
+        </button>
+        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${st.color}`}>{st.label}</span>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
+
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-sm p-5 flex items-start justify-between">
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Numar fisa</p>
+            <p className="text-2xl font-bold text-gray-900">{quote.quote_number}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-400">Data emiterii</p>
+            <p className="text-sm font-medium text-gray-700">{fmtDate(quote.created_at)}</p>
+          </div>
+        </div>
+
+        {/* Emitent */}
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            Emitent {isPro && company && <span className="ml-1 text-purple-500 normal-case font-normal">• {company.name}</span>}
+          </p>
+          <p className="text-base font-bold text-gray-900">{emitent.name}</p>
+          {isPro && emitent.cui && <p className="text-sm text-gray-500">CUI: {emitent.cui}</p>}
+          {isPro && emitent.reg_com && <p className="text-sm text-gray-500">Reg. Com.: {emitent.reg_com}</p>}
+          {emitent.address && <p className="text-sm text-gray-500">{emitent.address}</p>}
+          {emitent.phone && <p className="text-sm text-gray-500">Tel: {emitent.phone}</p>}
+          {emitent.email && <p className="text-sm text-gray-500">{emitent.email}</p>}
+        </div>
+
+        {/* Client */}
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Beneficiar</p>
+  {c ? (
+    <>
+      <p className="text-base font-bold text-gray-900">{c.name}</p>
+      {c.cui && <p className="text-sm text-gray-500">CUI: {c.cui}</p>}
+      {c.address && <p className="text-sm text-gray-500">{c.address}</p>}
+      {c.contact_person && <p className="text-sm text-gray-500">Contact: {c.contact_person}</p>}
+      {c.phone && <p className="text-sm text-gray-500">Tel: {c.phone}</p>}
+    </>
+  ) : (
+    <p className="text-sm text-gray-400">Fara beneficiar</p>
+  )}
+</div>
+
+        {/* Lucrari */}
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Lucrari / Servicii</p>
+          </div>
+
+          {quote.quote_items.map(item => (
+            <div key={item.id} className="px-5 py-3 flex items-center justify-between gap-3 border-b border-gray-50">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800">{item.description}</p>
+                <p className="text-xs text-gray-400">{item.quantity} buc × {fmt(item.unit_price)}</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <p className="text-sm font-semibold text-gray-900">{fmt(item.total)}</p>
+                <button onClick={() => handleDeleteItem(item.id)} className="text-red-400 text-xl leading-none">×</button>
+              </div>
+            </div>
+          ))}
+
+          <div className="px-4 py-3 space-y-3 bg-gray-50">
+            {rows.map((row, idx) => {
+              const qty = parseFloat(row.quantity) || 0;
+              const price = parseFloat(row.unit_price) || 0;
+              const rowTotal = qty * price;
+              return (
+                <div key={idx} className="bg-white rounded-xl border border-gray-200 p-3 space-y-2">
+                  {services.length > 0 && (
+                    <select className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+                      value={row.service_id} onChange={e => handleServiceSelect(idx, e.target.value)}>
+                      <option value="">— Selecteaza sau scrie liber —</option>
+                      {services.map(s => <option key={s.id} value={s.id}>{s.name} ({fmt(s.price_per_unit)}/{s.unit})</option>)}
+                    </select>
+                  )}
+                  <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    placeholder="Descriere serviciu *" value={row.description}
+                    onChange={e => updateRow(idx, "description", e.target.value)} />
+                  <div className="flex gap-2">
+                    <input type="number" min="0.01" step="0.01"
+                      className="w-1/3 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Cant." value={row.quantity}
+                      onChange={e => updateRow(idx, "quantity", e.target.value)} />
+                    <input type="number" min="0" step="0.01"
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      placeholder="Pret unitar (RON) *" value={row.unit_price}
+                      onChange={e => updateRow(idx, "unit_price", e.target.value)} />
+                    {rowTotal > 0 && <span className="shrink-0 self-center text-sm font-semibold text-blue-600">{fmt(rowTotal)}</span>}
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <button onClick={() => removeRow(idx)} className="text-xs text-red-400">Sterge rand</button>
+                    {idx === rows.length - 1 && <button onClick={addRow} className="text-xs text-blue-600 font-semibold">+ Rand nou</button>}
+                  </div>
+                </div>
+              );
+            })}
+            <button onClick={handleSave} disabled={saving}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
+              {saving ? "Se salveaza..." : "Salveaza serviciile"}
+            </button>
+          </div>
+        </div>
+
+        {/* Discount */}
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Discount</p>
+          <div className="flex gap-2">
+            <div className="flex rounded-xl overflow-hidden border border-gray-200">
+              <button onClick={() => setDiscountType("pct")} className={`px-4 py-2 text-sm font-semibold ${discountType === "pct" ? "bg-blue-600 text-white" : "bg-white text-gray-600"}`}>%</button>
+              <button onClick={() => setDiscountType("val")} className={`px-4 py-2 text-sm font-semibold ${discountType === "val" ? "bg-blue-600 text-white" : "bg-white text-gray-600"}`}>RON</button>
+            </div>
+            <input type="number" min="0" step="0.01" className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm"
+              placeholder={discountType === "pct" ? "Ex: 10" : "Ex: 150"}
+              value={discount} onChange={e => setDiscount(e.target.value)} />
+          </div>
+          {parseFloat(discount || "0") > 0 && (
+            <p className="text-sm text-red-500 font-medium mt-2">-{fmt(discountVal)} discount aplicat</p>
+          )}
+        </div>
+
+        {/* Totaluri */}
+        <div className="bg-white rounded-2xl shadow-sm p-5 space-y-2">
+          <div className="flex justify-between text-sm text-gray-600">
+            <span>Subtotal brut</span><span className="font-medium">{fmt(subtotalBrut)}</span>
+          </div>
+          {parseFloat(discount || "0") > 0 && (
+            <div className="flex justify-between text-sm text-red-500">
+              <span>Discount</span><span className="font-medium">-{fmt(discountVal)}</span>
+            </div>
+          )}
+          {isPro && (
+            <>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Subtotal net (fara TVA)</span><span className="font-medium">{fmt(subtotalNet)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>TVA {quote.vat_rate}%</span><span className="font-medium">{fmt(vatAmount)}</span>
+              </div>
+            </>
+          )}
+          <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
+            <span className="text-base font-bold text-gray-900">TOTAL</span>
+            <span className="text-xl font-bold text-blue-600">{fmt(total)}</span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Butoane fixe */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3">
+        <div className="max-w-2xl mx-auto flex gap-3">
+          <button onClick={shareWhatsApp}
+            className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white font-semibold rounded-xl py-4 text-base active:bg-green-700">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+            </svg>
+            WhatsApp
+          </button>
+          <button onClick={() => exportPDF(quote, emitent, isPro, parseFloat(discount || "0"), discountType)}
+            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold rounded-xl py-4 text-base active:bg-blue-800">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,301 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
+
+interface Company {
+  id: string
+  name: string
+  cui: string | null
+  reg_com: string | null
+  address: string | null
+  phone: string | null
+  email: string | null
+  bank: string | null
+  iban: string | null
+  vat_rate: number
+}
+
+const emptyCompany = (): Omit<Company, 'id'> => ({
+  name: '', cui: '', reg_com: '', address: '',
+  phone: '', email: '', bank: '', iban: '', vat_rate: 21
+})
+
+export default function SettingsPage() {
+  const router = useRouter()
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [editing, setEditing] = useState<string | null>(null)
+  const [form, setForm] = useState(emptyCompany())
+  const [accountType, setAccountType] = useState<'meseriaș' | 'pro'>('meseriaș')
+  const [saved, setSaved] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null)
+
+  useEffect(() => { load() }, [])
+
+  async function load() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { router.push('/login'); return }
+    const user = session.user
+    const { data: prof } = await supabase.from('profiles').select('account_type').eq('id', user.id).single()
+    if (prof) setAccountType(prof.account_type || 'meseriaș')
+    const { data: cos } = await supabase.from('companies').select('*').order('name')
+    setCompanies(cos || [])
+    setLoading(false)
+  }
+
+  async function saveAccountType(type: 'meseriaș' | 'pro') {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    setAccountType(type)
+    if (type === 'meseriaș') {
+      localStorage.removeItem('activeCompanyId')
+      localStorage.removeItem('activeCompanyName')
+    }
+    await supabase.from('profiles').upsert({ id: session.user.id, account_type: type })
+  }
+
+  async function saveCompany() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session || !form.name.trim()) return
+    const user = session.user
+    if (editing === 'new') {
+      const { data: newCompany } = await supabase.from('companies').insert({ ...form, user_id: user.id }).select().single()
+      if (newCompany) {
+        const { data: existingServices } = await supabase.from('services').select('*').eq('user_id', user.id).is('company_id', null)
+        if (existingServices && existingServices.length > 0) {
+          setPendingCompanyId(newCompany.id)
+          setEditing(null)
+          setSaved(true)
+          setTimeout(() => setSaved(false), 2000)
+          load()
+          return
+        }
+      }
+    } else {
+      await supabase.from('companies').update(form).eq('id', editing!)
+    }
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+    setEditing(null)
+    load()
+  }
+
+  async function handleCopyServices(copy: boolean) {
+    if (copy && pendingCompanyId) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const { data: existingServices } = await supabase.from('services').select('*').eq('user_id', session.user.id).is('company_id', null)
+      if (existingServices) {
+        await supabase.from('services').insert(existingServices.map(s => ({
+          user_id: session.user.id,
+          company_id: pendingCompanyId,
+          name: s.name,
+          unit: s.unit,
+          price_per_unit: s.price_per_unit
+        })))
+      }
+    }
+    setPendingCompanyId(null)
+  }
+
+  async function deleteCompany(id: string) {
+    if (!confirm('Stergi firma? Devizele asociate raman dar fara firma.')) return
+    await supabase.from('companies').delete().eq('id', id)
+    load()
+  }
+
+  function startEdit(c: Company) {
+    setForm({ name: c.name, cui: c.cui||'', reg_com: c.reg_com||'', address: c.address||'',
+      phone: c.phone||'', email: c.email||'', bank: c.bank||'', iban: c.iban||'', vat_rate: c.vat_rate })
+    setEditing(c.id)
+  }
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Se incarca...</p></div>
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-10">
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
+        <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+          <span className="text-xl">‹</span> Dashboard
+        </button>
+        <h1 className="text-base font-bold text-gray-800">Setari</h1>
+        <div className="w-20" />
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 pt-6 space-y-5">
+
+        {/* Tip cont */}
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Tip cont</p>
+          <div className="grid grid-cols-2 gap-3">
+            {(['meseriaș', 'pro'] as const).map(type => (
+              <button key={type} onClick={() => saveAccountType(type)}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  accountType === type
+                    ? type === 'pro' ? 'border-purple-500 bg-purple-50' : 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 bg-white'
+                }`}>
+                <span className="text-2xl">{type === 'pro' ? '🏢' : '🔨'}</span>
+                <span className={`text-sm font-bold ${accountType === type ? (type === 'pro' ? 'text-purple-700' : 'text-blue-700') : 'text-gray-700'}`}>
+                  {type === 'pro' ? 'Pro' : 'Meseriaș'}
+                </span>
+                <span className="text-xs text-gray-400 text-center">{type === 'pro' ? 'TVA · Firme' : 'Fara TVA · Simplu'}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Firme — doar Pro */}
+        {accountType === 'pro' && (
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Firmele mele</p>
+              {editing !== 'new' && (
+                <button onClick={() => { setForm(emptyCompany()); setEditing('new') }}
+                  className="text-sm font-semibold text-blue-600">+ Adauga</button>
+              )}
+            </div>
+            {companies.map(c => (
+              <div key={c.id}>
+                <div className="px-5 py-4 flex items-center justify-between border-b border-gray-50">
+                  <div>
+                    <a href={`/companies/${c.id}/quotes`} className="text-sm font-bold text-gray-900 hover:text-blue-600">{c.name}</a>
+                    {c.cui && <p className="text-xs text-gray-400">CUI: {c.cui}</p>}
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={() => startEdit(c)} className="text-sm text-blue-600">Editeaza</button>
+                    <button onClick={() => deleteCompany(c.id)} className="text-sm text-red-400">Sterge</button>
+                  </div>
+                </div>
+                {editing === c.id && <CompanyForm form={form} setForm={setForm} onSave={saveCompany} onCancel={() => setEditing(null)} saved={saved} />}
+              </div>
+            ))}
+            {companies.length === 0 && editing !== 'new' && (
+              <p className="px-5 py-4 text-sm text-gray-400">Nicio firma adaugata.</p>
+            )}
+            {editing === 'new' && (
+              <CompanyForm form={form} setForm={setForm} onSave={saveCompany} onCancel={() => setEditing(null)} saved={saved} />
+            )}
+          </div>
+        )}
+
+        {/* Meseriaș — profil simplu */}
+        {accountType === 'meseriaș' && <MeseriasForm />}
+
+      </div>
+
+      {/* Modal copiere servicii */}
+      {pendingCompanyId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full mx-4 space-y-4">
+            <p className="text-sm font-semibold text-gray-800">Copiez nomenclatorul de servicii existent pentru această firmă?</p>
+            <div className="flex gap-3">
+              <button onClick={() => handleCopyServices(false)} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600">Nu</button>
+              <button onClick={() => handleCopyServices(true)} className="flex-1 py-3 rounded-xl bg-purple-600 text-white text-sm font-semibold">Da</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CompanyForm({ form, setForm, onSave, onCancel, saved }: {
+  form: ReturnType<typeof emptyCompany>
+  setForm: (f: ReturnType<typeof emptyCompany>) => void
+  onSave: () => void
+  onCancel: () => void
+  saved: boolean
+}) {
+  const fields = [
+    { key: 'name', label: 'Nume firma *', placeholder: 'Ex: Instalatii Nord SRL' },
+    { key: 'cui', label: 'CUI / CIF', placeholder: 'RO12345678' },
+    { key: 'reg_com', label: 'Reg. Com.', placeholder: 'J40/1234/2020' },
+    { key: 'address', label: 'Adresa', placeholder: 'Str. Exemplu nr. 1, oras' },
+    { key: 'phone', label: 'Telefon', placeholder: '07xx xxx xxx' },
+    { key: 'email', label: 'Email', placeholder: 'contact@firma.ro' },
+    { key: 'bank', label: 'Banca', placeholder: 'BCR' },
+    { key: 'iban', label: 'IBAN', placeholder: 'RO49 AAAA...' },
+  ]
+  return (
+    <div className="px-5 py-4 space-y-3 bg-gray-50 border-b border-gray-100">
+      {fields.map(f => (
+        <div key={f.key}>
+          <label className="text-xs font-medium text-gray-600 mb-1 block">{f.label}</label>
+          <input
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white"
+            placeholder={f.placeholder}
+            value={form[f.key as keyof typeof form] as string}
+            onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+          />
+        </div>
+      ))}
+      <div>
+        <label className="text-xs font-medium text-gray-600 mb-1 block">Cota TVA implicita</label>
+        <div className="flex gap-2">
+          {[0, 21].map(r => (
+            <button key={r} onClick={() => setForm({ ...form, vat_rate: r })}
+              className={`flex-1 py-2 rounded-xl border-2 text-sm font-bold ${form.vat_rate === r ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-600'}`}>
+              {r === 0 ? 'Fara TVA' : `${r}%`}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex gap-2 pt-1">
+        <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600">Anuleaza</button>
+        <button onClick={onSave} className={`flex-1 py-3 rounded-xl text-sm font-semibold text-white ${saved ? 'bg-green-500' : 'bg-purple-600'}`}>
+          {saved ? '✓ Salvat!' : 'Salveaza firma'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function MeseriasForm() {
+  const [form, setForm] = useState({ company_name: '', phone: '', email: '', address: '' })
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
+        if (data) setForm({ company_name: data.company_name||'', phone: data.phone||'', email: data.email||'', address: data.address||'' })
+      })
+    })
+  }, [])
+
+  async function save() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await supabase.from('profiles').upsert({ id: session.user.id, ...form })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const fields = [
+    { key: 'company_name', label: 'Nume / Brand', placeholder: 'Ex: Ion Instalatii' },
+    { key: 'phone', label: 'Telefon', placeholder: '07xx xxx xxx' },
+    { key: 'email', label: 'Email', placeholder: 'contact@mail.ro' },
+    { key: 'address', label: 'Adresa', placeholder: 'Str. Exemplu nr. 1' },
+  ]
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Date personale</p>
+      {fields.map(f => (
+        <div key={f.key}>
+          <label className="text-xs font-medium text-gray-600 mb-1 block">{f.label}</label>
+          <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+            placeholder={f.placeholder}
+            value={form[f.key as keyof typeof form]}
+            onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
+        </div>
+      ))}
+      <button onClick={save} className={`w-full py-4 rounded-2xl font-bold text-base text-white ${saved ? 'bg-green-500' : 'bg-blue-600'}`}>
+        {saved ? '✓ Salvat!' : 'Salveaza'}
+      </button>
+    </div>
+  )
+}
