@@ -56,6 +56,8 @@ interface Quote {
   vat_rate: number;
   vat_amount: number;
   total_with_vat: number;
+  discount: number;
+  discount_type: "pct" | "val";
   clients: Client;
   quote_items: QuoteItem[];
 }
@@ -180,7 +182,7 @@ function exportPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: num
 
   doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(160, 160, 160);
   doc.text("Document generat de Tarifator • Tarifator.ro", W / 2, 290, { align: "center" });
-  doc.save(`fisa-${quote.quote_number}.pdf`);
+  window.open(doc.output('bloburl'), '_blank');
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -197,44 +199,49 @@ export default function QuoteDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<NewRow[]>([emptyRow()]);
   const [saving, setSaving] = useState(false);
+  const [savingDiscount, setSavingDiscount] = useState(false);
   const [discount, setDiscount] = useState<string>("0");
   const [discountType, setDiscountType] = useState<"pct" | "val">("pct");
+  const [savedDiscount, setSavedDiscount] = useState<string>("0");
+  const [savedDiscountType, setSavedDiscountType] = useState<"pct" | "val">("pct");
 
   const loadQuote = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login"); return; }
 
-    const activeCompanyId = localStorage.getItem("activeCompanyId") || "";
-
-    const [{ data: prof }, { data: comp }, { data: q, error: qErr }, { data: svcs }] = await Promise.all([
+    const [{ data: prof }, { data: q, error: qErr }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
-      activeCompanyId
-        ? supabase.from("companies").select("*").eq("id", activeCompanyId).single()
-        : Promise.resolve({ data: null }),
       supabase.from("quotes").select(`
         id, quote_number, created_at, status,
-        vat_rate, vat_amount, total_with_vat,
+        vat_rate, vat_amount, total_with_vat, discount, discount_type,
         clients ( id, name, cui, address, contact_person, phone, email ),
         quote_items ( id, description, quantity, unit_price, total )
       `).eq("id", id).single(),
-Promise.resolve({ data: null }),
     ]);
 
-    if (qErr || !q) { setError("Devizul nu a putut fi incarcat."); }
-else {
-  // aici ai q disponibil
-const companyId = (q as any)?.company_id
-const { data: svcs } = companyId
-  ? await supabase.from("services").select("*").eq("company_id", companyId).order("name")
-  : await supabase.from("services").select("*").is("company_id", null).order("name")
-setServices(svcs || [])
-  
-  setQuote(q as unknown as Quote);
-  setProfile(prof as Profile);
-  setCompany(comp as Company | null);
+    if (qErr || !q) { setError("Devizul nu a putut fi incarcat."); setLoading(false); return; }
 
-   
-    }
+    const companyId = (q as any)?.company_id;
+
+    const [{ data: comp }, { data: svcs }] = await Promise.all([
+      companyId
+        ? supabase.from("companies").select("*").eq("id", companyId).single()
+        : Promise.resolve({ data: null }),
+      companyId
+        ? supabase.from("services").select("*").eq("company_id", companyId).order("name")
+        : supabase.from("services").select("*").is("company_id", null).order("name"),
+    ]);
+
+    setQuote(q as unknown as Quote);
+    setProfile(prof as Profile);
+    setCompany(comp as Company | null);
+    setServices(svcs || []);
+    const dbDiscount = String((q as any).discount ?? 0);
+    const dbDiscountType = ((q as any).discount_type ?? "pct") as "pct" | "val";
+    setDiscount(dbDiscount);
+    setDiscountType(dbDiscountType);
+    setSavedDiscount(dbDiscount);
+    setSavedDiscountType(dbDiscountType);
     setLoading(false);
   }, [id]);
 
@@ -318,6 +325,8 @@ setServices(svcs || [])
       vat_rate: vatRate,
       vat_amount: vatAmount,
       total_with_vat: subtotalNet + vatAmount,
+      discount: parseFloat(discount || "0"),
+      discount_type: discountType,
     }).eq("id", quote.id);
 
     setRows([emptyRow()]);
@@ -327,6 +336,59 @@ setServices(svcs || [])
 
   async function handleDeleteItem(itemId: string) {
     await supabase.from("quote_items").delete().eq("id", itemId);
+    const { data: remaining } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote!.id);
+    const subtotalBrut = (remaining || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
+    const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
+    const subtotalNet = subtotalBrut - dVal;
+    const isPro = profile?.account_type === "pro";
+    const emitent = getEmitent();
+    const vatRate = isPro ? emitent.vat_rate : 0;
+    const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
+    await supabase.from("quotes").update({
+      total: subtotalNet,
+      vat_rate: vatRate,
+      vat_amount: vatAmount,
+      total_with_vat: subtotalNet + vatAmount,
+      discount: parseFloat(discount || "0"),
+      discount_type: discountType,
+    }).eq("id", quote!.id);
+    await loadQuote();
+  }
+
+  async function handleSaveDiscount() {
+    if (!quote || !profile) return;
+    setSavingDiscount(true);
+    const { data: allItems } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote.id);
+    const subtotalBrut = (allItems || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
+    const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
+    const subtotalNet = subtotalBrut - dVal;
+    const isPro = profile.account_type === "pro";
+    const emitent = getEmitent();
+    const vatRate = isPro ? emitent.vat_rate : 0;
+    const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
+    await supabase.from("quotes").update({
+      total: subtotalNet,
+      vat_rate: vatRate,
+      vat_amount: vatAmount,
+      total_with_vat: subtotalNet + vatAmount,
+      discount: parseFloat(discount || "0"),
+      discount_type: discountType,
+    }).eq("id", quote.id);
+    setSavedDiscount(discount);
+    setSavedDiscountType(discountType);
+    setSavingDiscount(false);
+    await loadQuote();
+  }
+
+  async function handleFinalize() {
+    if (!quote) return;
+    await supabase.from("quotes").update({ status: "final" }).eq("id", quote.id);
+    await loadQuote();
+  }
+
+  async function handleUnfinalize() {
+    if (!quote) return;
+    await supabase.from("quotes").update({ status: "draft" }).eq("id", quote.id);
     await loadQuote();
   }
 
@@ -359,7 +421,8 @@ setServices(svcs || [])
 
   const isPro = profile.account_type === "pro";
   const emitent = getEmitent();
-  const st = ({ draft: { label: "Schita", color: "bg-gray-100 text-gray-600" }, sent: { label: "Trimis", color: "bg-blue-100 text-blue-700" }, accepted: { label: "Acceptat", color: "bg-green-100 text-green-700" }, rejected: { label: "Respins", color: "bg-red-100 text-red-700" } } as Record<string, { label: string; color: string }>)[quote.status] ?? { label: quote.status, color: "bg-gray-100 text-gray-600" };
+  const isFinalized = quote.status === "final";
+  const st = ({ draft: { label: "Ciorna", color: "bg-gray-100 text-gray-600" }, final: { label: "Document Final", color: "bg-green-100 text-green-700" }, sent: { label: "Trimis", color: "bg-blue-100 text-blue-700" }, accepted: { label: "Acceptat", color: "bg-green-100 text-green-700" }, rejected: { label: "Respins", color: "bg-red-100 text-red-700" } } as Record<string, { label: string; color: string }>)[quote.status] ?? { label: quote.status, color: "bg-gray-100 text-gray-600" };
   const c = quote.clients;
   const subtotalBrut = quote.quote_items.reduce((s, i) => s + i.total, 0);
   const discountVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
@@ -433,12 +496,12 @@ setServices(svcs || [])
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <p className="text-sm font-semibold text-gray-900">{fmt(item.total)}</p>
-                <button onClick={() => handleDeleteItem(item.id)} className="text-red-400 text-xl leading-none">×</button>
+                {!isFinalized && <button onClick={() => handleDeleteItem(item.id)} className="text-red-400 text-xl leading-none">×</button>}
               </div>
             </div>
           ))}
 
-          <div className="px-4 py-3 space-y-3 bg-gray-50">
+          {!isFinalized && <div className="px-4 py-3 space-y-3 bg-gray-50">
             {rows.map((row, idx) => {
               const qty = parseFloat(row.quantity) || 0;
               const price = parseFloat(row.unit_price) || 0;
@@ -477,25 +540,35 @@ setServices(svcs || [])
               className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
               {saving ? "Se salveaza..." : "Salveaza serviciile"}
             </button>
-          </div>
+          </div>}
         </div>
 
         {/* Discount */}
+        {(!isFinalized || parseFloat(discount || "0") > 0) && (
         <div className="bg-white rounded-2xl shadow-sm p-5">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Discount</p>
-          <div className="flex gap-2">
-            <div className="flex rounded-xl overflow-hidden border border-gray-200">
-              <button onClick={() => setDiscountType("pct")} className={`px-4 py-2 text-sm font-semibold ${discountType === "pct" ? "bg-blue-600 text-white" : "bg-white text-gray-600"}`}>%</button>
-              <button onClick={() => setDiscountType("val")} className={`px-4 py-2 text-sm font-semibold ${discountType === "val" ? "bg-blue-600 text-white" : "bg-white text-gray-600"}`}>RON</button>
+          {!isFinalized && (
+            <div className="flex gap-2">
+              <div className="flex rounded-xl overflow-hidden border border-gray-200">
+                <button onClick={() => setDiscountType("pct")} className={`px-4 py-2 text-sm font-semibold ${discountType === "pct" ? "bg-blue-600 text-white" : "bg-white text-gray-600"}`}>%</button>
+                <button onClick={() => setDiscountType("val")} className={`px-4 py-2 text-sm font-semibold ${discountType === "val" ? "bg-blue-600 text-white" : "bg-white text-gray-600"}`}>RON</button>
+              </div>
+              <input type="number" min="0" step="0.01" className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm"
+                placeholder={discountType === "pct" ? "Ex: 10" : "Ex: 150"}
+                value={discount} onChange={e => setDiscount(e.target.value)} />
             </div>
-            <input type="number" min="0" step="0.01" className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm"
-              placeholder={discountType === "pct" ? "Ex: 10" : "Ex: 150"}
-              value={discount} onChange={e => setDiscount(e.target.value)} />
-          </div>
+          )}
           {parseFloat(discount || "0") > 0 && (
             <p className="text-sm text-red-500 font-medium mt-2">-{fmt(discountVal)} discount aplicat</p>
           )}
+          {!isFinalized && (discount !== savedDiscount || discountType !== savedDiscountType) && (
+            <button onClick={handleSaveDiscount} disabled={savingDiscount}
+              className="mt-3 w-full py-2.5 bg-orange-500 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
+              {savingDiscount ? "Se salveaza..." : "Salveaza discount"}
+            </button>
+          )}
         </div>
+        )}
 
         {/* Totaluri */}
         <div className="bg-white rounded-2xl shadow-sm p-5 space-y-2">
@@ -526,22 +599,35 @@ setServices(svcs || [])
       </div>
 
       {/* Butoane fixe */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 space-y-2">
         <div className="max-w-2xl mx-auto flex gap-3">
           <button onClick={shareWhatsApp}
-            className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white font-semibold rounded-xl py-4 text-base active:bg-green-700">
+            className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white font-semibold rounded-xl py-3 text-sm active:bg-green-700">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
             </svg>
             WhatsApp
           </button>
           <button onClick={() => exportPDF(quote, emitent, isPro, parseFloat(discount || "0"), discountType)}
-            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold rounded-xl py-4 text-base active:bg-blue-800">
+            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold rounded-xl py-3 text-sm active:bg-blue-800">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            Export PDF
+            PDF
           </button>
+        </div>
+        <div className="max-w-2xl mx-auto">
+          {!isFinalized ? (
+            <button onClick={handleFinalize}
+              className="w-full py-3.5 bg-green-600 text-white font-bold rounded-xl text-base active:bg-green-800">
+              Finalizeaza documentul
+            </button>
+          ) : (
+            <button onClick={handleUnfinalize}
+              className="w-full py-3 border-2 border-gray-300 text-gray-500 font-semibold rounded-xl text-sm">
+              Reda ca ciorna
+            </button>
+          )}
         </div>
       </div>
     </div>
