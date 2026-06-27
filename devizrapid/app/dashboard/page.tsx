@@ -148,40 +148,20 @@ export default function Dashboard() {
 
         {/* Onboarding — prima vizita */}
         {showWelcome && (
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-4">
-            <div className="flex justify-between items-start">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">👋</span>
               <div>
-                <p className="font-black text-lg text-gray-900">Bun venit în Tarifator! 👋</p>
-                <p className="text-sm text-gray-400 mt-0.5">Cu ce vrei să începi?</p>
+                <p className="text-sm font-bold text-blue-900">Primul pas: adaugă-ți serviciile</p>
+                <p className="text-xs text-blue-500">Fără ele, nici fișele nici calculatorul nu funcționează.</p>
               </div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <a href="/services" onClick={() => localStorage.setItem('welcomed', '1')}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 whitespace-nowrap">Adaugă →</a>
               <button onClick={() => { localStorage.setItem('welcomed', '1'); setShowWelcome(false) }}
-                className="text-gray-300 hover:text-gray-500 text-xl leading-none">×</button>
+                className="text-blue-300 hover:text-blue-500 text-xl leading-none">×</button>
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <a href="/services"
-                onClick={() => localStorage.setItem('welcomed', '1')}
-                className="bg-blue-50 border-2 border-blue-100 hover:border-blue-400 rounded-2xl p-4 flex flex-col gap-2 transition-all active:scale-95">
-                <span className="text-3xl">🎙️</span>
-                <p className="font-bold text-sm text-gray-900 leading-tight">Fișe de servicii</p>
-                <p className="text-xs text-gray-500">Dictezi ce ai lucrat, trimiți PDF clientului</p>
-                <span className="text-xs text-blue-600 font-semibold mt-1">Începe →</span>
-              </a>
-              <a href="/pricing"
-                onClick={() => localStorage.setItem('welcomed', '1')}
-                className="bg-amber-50 border-2 border-amber-100 hover:border-amber-400 rounded-2xl p-4 flex flex-col gap-2 transition-all active:scale-95">
-                <span className="text-3xl">🏷️</span>
-                <p className="font-bold text-sm text-gray-900 leading-tight">Calculator preț</p>
-                <p className="text-xs text-gray-500">Calculezi prețul de vânzare cu adaos și TVA</p>
-                <span className="text-xs text-amber-600 font-semibold mt-1">Începe →</span>
-              </a>
-            </div>
-
-            <a href="/settings"
-              onClick={() => localStorage.setItem('welcomed', '1')}
-              className="flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 pt-1">
-              <span>⚙️</span> Completează mai întâi profilul și datele firmei
-            </a>
           </div>
         )}
 
