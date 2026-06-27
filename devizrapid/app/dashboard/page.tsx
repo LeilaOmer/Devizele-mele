@@ -61,9 +61,10 @@ export default function Dashboard() {
       const userPlan: 'meseriaș' | 'pro' = 'pro'
       setPlan(userPlan)
 
-      // modul activ: daca are pro, preia din localStorage, altfel meserias
+      // modul activ: localStorage > account_type din DB > meserias
       const savedMode = localStorage.getItem('dashboardMode') as 'meseriaș' | 'pro' | null
-      const activeMode: 'meseriaș' | 'pro' = (userPlan === 'pro' && savedMode === 'pro') ? 'pro' : 'meseriaș'
+      const dbMode = prof?.account_type === 'pro' ? 'pro' : 'meseriaș'
+      const activeMode: 'meseriaș' | 'pro' = userPlan === 'pro' && (savedMode === 'pro' || (savedMode === null && dbMode === 'pro')) ? 'pro' : 'meseriaș'
       setMode(activeMode)
 
       setDisplayName(prof.company_name || prof.email || session.user.email || '')

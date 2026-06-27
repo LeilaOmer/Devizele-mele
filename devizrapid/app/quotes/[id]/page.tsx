@@ -247,10 +247,9 @@ export default function QuoteDetailPage() {
 
   useEffect(() => { loadQuote(); }, [loadQuote]);
 
-  // Emitent dinamic: Pro → firma activa, Meseriaș → profil
+  // Emitent: daca fisa are company_id → firma aceea, indiferent de account_type
   function getEmitent(): Emitent {
-    const isPro = profile?.account_type === "pro";
-    if (isPro && company) {
+    if (company) {
       return {
         name: company.name,
         cui: company.cui,
@@ -315,7 +314,7 @@ export default function QuoteDetailPage() {
     const subtotalBrut = (allItems || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
     const subtotalNet = subtotalBrut - dVal;
-    const isPro = profile.account_type === "pro";
+    const isPro = !!company || profile.account_type === "pro";
     const emitent = getEmitent();
     const vatRate = isPro ? emitent.vat_rate : 0;
     const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
@@ -362,7 +361,7 @@ export default function QuoteDetailPage() {
     const subtotalBrut = (allItems || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
     const subtotalNet = subtotalBrut - dVal;
-    const isPro = profile.account_type === "pro";
+    const isPro = !!company || profile.account_type === "pro";
     const emitent = getEmitent();
     const vatRate = isPro ? emitent.vat_rate : 0;
     const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
@@ -394,7 +393,7 @@ export default function QuoteDetailPage() {
 
   const shareWhatsApp = async () => {
     if (!quote || !profile) return;
-    const isPro = profile.account_type === "pro";
+    const isPro = !!company || profile.account_type === "pro";
     const doc = buildPDF(quote, emitent, isPro, parseFloat(discount || "0"), discountType);
     const fileName = `Deviz_${quote.quote_number}.pdf`;
 
@@ -417,7 +416,7 @@ export default function QuoteDetailPage() {
     </div>
   );
 
-  const isPro = profile.account_type === "pro";
+  const isPro = !!company || profile.account_type === "pro";
   const emitent = getEmitent();
   const isFinalized = quote.status === "final";
   const st = ({ draft: { label: "Ciorna", color: "bg-gray-100 text-gray-600" }, final: { label: "Document Final", color: "bg-green-100 text-green-700" }, sent: { label: "Trimis", color: "bg-blue-100 text-blue-700" }, accepted: { label: "Acceptat", color: "bg-green-100 text-green-700" }, rejected: { label: "Respins", color: "bg-red-100 text-red-700" } } as Record<string, { label: string; color: string }>)[quote.status] ?? { label: quote.status, color: "bg-gray-100 text-gray-600" };
