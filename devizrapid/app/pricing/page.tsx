@@ -10,7 +10,6 @@ type Item = {
   id: string
   name: string
   unit: string
-  quantity: string
   supplierPrice: string
   discount: string
   vat: 11 | 21
@@ -18,7 +17,7 @@ type Item = {
 
 const emptyItem = (defaultVat: 11 | 21 = 21): Item => ({
   id: crypto.randomUUID(),
-  name: '', unit: 'buc', quantity: '1', supplierPrice: '', discount: '0',
+  name: '', unit: 'buc', supplierPrice: '', discount: '0',
   vat: defaultVat,
 })
 
@@ -32,13 +31,12 @@ function applyRounding(price: number, step: RoundStep, mode: RoundMode): number 
 function calcItem(item: Item, adaos: number, step: RoundStep, mode: RoundMode) {
   const sp = parseFloat(item.supplierPrice) || 0
   const disc = parseFloat(item.discount) || 0
-  const qty = parseFloat(item.quantity) || 1
   const netPrice = sp * (1 - disc / 100)
   const sellExVat = netPrice * (1 + adaos / 100)
   const vatAmt = sellExVat * (item.vat / 100)
   const withVat = sellExVat + vatAmt
   const final = applyRounding(withVat, step, mode)
-  return { sp, disc, qty, netPrice, sellExVat, vatAmt, withVat, final }
+  return { sp, disc, netPrice, sellExVat, vatAmt, withVat, final }
 }
 
 const fmt2 = (n: number) => n.toFixed(2)
@@ -55,18 +53,17 @@ function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: 
   y += 8
 
   const cols = [
-    { label: 'Denumire', x: margin, w: 60 },
-    { label: 'UM', x: 72, w: 12 },
-    { label: 'Cant.', x: 86, w: 14 },
-    { label: 'Pret furn.', x: 102, w: 20 },
-    { label: 'Disc%', x: 124, w: 14 },
-    { label: 'Pret net', x: 140, w: 20 },
-    { label: `Adaos ${adaos}%`, x: 162, w: 22 },
+    { label: 'Denumire', x: margin, w: 70 },
+    { label: 'UM', x: 82, w: 12 },
+    { label: 'Pret furn.', x: 96, w: 22 },
+    { label: 'Disc%', x: 120, w: 14 },
+    { label: 'Pret net', x: 136, w: 22 },
+    { label: `Adaos ${adaos}%`, x: 160, w: 24 },
     { label: 'F.TVA', x: 186, w: 20 },
     { label: 'Cota', x: 208, w: 14 },
-    { label: 'TVA', x: 224, w: 18 },
-    { label: 'Pret final', x: 244, w: 22 },
-    { label: 'Rotunjit', x: 268, w: 22 },
+    { label: 'TVA', x: 224, w: 20 },
+    { label: 'Pret final', x: 246, w: 24 },
+    { label: 'Rotunjit', x: 272, w: 22 },
   ]
 
   doc.setFillColor(240, 240, 245)
@@ -81,7 +78,7 @@ function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: 
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6, 'F') }
     doc.setFontSize(8)
     const vals = [
-      item.name, item.unit, fmt2(c.qty), fmt2(c.sp),
+      item.name, item.unit, fmt2(c.sp),
       c.disc > 0 ? `${c.disc}%` : '—',
       fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
       fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
@@ -177,7 +174,6 @@ export default function PricingPage() {
         id: crypto.randomUUID(),
         name: i.name || '',
         unit: i.unit || 'buc',
-        quantity: String(i.quantity || 1),
         supplierPrice: String(i.supplier_price || ''),
         discount: String(i.discount || 0),
         vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
@@ -293,19 +289,13 @@ export default function PricingPage() {
                 </div>
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="text-xs text-gray-400 mb-0.5 block">Cant.</label>
-                    <input type="number" min="0" step="1"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
-                      value={item.quantity} onChange={e => updateItem(item.id, 'quantity', e.target.value)} />
-                  </div>
-                  <div className="flex-1">
                     <label className="text-xs text-gray-400 mb-0.5 block">Pret furnizor</label>
                     <input type="number" min="0" step="0.01"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
                       placeholder="0.00" value={item.supplierPrice}
                       onChange={e => updateItem(item.id, 'supplierPrice', e.target.value)} />
                   </div>
-                  <div className="w-20">
+                  <div className="w-24">
                     <label className="text-xs text-gray-400 mb-0.5 block">Disc %</label>
                     <input type="number" min="0" max="100" step="0.5"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
