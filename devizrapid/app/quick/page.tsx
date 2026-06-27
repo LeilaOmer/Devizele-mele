@@ -15,6 +15,8 @@ export default function QuickPage() {
   const router = useRouter()
   const committedRef = useRef('')
   const previewRef = useRef<{ client_name: string; items: PreviewItem[] } | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
 
   useEffect(() => { previewRef.current = preview }, [preview])
 
@@ -33,26 +35,54 @@ export default function QuickPage() {
     loadServices()
   }, [])
 
-  function handleVoice() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) return alert('Browserul nu suportă dictare.')
-    const r = new SR()
-    r.lang = 'ro-RO'
-    r.continuous = false
-    r.interimResults = false
-    r.onstart = () => setListening(true)
-    r.onend = () => setListening(false)
-    r.onresult = (e: any) => {
-      const text = e.results[0][0].transcript
+  async function handleVoice() {
+    if (listening) {
+      mediaRecorderRef.current?.stop()
+      return
+    }
+
+    let stream: MediaStream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch {
+      alert('Nu am acces la microfon.')
+      return
+    }
+
+    const mediaRecorder = new MediaRecorder(stream)
+    mediaRecorderRef.current = mediaRecorder
+    chunksRef.current = []
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data)
+    }
+
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop())
+      setListening(false)
+      setLoading(true)
+
+      const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+      const form = new FormData()
+      form.append('file', blob, 'audio.webm')
+
+      const res = await fetch('/api/transcribe', { method: 'POST', body: form })
+      const { text } = await res.json()
+
+      if (!text) { setLoading(false); return }
+
       const full = (committedRef.current ? committedRef.current + ' ' + text : text).trim()
       setTranscript(full)
+
       if (previewRef.current) {
         handleEdit(full)
       } else {
         handleParse(full)
       }
     }
-    r.start()
+
+    mediaRecorder.start()
+    setListening(true)
   }
 
   async function handleParse(input?: string) {
