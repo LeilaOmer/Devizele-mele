@@ -199,8 +199,11 @@ export default function QuoteDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<NewRow[]>([emptyRow()]);
   const [saving, setSaving] = useState(false);
+  const [savingDiscount, setSavingDiscount] = useState(false);
   const [discount, setDiscount] = useState<string>("0");
   const [discountType, setDiscountType] = useState<"pct" | "val">("pct");
+  const [savedDiscount, setSavedDiscount] = useState<string>("0");
+  const [savedDiscountType, setSavedDiscountType] = useState<"pct" | "val">("pct");
 
   const loadQuote = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -233,8 +236,12 @@ export default function QuoteDetailPage() {
     setProfile(prof as Profile);
     setCompany(comp as Company | null);
     setServices(svcs || []);
-    setDiscount(String((q as any).discount ?? 0));
-    setDiscountType(((q as any).discount_type ?? "pct") as "pct" | "val");
+    const dbDiscount = String((q as any).discount ?? 0);
+    const dbDiscountType = ((q as any).discount_type ?? "pct") as "pct" | "val";
+    setDiscount(dbDiscount);
+    setDiscountType(dbDiscountType);
+    setSavedDiscount(dbDiscount);
+    setSavedDiscountType(dbDiscountType);
     setLoading(false);
   }, [id]);
 
@@ -345,6 +352,31 @@ export default function QuoteDetailPage() {
       discount: parseFloat(discount || "0"),
       discount_type: discountType,
     }).eq("id", quote!.id);
+    await loadQuote();
+  }
+
+  async function handleSaveDiscount() {
+    if (!quote || !profile) return;
+    setSavingDiscount(true);
+    const { data: allItems } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote.id);
+    const subtotalBrut = (allItems || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
+    const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
+    const subtotalNet = subtotalBrut - dVal;
+    const isPro = profile.account_type === "pro";
+    const emitent = getEmitent();
+    const vatRate = isPro ? emitent.vat_rate : 0;
+    const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
+    await supabase.from("quotes").update({
+      total: subtotalNet,
+      vat_rate: vatRate,
+      vat_amount: vatAmount,
+      total_with_vat: subtotalNet + vatAmount,
+      discount: parseFloat(discount || "0"),
+      discount_type: discountType,
+    }).eq("id", quote.id);
+    setSavedDiscount(discount);
+    setSavedDiscountType(discountType);
+    setSavingDiscount(false);
     await loadQuote();
   }
 
@@ -512,6 +544,12 @@ export default function QuoteDetailPage() {
           </div>
           {parseFloat(discount || "0") > 0 && (
             <p className="text-sm text-red-500 font-medium mt-2">-{fmt(discountVal)} discount aplicat</p>
+          )}
+          {(discount !== savedDiscount || discountType !== savedDiscountType) && (
+            <button onClick={handleSaveDiscount} disabled={savingDiscount}
+              className="mt-3 w-full py-2.5 bg-orange-500 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
+              {savingDiscount ? "Se salveaza..." : "Salveaza discount"}
+            </button>
           )}
         </div>
 
