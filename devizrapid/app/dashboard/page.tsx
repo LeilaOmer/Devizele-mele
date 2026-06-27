@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { trialInfo } from '@/lib/trial'
 import { useRouter } from 'next/navigation'
 
 interface Company {
@@ -18,12 +19,21 @@ export default function Dashboard() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
+  const [trial, setTrial] = useState<{ daysLeft: number; isActive: boolean; urgency: 'ok' | 'warning' | 'critical' } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
+
+      // verifica trial
+      const t = trialInfo(session.user.created_at)
+      setTrial(t)
+      if (!t.isActive) {
+        router.push('/trial-expired')
+        return
+      }
 
       let { data: prof } = await supabase
         .from('profiles').select('account_type, company_name, email').eq('id', session.user.id).single()
@@ -33,7 +43,8 @@ export default function Dashboard() {
         return
       }
 
-      const userPlan: 'meseriaș' | 'pro' = prof.account_type || 'meseriaș'
+      // in trial, toata lumea are acces complet (pro)
+      const userPlan: 'meseriaș' | 'pro' = 'pro'
       setPlan(userPlan)
 
       // modul activ: daca are pro, preia din localStorage, altfel meserias
@@ -103,6 +114,35 @@ export default function Dashboard() {
             <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-gray-700">Iesi</button>
           </div>
         </div>
+
+        {/* Banner trial */}
+        {trial && (
+          <div className={`rounded-2xl px-4 py-3 flex items-center justify-between ${
+            trial.urgency === 'critical' ? 'bg-red-50 border border-red-200' :
+            trial.urgency === 'warning'  ? 'bg-amber-50 border border-amber-200' :
+                                           'bg-green-50 border border-green-200'
+          }`}>
+            <div>
+              <p className={`text-xs font-bold uppercase tracking-wide ${
+                trial.urgency === 'critical' ? 'text-red-500' :
+                trial.urgency === 'warning'  ? 'text-amber-500' : 'text-green-600'
+              }`}>
+                {trial.urgency === 'critical' ? '⚠️ Trial aproape de final' :
+                 trial.urgency === 'warning'  ? '⏳ Trial activ' : '✓ Trial activ'}
+              </p>
+              <p className={`text-sm font-semibold ${
+                trial.urgency === 'critical' ? 'text-red-700' :
+                trial.urgency === 'warning'  ? 'text-amber-700' : 'text-green-700'
+              }`}>
+                {trial.daysLeft === 1 ? 'Ultima zi' : `${trial.daysLeft} zile ramase`} · Acces complet gratuit
+              </p>
+            </div>
+            <span className={`text-2xl font-black ${
+              trial.urgency === 'critical' ? 'text-red-300' :
+              trial.urgency === 'warning'  ? 'text-amber-300' : 'text-green-300'
+            }`}>{trial.daysLeft}</span>
+          </div>
+        )}
 
         {/* Unelte principale — carduri mari */}
         <div className="grid grid-cols-2 gap-3">
