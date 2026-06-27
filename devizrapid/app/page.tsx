@@ -24,10 +24,10 @@ export default function LandingPage() {
           30 de zile gratuit · Fără card
         </p>
         <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-6 max-w-xl">
-          Fișe de servicii și calcul de preț pentru prestatori.
+          Fișe de servicii și calcul de preț. Rapid și corect.
         </h1>
         <p className="text-xl text-gray-500 mb-10 max-w-lg leading-relaxed">
-          Dictezi ce ai lucrat, aplicația generează fișa cu prețurile tale. Sau calculezi prețul de vânzare cu adaos și TVA. Fără Excel. Fără hârtii.
+          Dictezi ce ai lucrat și generezi fișa cu prețurile tale. Sau calculezi prețul de vânzare cu adaos și TVA pentru orice produs. Fără Excel. Fără hârtii.
         </p>
         <Link href="/login"
           className="inline-block px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">
@@ -70,12 +70,19 @@ export default function LandingPage() {
       <section className="border-t border-gray-100 bg-gray-50 px-6 py-16">
         <div className="max-w-3xl mx-auto">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-6">Pentru cine</p>
-          <p className="text-2xl font-bold text-gray-900 mb-4 max-w-xl">
-            Orice prestator care lucrează cu prețuri și clienți.
+          <p className="text-2xl font-bold text-gray-900 mb-6 max-w-xl">
+            Două categorii, același instrument.
           </p>
-          <p className="text-gray-500 max-w-lg leading-relaxed">
-            Electricieni, instalatori, tehnicieni HVAC, contabili, mecanici, curățenie — dacă emiți fișe de servicii sau calculezi prețuri de vânzare, Tarifatorul e construit pentru tine.
-          </p>
+          <div className="grid md:grid-cols-2 gap-8 max-w-2xl">
+            <div>
+              <p className="font-semibold text-gray-900 mb-2">Prestatori de servicii</p>
+              <p className="text-gray-500 text-sm leading-relaxed">Electricieni, instalatori, tehnicieni HVAC, contabili, mecanici, curățenie — oricine emite fișe de servicii și lucrează cu clienți.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 mb-2">Mici comercianți</p>
+              <p className="text-gray-500 text-sm leading-relaxed">Magazine, distribuitori, revânzători — oricine cumpără produse și trebuie să calculeze prețul de vânzare cu adaos și TVA.</p>
+            </div>
+          </div>
         </div>
       </section>
 
