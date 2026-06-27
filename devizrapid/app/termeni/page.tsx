@@ -13,9 +13,9 @@ export default function TermeniPage() {
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 space-y-3">
           <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Pe scurt — ce trebuie sa stii</p>
           <ul className="space-y-2 text-sm text-blue-900">
-            <li>✓ <strong>Ce e Tarifator:</strong> aplicatie pentru meseriari — genereaza fise de servicii, calculeaza preturi, exporta PDF.</li>
+            <li>✓ <strong>Ce e Tarifator:</strong> aplicatie pentru artizani si prestatori de servicii — genereaza fise de servicii, calculeaza preturi, exporta PDF.</li>
             <li>✓ <strong>Trial gratuit:</strong> 30 de zile cu acces complet, fara card.</li>
-            <li>✓ <strong>Dupa trial:</strong> plan gratuit (3 fise + 3 calcule/luna) sau abonament Meserias 25 lei/luna / Pro 65 lei/luna.</li>
+            <li>✓ <strong>Dupa trial:</strong> plan gratuit (3 fise + 3 calcule/luna) sau abonament Artizan 25 lei/luna / Pro 65 lei/luna.</li>
             <li>✓ <strong>Datele tale iti apartin:</strong> fisele, clientii si preturile introduse de tine sunt ale tale si le poti sterge oricand.</li>
             <li>✓ <strong>Retragere:</strong> ai 14 zile sa te razgandesti dupa plata. Daca ai folosit deja serviciul, rambursarea e proportionala.</li>
             <li>✓ <strong>Anulare:</strong> oricand, fara penalitati. Accesul continua pana la expirarea perioadei platite.</li>
@@ -30,7 +30,7 @@ export default function TermeniPage() {
         </Section>
 
         <Section title="2. Descrierea Serviciului">
-          <p>Tarifator este o platforma digitala destinata meseriasilor si firmelor mici pentru:</p>
+          <p>Tarifator este o platforma digitala destinata artizanilor, prestatorilor de servicii si firmelor mici pentru:</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li>Generarea de fise de servicii prin dictare vocala sau manual</li>
             <li>Calculul pretului de vanzare cu adaos si TVA</li>
@@ -53,7 +53,7 @@ export default function TermeniPage() {
           <div className="space-y-2">
             <Row label="Perioada de test" value="30 de zile gratuite cu acces complet (Plan Pro)" />
             <Row label="Plan gratuit" value="3 fise/luna + 3 calcule de pret/luna, dupa expirarea trialului" />
-            <Row label="Plan Meserias" value="25 lei (RON)/luna — utilizare nelimitata, fara TVA, fara firme" />
+            <Row label="Plan Artizan" value="25 lei (RON)/luna — utilizare nelimitata, fara TVA, fara firme" />
             <Row label="Plan Pro" value="65 lei (RON)/luna — utilizare nelimitata, TVA, firme multiple" />
           </div>
           <p className="mt-3">Tarifele pot fi modificate cu notificare prealabila de minimum <strong>30 de zile</strong> transmisa pe adresa de email inregistrata. Continuarea utilizarii Serviciului dupa data intrarii in vigoare a noilor tarife constituie acceptarea acestora.</p>

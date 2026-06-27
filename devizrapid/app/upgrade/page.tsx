@@ -27,19 +27,19 @@ function UpgradeContent() {
           <p className="text-sm text-gray-500">Fise si calcule nelimitate. Fara limite lunare.</p>
         </div>
 
-        {/* Meserias */}
+        {/* Artizan */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🔨</span>
             <div>
-              <p className="font-bold text-gray-900">Meserias</p>
+              <p className="font-bold text-gray-900">Artizan</p>
               <p className="text-2xl font-black text-gray-900">25 <span className="text-base font-semibold text-gray-400">lei/luna</span></p>
             </div>
           </div>
           <ul className="space-y-1.5 text-sm text-gray-600">
             <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Fise Servicii nelimitate</li>
             <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Calcule Pret nelimitate</li>
-            <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Fara TVA · Fara firme</li>
+            <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Fără TVA · Fără firme</li>
           </ul>
         </div>
 

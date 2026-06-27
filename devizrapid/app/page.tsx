@@ -96,7 +96,7 @@ export default function LandingPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-lg">🔨</span>
-                  <p className="font-bold text-gray-900">Meseriaș</p>
+                  <p className="font-bold text-gray-900">Artizan</p>
                 </div>
                 <p className="text-xs text-gray-500">Fișe și calcule nelimitate · Fără TVA</p>
               </div>
@@ -112,7 +112,7 @@ export default function LandingPage() {
                   <p className="font-bold text-gray-900">Pro</p>
                   <span className="text-[10px] font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Recomandat</span>
                 </div>
-                <p className="text-xs text-gray-500">Tot Meseriaș + TVA · Firme multiple</p>
+                <p className="text-xs text-gray-500">Tot Artizan + TVA · Firme multiple</p>
               </div>
               <p className="text-2xl font-black text-gray-900 shrink-0">65 <span className="text-sm font-semibold text-gray-400">lei/lună</span></p>
             </div>

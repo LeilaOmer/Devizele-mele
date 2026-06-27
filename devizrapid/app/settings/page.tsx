@@ -167,7 +167,7 @@ export default function SettingsPage() {
                 }`}>
                 <span className="text-2xl">{type === 'pro' ? '🏢' : '🔨'}</span>
                 <span className={`text-sm font-bold ${accountType === type ? (type === 'pro' ? 'text-purple-700' : 'text-blue-700') : 'text-gray-700'}`}>
-                  {type === 'pro' ? 'Pro' : 'Meseriaș'}
+                  {type === 'pro' ? 'Pro' : 'Artizan'}
                 </span>
                 <span className="text-xs text-gray-400 text-center">{type === 'pro' ? 'TVA · Firme' : 'Fara TVA · Simplu'}</span>
               </button>
@@ -209,7 +209,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Meseriaș — profil simplu */}
+        {/* Artizan — profil simplu */}
         {accountType === 'meseriaș' && <MeseriasForm />}
 
         {/* Contul meu */}
@@ -230,7 +230,7 @@ export default function SettingsPage() {
               <p className="text-xs text-gray-400">Abonament</p>
               <p className="text-sm font-semibold text-gray-800">
                 {planActiveUntil && new Date(planActiveUntil) > new Date()
-                  ? `${accountType === 'pro' ? 'Pro' : 'Meseriaș'} · activ pana la ${new Date(planActiveUntil).toLocaleDateString('ro-RO')}`
+                  ? `${accountType === 'pro' ? 'Pro' : 'Artizan'} · activ pana la ${new Date(planActiveUntil).toLocaleDateString('ro-RO')}`
                   : 'Plan gratuit'}
               </p>
             </div>

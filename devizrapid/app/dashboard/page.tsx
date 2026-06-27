@@ -287,7 +287,7 @@ export default function Dashboard() {
           {/* Dreapta: selector mod + firma activa */}
           <div className="flex flex-col gap-3">
 
-            {/* Tab meserias */}
+            {/* Tab artizan */}
             <button
               onClick={() => switchMode('meseriaș')}
               disabled={plan !== 'pro'}
@@ -299,13 +299,13 @@ export default function Dashboard() {
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-lg">🔨</span>
                 <span className={`font-bold text-sm ${mode === 'meseriaș' ? 'text-blue-700' : 'text-gray-600'}`}>
-                  Meserias
+                  Artizan
                 </span>
                 {mode === 'meseriaș' && (
                   <span className="ml-auto text-[10px] font-bold text-blue-500 uppercase tracking-wide">activ</span>
                 )}
               </div>
-              <p className="text-xs text-gray-400">Fara TVA · Fara firme</p>
+              <p className="text-xs text-gray-400">Fără TVA · Fără firme</p>
             </button>
 
             {/* Tab pro */}
