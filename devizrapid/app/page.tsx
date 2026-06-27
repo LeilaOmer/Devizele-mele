@@ -24,10 +24,13 @@ export default function LandingPage() {
           30 de zile gratuit · Fără card
         </p>
         <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-6 max-w-xl">
-          Fișe de servicii și calcul de preț. Rapid și corect.
+          Fișa clientului, gata înainte să pleci de la el.
         </h1>
-        <p className="text-xl text-gray-500 mb-10 max-w-lg leading-relaxed">
-          Dictezi ce ai lucrat și generezi fișa cu prețurile tale. Sau calculezi prețul de vânzare cu adaos și TVA pentru orice produs. Fără Excel. Fără hârtii.
+        <p className="text-xl text-gray-500 mb-4 max-w-lg leading-relaxed">
+          Dictezi ce ai lucrat. Fișa apare cu prețurile tale. O trimiți pe WhatsApp și pleci.
+        </p>
+        <p className="text-sm text-gray-400 mb-10 max-w-lg">
+          Nu faci devize cu materiale și norme. Faci fișa de servicii prestate — simplu, rapid, pe telefon.
         </p>
         <Link href="/login"
           className="inline-block px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">
