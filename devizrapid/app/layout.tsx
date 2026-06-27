@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import ActiveCompanyBanner from './components/ActiveCompanyBanner'
+import CookieBanner from './components/CookieBanner'
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         `}} />
         <ActiveCompanyBanner />
         {children}
+        <CookieBanner />
         <Link href="/quick"
           className="fixed bottom-24 right-4 z-[9999] w-14 h-14 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-full shadow-xl flex items-center justify-center"
           title="Fisa Servicii rapid prin dictare">
