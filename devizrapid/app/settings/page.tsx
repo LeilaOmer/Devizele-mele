@@ -31,6 +31,11 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState('')
+  const [planActiveUntil, setPlanActiveUntil] = useState<string | null>(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -38,8 +43,12 @@ export default function SettingsPage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { router.push('/login'); return }
     const user = session.user
-    const { data: prof } = await supabase.from('profiles').select('account_type').eq('id', user.id).single()
-    if (prof) setAccountType(prof.account_type || 'meseriaș')
+    setUserEmail(user.email || '')
+    const { data: prof } = await supabase.from('profiles').select('account_type, plan_active_until').eq('id', user.id).single()
+    if (prof) {
+      setAccountType(prof.account_type || 'meseriaș')
+      setPlanActiveUntil(prof.plan_active_until || null)
+    }
     const { data: cos } = await supabase.from('companies').select('*').order('name')
     setCompanies(cos || [])
     setLoading(false)
@@ -104,6 +113,25 @@ export default function SettingsPage() {
     if (!confirm('Stergi firma? Devizele asociate raman dar fara firma.')) return
     await supabase.from('companies').delete().eq('id', id)
     load()
+  }
+
+  async function handleDeleteAccount() {
+    setDeletingAccount(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setDeletingAccount(false); return }
+    const res = await fetch('/api/delete-account', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+    if (res.ok) {
+      await supabase.auth.signOut()
+      router.push('/login')
+    } else {
+      const { error } = await res.json()
+      alert('Eroare la stergere: ' + (error || 'necunoscuta'))
+      setDeletingAccount(false)
+      setShowDeleteModal(false)
+    }
   }
 
   function startEdit(c: Company) {
@@ -184,6 +212,62 @@ export default function SettingsPage() {
         {/* Meseriaș — profil simplu */}
         {accountType === 'meseriaș' && <MeseriasForm />}
 
+        {/* Contul meu */}
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Contul meu</p>
+          </div>
+
+          <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-400">Email cont</p>
+              <p className="text-sm font-semibold text-gray-800">{userEmail}</p>
+            </div>
+          </div>
+
+          <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-400">Abonament</p>
+              <p className="text-sm font-semibold text-gray-800">
+                {planActiveUntil && new Date(planActiveUntil) > new Date()
+                  ? `${accountType === 'pro' ? 'Pro' : 'Meseriaș'} · activ pana la ${new Date(planActiveUntil).toLocaleDateString('ro-RO')}`
+                  : 'Plan gratuit'}
+              </p>
+            </div>
+            {planActiveUntil && new Date(planActiveUntil) > new Date() && (
+              <button onClick={() => setShowCancelModal(true)}
+                className="text-xs font-semibold text-amber-600 hover:text-amber-800">
+                Anuleaza
+              </button>
+            )}
+          </div>
+
+          <div className="px-5 py-3 border-b border-gray-50">
+            <p className="text-xs text-gray-400 mb-2">Documente legale</p>
+            <div className="space-y-2">
+              {[
+                { href: '/termeni', label: 'Termeni și Condiții' },
+                { href: '/confidentialitate', label: 'Politica de Confidentialitate (GDPR)' },
+                { href: '/retragere', label: 'Drept de Retragere · Rambursare · Anulare' },
+              ].map(({ href, label }) => (
+                <a key={href} href={href}
+                  className="flex items-center justify-between text-sm text-blue-600 hover:text-blue-800 py-0.5">
+                  {label}
+                  <span className="text-gray-300 ml-2">→</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="px-5 py-3">
+            <button onClick={() => setShowDeleteModal(true)}
+              className="text-sm font-semibold text-red-500 hover:text-red-700">
+              Sterge contul
+            </button>
+            <p className="text-xs text-gray-400 mt-0.5">Toate datele tale vor fi sterse definitiv.</p>
+          </div>
+        </div>
+
       </div>
 
       {/* Modal copiere servicii */}
@@ -195,6 +279,43 @@ export default function SettingsPage() {
               <button onClick={() => handleCopyServices(false)} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600">Nu</button>
               <button onClick={() => handleCopyServices(true)} className="flex-1 py-3 rounded-xl bg-purple-600 text-white text-sm font-semibold">Da</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full space-y-4">
+            <h2 className="font-bold text-gray-900">Anulare abonament</h2>
+            <p className="text-sm text-gray-600">Trimite un email la adresa de mai jos cu subiectul <strong>"Anulare abonament"</strong>. Accesul continua pana la expirarea perioadei platite.</p>
+            <a href={`mailto:leyla.omer@gmail.com?subject=Anulare%20abonament&body=Doresc%20anularea%20abonamentului%20pentru%20contul%3A%20${encodeURIComponent(userEmail)}`}
+              className="block w-full py-3 bg-amber-500 text-white font-bold rounded-xl text-sm text-center">
+              Deschide email
+            </a>
+            <button onClick={() => setShowCancelModal(false)}
+              className="w-full py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600">
+              Inchide
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full space-y-4">
+            <div className="text-center">
+              <div className="text-4xl mb-2">⚠️</div>
+              <h2 className="font-bold text-gray-900">Stergi contul?</h2>
+              <p className="text-sm text-gray-500 mt-1">Aceasta actiune este <strong>ireversibila</strong>. Fișele, clienții, serviciile și toate datele tale vor fi șterse definitiv.</p>
+            </div>
+            <button onClick={handleDeleteAccount} disabled={deletingAccount}
+              className="w-full py-3 bg-red-600 text-white font-bold rounded-xl text-sm disabled:bg-red-300">
+              {deletingAccount ? 'Se sterge...' : 'Da, sterge contul definitiv'}
+            </button>
+            <button onClick={() => setShowDeleteModal(false)} disabled={deletingAccount}
+              className="w-full py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600">
+              Anuleaza
+            </button>
           </div>
         </div>
       )}
