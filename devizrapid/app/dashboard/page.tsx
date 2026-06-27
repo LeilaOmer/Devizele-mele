@@ -148,39 +148,40 @@ export default function Dashboard() {
 
         {/* Onboarding — prima vizita */}
         {showWelcome && (
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-3">
+          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-4">
             <div className="flex justify-between items-start">
-              <p className="text-sm font-bold text-blue-800">Bun venit în Tarifator! 👋</p>
+              <div>
+                <p className="font-black text-lg text-gray-900">Bun venit în Tarifator! 👋</p>
+                <p className="text-sm text-gray-400 mt-0.5">Cu ce vrei să începi?</p>
+              </div>
               <button onClick={() => { localStorage.setItem('welcomed', '1'); setShowWelcome(false) }}
-                className="text-blue-300 hover:text-blue-500 text-lg leading-none">×</button>
+                className="text-gray-300 hover:text-gray-500 text-xl leading-none">×</button>
             </div>
-            <p className="text-xs text-blue-600">3 pași pentru a începe:</p>
-            <div className="space-y-2">
-              <a href="/services" className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 shadow-sm hover:shadow">
-                <span className="text-xl">🔧</span>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">1. Adaugă serviciile tale</p>
-                  <p className="text-xs text-gray-400">Prețurile cu care lucrezi</p>
-                </div>
-                <span className="ml-auto text-gray-300 text-lg">›</span>
+
+            <div className="grid grid-cols-2 gap-3">
+              <a href="/services"
+                onClick={() => localStorage.setItem('welcomed', '1')}
+                className="bg-blue-50 border-2 border-blue-100 hover:border-blue-400 rounded-2xl p-4 flex flex-col gap-2 transition-all active:scale-95">
+                <span className="text-3xl">🎙️</span>
+                <p className="font-bold text-sm text-gray-900 leading-tight">Fișe de servicii</p>
+                <p className="text-xs text-gray-500">Dictezi ce ai lucrat, trimiți PDF clientului</p>
+                <span className="text-xs text-blue-600 font-semibold mt-1">Începe →</span>
               </a>
-              <a href="/quick" className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 shadow-sm hover:shadow">
-                <span className="text-xl">🎙️</span>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">2. Dictează prima fișă</p>
-                  <p className="text-xs text-gray-400">Voce → fișă în secunde</p>
-                </div>
-                <span className="ml-auto text-gray-300 text-lg">›</span>
-              </a>
-              <a href="/settings" className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 shadow-sm hover:shadow">
-                <span className="text-xl">⚙️</span>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">3. Completează profilul</p>
-                  <p className="text-xs text-gray-400">Nume, telefon, date firmă</p>
-                </div>
-                <span className="ml-auto text-gray-300 text-lg">›</span>
+              <a href="/pricing"
+                onClick={() => localStorage.setItem('welcomed', '1')}
+                className="bg-amber-50 border-2 border-amber-100 hover:border-amber-400 rounded-2xl p-4 flex flex-col gap-2 transition-all active:scale-95">
+                <span className="text-3xl">🏷️</span>
+                <p className="font-bold text-sm text-gray-900 leading-tight">Calculator preț</p>
+                <p className="text-xs text-gray-500">Calculezi prețul de vânzare cu adaos și TVA</p>
+                <span className="text-xs text-amber-600 font-semibold mt-1">Începe →</span>
               </a>
             </div>
+
+            <a href="/settings"
+              onClick={() => localStorage.setItem('welcomed', '1')}
+              className="flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 pt-1">
+              <span>⚙️</span> Completează mai întâi profilul și datele firmei
+            </a>
           </div>
         )}
 
