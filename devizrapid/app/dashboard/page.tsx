@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [usage, setUsage] = useState<{ fise: number; calcule: number } | null>(null)
   const [subscribed, setSubscribed] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [showWelcome, setShowWelcome] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -82,6 +83,7 @@ export default function Dashboard() {
           localStorage.setItem('activeCompanyName', active.name)
         }
       }
+      if (!localStorage.getItem('welcomed')) setShowWelcome(true)
       setLoading(false)
     }
     load()
@@ -143,6 +145,44 @@ export default function Dashboard() {
             <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-gray-700">Iesi</button>
           </div>
         </div>
+
+        {/* Onboarding — prima vizita */}
+        {showWelcome && (
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-3">
+            <div className="flex justify-between items-start">
+              <p className="text-sm font-bold text-blue-800">Bun venit în Tarifator! 👋</p>
+              <button onClick={() => { localStorage.setItem('welcomed', '1'); setShowWelcome(false) }}
+                className="text-blue-300 hover:text-blue-500 text-lg leading-none">×</button>
+            </div>
+            <p className="text-xs text-blue-600">3 pași pentru a începe:</p>
+            <div className="space-y-2">
+              <a href="/services" className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 shadow-sm hover:shadow">
+                <span className="text-xl">🔧</span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">1. Adaugă serviciile tale</p>
+                  <p className="text-xs text-gray-400">Prețurile cu care lucrezi</p>
+                </div>
+                <span className="ml-auto text-gray-300 text-lg">›</span>
+              </a>
+              <a href="/quick" className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 shadow-sm hover:shadow">
+                <span className="text-xl">🎙️</span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">2. Dictează prima fișă</p>
+                  <p className="text-xs text-gray-400">Voce → fișă în secunde</p>
+                </div>
+                <span className="ml-auto text-gray-300 text-lg">›</span>
+              </a>
+              <a href="/settings" className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 shadow-sm hover:shadow">
+                <span className="text-xl">⚙️</span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">3. Completează profilul</p>
+                  <p className="text-xs text-gray-400">Nume, telefon, date firmă</p>
+                </div>
+                <span className="ml-auto text-gray-300 text-lg">›</span>
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* Banner trial activ */}
         {trial?.isActive && (
