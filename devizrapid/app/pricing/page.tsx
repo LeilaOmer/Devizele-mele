@@ -143,6 +143,7 @@ export default function PricingPage() {
   const [items, setItems] = useState<Item[]>([emptyItem(21)])
   const [listening, setListening] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [usageInfo, setUsageInfo] = useState<{ calcule: number; limit: number; show: boolean } | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -151,24 +152,34 @@ export default function PricingPage() {
   const [voiceMsg, setVoiceMsg] = useState('')
 
   useEffect(() => {
+    // restaureaza doar setarile, NU produsele (produsele sunt per factura)
     try {
-      const saved = localStorage.getItem('pricing_state')
+      const saved = localStorage.getItem('pricing_settings')
       if (saved) {
         const s = JSON.parse(saved)
-        if (s.items?.length) setItems(s.items)
         if (s.adaos) setAdaos(s.adaos)
-        if (s.supplier) setSupplier(s.supplier)
         if (s.roundStep) setRoundStep(s.roundStep)
         if (s.roundMode) setRoundMode(s.roundMode)
       }
     } catch {}
+
+    // incarca contorul de calcule
+    async function loadUsage() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const t = trialInfo(session.user.created_at)
+      if (t.isActive) return
+      const [active, calcule] = await Promise.all([isPlanActive(session.user.id), getMonthlyCalcule(session.user.id)])
+      if (!active) setUsageInfo({ calcule, limit: FREE_CALCULE_LIMIT, show: true })
+    }
+    loadUsage()
   }, [])
 
   useEffect(() => {
     try {
-      localStorage.setItem('pricing_state', JSON.stringify({ items, adaos, supplier, roundStep, roundMode }))
+      localStorage.setItem('pricing_settings', JSON.stringify({ adaos, roundStep, roundMode }))
     } catch {}
-  }, [items, adaos, supplier, roundStep, roundMode])
+  }, [adaos, roundStep, roundMode])
 
   const adaosNum = parseFloat(adaos) || 0
 
@@ -278,6 +289,7 @@ export default function PricingPage() {
         return
       }
       await logCalcul(session.user.id)
+      setUsageInfo(prev => prev ? { ...prev, calcule: prev.calcule + 1 } : prev)
     }
 
     exportFn()
@@ -431,7 +443,14 @@ export default function PricingPage() {
       {validItems.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3">
           <div className="max-w-2xl mx-auto space-y-2">
-            <p className="text-xs text-center text-gray-400">{validItems.length} produs{validItems.length !== 1 ? 'e' : ''} cu pret calculat</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-400">{validItems.length} produs{validItems.length !== 1 ? 'e' : ''} cu pret calculat</p>
+              {usageInfo?.show && (
+                <p className={`text-xs font-semibold ${usageInfo.calcule >= usageInfo.limit ? 'text-red-500' : 'text-gray-400'}`}>
+                  {usageInfo.calcule}/{usageInfo.limit} calcule luna aceasta
+                </p>
+              )}
+            </div>
             <div className="flex gap-3">
               <button onClick={() => handleExport(() => exportPDFContabil(validItems, adaosNum, roundStep, roundMode, supplier))}
                 className="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-xl text-sm">
