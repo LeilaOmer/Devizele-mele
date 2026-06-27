@@ -56,6 +56,8 @@ interface Quote {
   vat_rate: number;
   vat_amount: number;
   total_with_vat: number;
+  discount: number;
+  discount_type: "pct" | "val";
   clients: Client;
   quote_items: QuoteItem[];
 }
@@ -208,7 +210,7 @@ export default function QuoteDetailPage() {
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       supabase.from("quotes").select(`
         id, quote_number, created_at, status,
-        vat_rate, vat_amount, total_with_vat,
+        vat_rate, vat_amount, total_with_vat, discount, discount_type,
         clients ( id, name, cui, address, contact_person, phone, email ),
         quote_items ( id, description, quantity, unit_price, total )
       `).eq("id", id).single(),
@@ -231,6 +233,8 @@ export default function QuoteDetailPage() {
     setProfile(prof as Profile);
     setCompany(comp as Company | null);
     setServices(svcs || []);
+    setDiscount(String((q as any).discount ?? 0));
+    setDiscountType(((q as any).discount_type ?? "pct") as "pct" | "val");
     setLoading(false);
   }, [id]);
 
@@ -314,6 +318,8 @@ export default function QuoteDetailPage() {
       vat_rate: vatRate,
       vat_amount: vatAmount,
       total_with_vat: subtotalNet + vatAmount,
+      discount: parseFloat(discount || "0"),
+      discount_type: discountType,
     }).eq("id", quote.id);
 
     setRows([emptyRow()]);
@@ -336,6 +342,8 @@ export default function QuoteDetailPage() {
       vat_rate: vatRate,
       vat_amount: vatAmount,
       total_with_vat: subtotalNet + vatAmount,
+      discount: parseFloat(discount || "0"),
+      discount_type: discountType,
     }).eq("id", quote!.id);
     await loadQuote();
   }
