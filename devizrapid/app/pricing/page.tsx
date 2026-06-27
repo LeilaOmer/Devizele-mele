@@ -41,6 +41,7 @@ function calcItem(item: Item, adaos: number, step: RoundStep, mode: RoundMode) {
 
 const fmt2 = (n: number) => n.toFixed(2)
 const fmtDate = () => new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+const noDiac = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[șŞ]/g, 's').replace(/[țŢ]/g, 't').replace(/[ăÂâ]/g, 'a').replace(/[îÎ]/g, 'i')
 
 function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
@@ -49,7 +50,7 @@ function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: 
   doc.setFontSize(13); doc.setFont('helvetica', 'bold')
   doc.text('Calculator Pret Vanzare', margin, y); y += 6
   doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100)
-  doc.text(`Data: ${fmtDate()}  |  Furnizor: ${supplier || '—'}  |  Adaos: ${adaos}%  |  Rotunjire: ${step === 'none' ? 'fara' : step + ' lei (' + (mode === 'nearest' ? 'corect' : 'in sus') + ')'}`, margin, y)
+  doc.text(`Data: ${fmtDate()}  |  Furnizor: ${noDiac(supplier || '-')}  |  Adaos: ${adaos}%  |  Rotunjire: ${step === 'none' ? 'fara' : step + ' lei (' + (mode === 'nearest' ? 'corect' : 'in sus') + ')'}`, margin, y)
   y += 8
 
   const cols = [
@@ -78,8 +79,8 @@ function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: 
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6, 'F') }
     doc.setFontSize(8)
     const vals = [
-      item.name, item.unit, fmt2(c.sp),
-      c.disc > 0 ? `${c.disc}%` : '—',
+      noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
+      c.disc > 0 ? `${c.disc}%` : '-',
       fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
       fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
     ]
@@ -115,8 +116,8 @@ function exportPDFMagazin(items: Item[], adaos: number, step: RoundStep, mode: R
     const { final } = calcItem(item, adaos, step, mode)
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6.5, 'F') }
     doc.setFontSize(9)
-    doc.text(item.name, margin, y)
-    doc.text(item.unit, 130, y)
+    doc.text(noDiac(item.name), margin, y)
+    doc.text(noDiac(item.unit), 130, y)
     doc.setFont('helvetica', 'bold')
     doc.text(fmt2(final) + ' RON', W - margin, y, { align: 'right' })
     doc.setFont('helvetica', 'normal')
