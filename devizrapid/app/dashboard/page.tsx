@@ -149,6 +149,12 @@ export default function Dashboard() {
             <h2 className="font-semibold text-lg text-gray-900">Clienti</h2>
             <p className="text-gray-500 text-sm">Gestioneaza lista de clienti</p>
           </a>
+
+          <a href="/pricing" className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md active:scale-95 transition-all col-span-2">
+            <div className="text-2xl mb-2">🏷️</div>
+            <h2 className="font-semibold text-lg text-gray-900">Calculator Pret Vanzare</h2>
+            <p className="text-gray-500 text-sm">Adaos comercial · TVA · Rotunjire · PDF contabil + magazin</p>
+          </a>
         </div>
 
       </div>
