@@ -200,16 +200,16 @@ export default function Dashboard() {
         {/* Unelte principale — carduri mari */}
         <div className="grid grid-cols-2 gap-3">
           <a href="/quick"
-            className="bg-blue-600 text-white p-5 rounded-2xl shadow hover:bg-blue-700 active:scale-95 transition-all flex flex-col min-h-[160px]">
+            className="bg-white p-5 rounded-2xl shadow hover:shadow-md active:scale-95 transition-all flex flex-col min-h-[160px] border border-gray-100">
             <span className="text-4xl mb-3">🎙️</span>
-            <h2 className="font-bold text-xl leading-tight">Fișă Servicii Voce</h2>
-            <p className="text-blue-200 text-sm mt-1.5">Dictează și generează instant</p>
+            <h2 className="font-bold text-xl leading-tight text-gray-900">Fișă Servicii Voce</h2>
+            <p className="text-gray-500 text-sm mt-1.5">Dictează și generează instant</p>
           </a>
           <a href="/pricing"
-            className="bg-amber-500 text-white p-5 rounded-2xl shadow hover:bg-amber-600 active:scale-95 transition-all flex flex-col min-h-[160px]">
+            className="bg-white p-5 rounded-2xl shadow hover:shadow-md active:scale-95 transition-all flex flex-col min-h-[160px] border border-gray-100">
             <span className="text-4xl mb-3">🏷️</span>
-            <h2 className="font-bold text-xl leading-tight">Calculator Preț Vânzare</h2>
-            <p className="text-amber-100 text-sm mt-1.5">Adaos · TVA · PDF</p>
+            <h2 className="font-bold text-xl leading-tight text-gray-900">Calculator Preț Vânzare</h2>
+            <p className="text-gray-500 text-sm mt-1.5">Adaos · TVA · PDF</p>
           </a>
         </div>
 
