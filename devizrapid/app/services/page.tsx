@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 
 type Service = {
   id: string
@@ -18,6 +19,7 @@ export default function ServicesPage() {
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
   const [activeCompanyName, setActiveCompanyName] = useState<string | null>(null)
   const [isPro, setIsPro] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     async function init() {
@@ -73,41 +75,63 @@ export default function ServicesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Servicii</h1>
-            {isPro && activeCompanyName && (
-              <p className="text-sm text-purple-600 font-medium mt-0.5">Firma activa: {activeCompanyName}</p>
-            )}
-            {isPro && !activeCompanyName && (
-              <p className="text-sm text-orange-500 mt-0.5">Nicio firma activa selectata</p>
-            )}
+    <div className="min-h-screen bg-gray-50 pb-10">
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
+        <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+          <span className="text-xl">‹</span> Dashboard
+        </button>
+        <h1 className="text-base font-bold text-gray-800">Servicii</h1>
+        <div className="w-20" />
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
+
+        {isPro && (
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
+              {activeCompanyName ? `Firma: ${activeCompanyName}` : 'Nicio firmă activă'}
+            </span>
           </div>
-          <a href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700">← Dashboard</a>
+        )}
+
+        {/* Form adaugare */}
+        <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Serviciu nou</p>
+          <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+            placeholder="Nume serviciu *" value={name} onChange={e => setName(e.target.value)} />
+          <div className="flex gap-3">
+            <input className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 w-32"
+              placeholder="UM (buc, h, mp)" value={unit} onChange={e => setUnit(e.target.value)} />
+            <input className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 flex-1"
+              placeholder="Preț / UM (lei)" type="number" value={price} onChange={e => setPrice(e.target.value)} />
+          </div>
+          <button onClick={handleAdd} disabled={loading || !name || !unit || !price}
+            className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
+            {loading ? 'Se adaugă...' : '+ Adaugă serviciu'}
+          </button>
         </div>
-        <div className="bg-white p-4 rounded shadow mb-6 flex gap-2">
-          <input className="border p-2 rounded flex-1" placeholder="Nume serviciu" value={name} onChange={e => setName(e.target.value)} />
-          <input className="border p-2 rounded w-24" placeholder="UM (mp, h)" value={unit} onChange={e => setUnit(e.target.value)} />
-          <input className="border p-2 rounded w-32" placeholder="Pret/UM" type="number" value={price} onChange={e => setPrice(e.target.value)} />
-          <button onClick={handleAdd} disabled={loading} className="bg-blue-600 text-white px-4 rounded">Adauga</button>
-        </div>
-        <div className="bg-white rounded shadow divide-y">
-          {services.length === 0 && <p className="p-4 text-gray-400">Niciun serviciu adaugat.</p>}
-          {services.map(s => (
-            <div key={s.id} className="flex justify-between items-center p-4">
-              <div>
-                <span className="font-medium">{s.name}</span>
-                <span className="text-gray-400 text-sm ml-2">{s.unit}</span>
+
+        {/* Lista servicii */}
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          {services.length === 0 && (
+            <p className="p-5 text-sm text-gray-400">Niciun serviciu adăugat.</p>
+          )}
+          <div className="divide-y divide-gray-50">
+            {services.map(s => (
+              <div key={s.id} className="flex items-center justify-between px-5 py-4 gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-gray-900 truncate">{s.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{s.unit}</p>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  <span className="text-sm font-bold text-gray-700">{s.price_per_unit} lei/{s.unit}</span>
+                  <button onClick={() => handleDelete(s.id)} className="text-red-400 text-xl leading-none">×</button>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="font-semibold">{s.price_per_unit} lei/{s.unit}</span>
-                <button onClick={() => handleDelete(s.id)} className="text-red-400 hover:text-red-600 text-sm">Sterge</button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
       </div>
     </div>
   )
