@@ -198,6 +198,7 @@ export default function PricingPage() {
       const tr = await fetch('/api/transcribe', { method: 'POST', body: form })
       const { text } = await tr.json()
       if (!text) { setLoading(false); setVoiceMsg('Nu am prins nimic. Vorbeste mai tare sau mai aproape de microfon.'); return }
+      setVoiceMsg(`Am auzit: "${text}"`);
       const res = await fetch('/api/parse-pricing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -208,8 +209,8 @@ export default function PricingPage() {
         id: crypto.randomUUID(),
         name: i.name || '',
         unit: i.unit || 'buc',
-        supplierPrice: String(i.supplier_price || ''),
-        discount: String(i.discount || 0),
+        supplierPrice: i.supplier_price != null && i.supplier_price !== 0 ? String(i.supplier_price) : '',
+        discount: String(i.discount ?? 0),
         vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
       })).filter((i: Item) => i.name)
       if (parsed.length > 0) {
