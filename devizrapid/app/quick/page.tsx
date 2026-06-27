@@ -166,7 +166,7 @@ export default function QuickPage() {
       status: 'draft',
       total: 0,
       quote_number,
-      company_id: localStorage.getItem('activeCompanyId') || null
+      company_id: localStorage.getItem('dashboardMode') === 'pro' ? (localStorage.getItem('activeCompanyId') || null) : null
     }).select().single()
     if (!quote) return setLoading(false)
     for (const item of preview.items) {

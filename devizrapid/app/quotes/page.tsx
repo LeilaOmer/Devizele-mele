@@ -21,7 +21,8 @@ export default function QuotesPage() {
   const router = useRouter()
 
   useEffect(() => {
-  const saved = localStorage.getItem('activeCompanyId')
+  const mode = localStorage.getItem('dashboardMode')
+  const saved = mode === 'pro' ? localStorage.getItem('activeCompanyId') : null
   setActiveCompanyId(saved)
   setFilterCompanyId('all')
   fetchData()
