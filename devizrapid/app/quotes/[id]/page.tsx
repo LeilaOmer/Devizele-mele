@@ -204,37 +204,33 @@ export default function QuoteDetailPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login"); return; }
 
-    const activeCompanyId = localStorage.getItem("activeCompanyId") || "";
-
-    const [{ data: prof }, { data: comp }, { data: q, error: qErr }, { data: svcs }] = await Promise.all([
+    const [{ data: prof }, { data: q, error: qErr }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
-      activeCompanyId
-        ? supabase.from("companies").select("*").eq("id", activeCompanyId).single()
-        : Promise.resolve({ data: null }),
       supabase.from("quotes").select(`
         id, quote_number, created_at, status,
         vat_rate, vat_amount, total_with_vat,
         clients ( id, name, cui, address, contact_person, phone, email ),
         quote_items ( id, description, quantity, unit_price, total )
       `).eq("id", id).single(),
-Promise.resolve({ data: null }),
     ]);
 
-    if (qErr || !q) { setError("Devizul nu a putut fi incarcat."); }
-else {
-  // aici ai q disponibil
-const companyId = (q as any)?.company_id
-const { data: svcs } = companyId
-  ? await supabase.from("services").select("*").eq("company_id", companyId).order("name")
-  : await supabase.from("services").select("*").is("company_id", null).order("name")
-setServices(svcs || [])
-  
-  setQuote(q as unknown as Quote);
-  setProfile(prof as Profile);
-  setCompany(comp as Company | null);
+    if (qErr || !q) { setError("Devizul nu a putut fi incarcat."); setLoading(false); return; }
 
-   
-    }
+    const companyId = (q as any)?.company_id;
+
+    const [{ data: comp }, { data: svcs }] = await Promise.all([
+      companyId
+        ? supabase.from("companies").select("*").eq("id", companyId).single()
+        : Promise.resolve({ data: null }),
+      companyId
+        ? supabase.from("services").select("*").eq("company_id", companyId).order("name")
+        : supabase.from("services").select("*").is("company_id", null).order("name"),
+    ]);
+
+    setQuote(q as unknown as Quote);
+    setProfile(prof as Profile);
+    setCompany(comp as Company | null);
+    setServices(svcs || []);
     setLoading(false);
   }, [id]);
 
@@ -327,6 +323,20 @@ setServices(svcs || [])
 
   async function handleDeleteItem(itemId: string) {
     await supabase.from("quote_items").delete().eq("id", itemId);
+    const { data: remaining } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote!.id);
+    const subtotalBrut = (remaining || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
+    const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
+    const subtotalNet = subtotalBrut - dVal;
+    const isPro = profile?.account_type === "pro";
+    const emitent = getEmitent();
+    const vatRate = isPro ? emitent.vat_rate : 0;
+    const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
+    await supabase.from("quotes").update({
+      total: subtotalNet,
+      vat_rate: vatRate,
+      vat_amount: vatAmount,
+      total_with_vat: subtotalNet + vatAmount,
+    }).eq("id", quote!.id);
     await loadQuote();
   }
 

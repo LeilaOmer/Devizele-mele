@@ -33,9 +33,12 @@ export default function Dashboard() {
         const saved = localStorage.getItem('activeCompanyId')
         if (saved && cos?.find(c => c.id === saved)) {
           setActiveCompanyId(saved)
+          const savedCompany = cos.find(c => c.id === saved)
+          if (savedCompany) localStorage.setItem('activeCompanyName', savedCompany.name)
         } else if (cos && cos.length > 0) {
           setActiveCompanyId(cos[0].id)
           localStorage.setItem('activeCompanyId', cos[0].id)
+          localStorage.setItem('activeCompanyName', cos[0].name)
         }
       }
       setLoading(false)

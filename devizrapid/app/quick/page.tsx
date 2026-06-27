@@ -19,9 +19,18 @@ export default function QuickPage() {
   useEffect(() => { previewRef.current = preview }, [preview])
 
   useEffect(() => {
-    supabase.from('services').select('*').order('name').then(({ data }) => {
+    async function loadServices() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const { data: prof } = await supabase.from('profiles').select('account_type').eq('id', session.user.id).single()
+      const isPro = prof?.account_type === 'pro'
+      const companyId = isPro ? localStorage.getItem('activeCompanyId') : null
+      const { data } = companyId
+        ? await supabase.from('services').select('*').eq('company_id', companyId).order('name')
+        : await supabase.from('services').select('*').is('company_id', null).order('name')
       if (data) setServices(data)
-    })
+    }
+    loadServices()
   }, [])
 
   function handleVoice() {
