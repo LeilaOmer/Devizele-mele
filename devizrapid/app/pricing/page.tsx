@@ -10,14 +10,15 @@ type Item = {
   id: string
   name: string
   unit: string
-  quantity: string
   supplierPrice: string
   discount: string
+  vat: 11 | 21
 }
 
-const emptyItem = (): Item => ({
+const emptyItem = (defaultVat: 11 | 21 = 21): Item => ({
   id: crypto.randomUUID(),
-  name: '', unit: 'buc', quantity: '1', supplierPrice: '', discount: '0',
+  name: '', unit: 'buc', supplierPrice: '', discount: '0',
+  vat: defaultVat,
 })
 
 function applyRounding(price: number, step: RoundStep, mode: RoundMode): number {
@@ -27,43 +28,42 @@ function applyRounding(price: number, step: RoundStep, mode: RoundMode): number 
   return Math.ceil(price / s) * s
 }
 
-function calcItem(item: Item, adaos: number, vat: number, step: RoundStep, mode: RoundMode) {
+function calcItem(item: Item, adaos: number, step: RoundStep, mode: RoundMode) {
   const sp = parseFloat(item.supplierPrice) || 0
   const disc = parseFloat(item.discount) || 0
-  const qty = parseFloat(item.quantity) || 1
   const netPrice = sp * (1 - disc / 100)
   const sellExVat = netPrice * (1 + adaos / 100)
-  const vatAmt = sellExVat * (vat / 100)
+  const vatAmt = sellExVat * (item.vat / 100)
   const withVat = sellExVat + vatAmt
   const final = applyRounding(withVat, step, mode)
-  return { sp, disc, qty, netPrice, sellExVat, vatAmt, withVat, final }
+  return { sp, disc, netPrice, sellExVat, vatAmt, withVat, final }
 }
 
 const fmt2 = (n: number) => n.toFixed(2)
 const fmtDate = () => new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-function exportPDFContabil(items: Item[], adaos: number, vat: number, step: RoundStep, mode: RoundMode, supplier: string) {
+function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
   const W = 297; const margin = 10; let y = 15
 
   doc.setFontSize(13); doc.setFont('helvetica', 'bold')
   doc.text('Calculator Pret Vanzare', margin, y); y += 6
   doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100)
-  doc.text(`Data: ${fmtDate()}  |  Furnizor: ${supplier || '—'}  |  Adaos: ${adaos}%  |  TVA: ${vat}%  |  Rotunjire: ${step === 'none' ? 'fara' : step + ' lei (' + (mode === 'nearest' ? 'corect' : 'in sus') + ')'}`, margin, y)
+  doc.text(`Data: ${fmtDate()}  |  Furnizor: ${supplier || '—'}  |  Adaos: ${adaos}%  |  Rotunjire: ${step === 'none' ? 'fara' : step + ' lei (' + (mode === 'nearest' ? 'corect' : 'in sus') + ')'}`, margin, y)
   y += 8
 
   const cols = [
-    { label: 'Denumire', x: margin, w: 60 },
-    { label: 'UM', x: 72, w: 12 },
-    { label: 'Cant.', x: 86, w: 14 },
-    { label: 'Pret furn.', x: 102, w: 20 },
-    { label: 'Disc%', x: 124, w: 14 },
-    { label: 'Pret net', x: 140, w: 20 },
-    { label: `Adaos ${adaos}%`, x: 162, w: 22 },
+    { label: 'Denumire', x: margin, w: 70 },
+    { label: 'UM', x: 82, w: 12 },
+    { label: 'Pret furn.', x: 96, w: 22 },
+    { label: 'Disc%', x: 120, w: 14 },
+    { label: 'Pret net', x: 136, w: 22 },
+    { label: `Adaos ${adaos}%`, x: 160, w: 24 },
     { label: 'F.TVA', x: 186, w: 20 },
-    { label: `TVA ${vat}%`, x: 208, w: 20 },
-    { label: 'Pret final', x: 230, w: 22 },
-    { label: 'Rotunjit', x: 254, w: 22 },
+    { label: 'Cota', x: 208, w: 14 },
+    { label: 'TVA', x: 224, w: 20 },
+    { label: 'Pret final', x: 246, w: 24 },
+    { label: 'Rotunjit', x: 272, w: 22 },
   ]
 
   doc.setFillColor(240, 240, 245)
@@ -74,14 +74,14 @@ function exportPDFContabil(items: Item[], adaos: number, vat: number, step: Roun
 
   doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 30, 30)
   items.forEach((item, idx) => {
-    const c = calcItem(item, adaos, vat, step, mode)
+    const c = calcItem(item, adaos, step, mode)
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6, 'F') }
     doc.setFontSize(8)
     const vals = [
-      item.name, item.unit, fmt2(c.qty), fmt2(c.sp),
+      item.name, item.unit, fmt2(c.sp),
       c.disc > 0 ? `${c.disc}%` : '—',
       fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
-      fmt2(c.sellExVat), fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
+      fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
     ]
     cols.forEach((col, i) => doc.text(vals[i], col.x, y))
     y += 6
@@ -93,7 +93,7 @@ function exportPDFContabil(items: Item[], adaos: number, vat: number, step: Roun
   window.open(doc.output('bloburl'), '_blank')
 }
 
-function exportPDFMagazin(items: Item[], adaos: number, vat: number, step: RoundStep, mode: RoundMode, supplier: string) {
+function exportPDFMagazin(items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const W = 210; const margin = 15; let y = 20
 
@@ -112,7 +112,7 @@ function exportPDFMagazin(items: Item[], adaos: number, vat: number, step: Round
 
   doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 30, 30)
   items.forEach((item, idx) => {
-    const { final } = calcItem(item, adaos, vat, step, mode)
+    const { final } = calcItem(item, adaos, step, mode)
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6.5, 'F') }
     doc.setFontSize(9)
     doc.text(item.name, margin, y)
@@ -136,7 +136,7 @@ export default function PricingPage() {
   const [vat, setVat] = useState<11 | 21>(21)
   const [roundStep, setRoundStep] = useState<RoundStep>('0.50')
   const [roundMode, setRoundMode] = useState<RoundMode>('nearest')
-  const [items, setItems] = useState<Item[]>([emptyItem()])
+  const [items, setItems] = useState<Item[]>([emptyItem(21)])
   const [listening, setListening] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -174,9 +174,9 @@ export default function PricingPage() {
         id: crypto.randomUUID(),
         name: i.name || '',
         unit: i.unit || 'buc',
-        quantity: String(i.quantity || 1),
         supplierPrice: String(i.supplier_price || ''),
         discount: String(i.discount || 0),
+        vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
       })).filter((i: Item) => i.name)
       if (parsed.length > 0) setItems(prev => {
         const clean = prev.filter(p => p.name || p.supplierPrice)
@@ -188,7 +188,11 @@ export default function PricingPage() {
   }
 
   function updateItem(id: string, field: keyof Item, value: string) {
-    setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i))
+    setItems(prev => prev.map(i => {
+      if (i.id !== id) return i
+      if (field === 'vat') return { ...i, vat: (parseInt(value) === 11 ? 11 : 21) as 11 | 21 }
+      return { ...i, [field]: value }
+    }))
   }
 
   function removeItem(id: string) {
@@ -272,7 +276,7 @@ export default function PricingPage() {
         {/* Produse */}
         <div className="space-y-3">
           {items.map((item) => {
-            const c = item.supplierPrice ? calcItem(item, adaosNum, vat, roundStep, roundMode) : null
+            const c = item.supplierPrice ? calcItem(item, adaosNum, roundStep, roundMode) : null
             return (
               <div key={item.id} className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
                 <div className="flex gap-2">
@@ -285,19 +289,13 @@ export default function PricingPage() {
                 </div>
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="text-xs text-gray-400 mb-0.5 block">Cant.</label>
-                    <input type="number" min="0" step="1"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
-                      value={item.quantity} onChange={e => updateItem(item.id, 'quantity', e.target.value)} />
-                  </div>
-                  <div className="flex-1">
                     <label className="text-xs text-gray-400 mb-0.5 block">Pret furnizor</label>
                     <input type="number" min="0" step="0.01"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
                       placeholder="0.00" value={item.supplierPrice}
                       onChange={e => updateItem(item.id, 'supplierPrice', e.target.value)} />
                   </div>
-                  <div className="w-20">
+                  <div className="w-24">
                     <label className="text-xs text-gray-400 mb-0.5 block">Disc %</label>
                     <input type="number" min="0" max="100" step="0.5"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
@@ -306,12 +304,24 @@ export default function PricingPage() {
                   </div>
                 </div>
 
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-400">TVA:</label>
+                  <div className="flex rounded-lg overflow-hidden border border-gray-200">
+                    {([11, 21] as const).map(r => (
+                      <button key={r} onClick={() => updateItem(item.id, 'vat', String(r) as any)}
+                        className={`px-3 py-1 text-xs font-bold transition-all ${item.vat === r ? 'bg-blue-600 text-white' : 'bg-white text-gray-500'}`}>
+                        {r}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {c && (
                   <div className="bg-gray-50 rounded-xl p-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                     <div className="flex justify-between"><span className="text-gray-400">Pret net furnizor</span><span className="font-medium">{fmt2(c.netPrice)} lei</span></div>
                     <div className="flex justify-between"><span className="text-gray-400">Adaos ({adaos}%)</span><span className="font-medium">+{fmt2(c.sellExVat - c.netPrice)} lei</span></div>
                     <div className="flex justify-between"><span className="text-gray-400">Fara TVA</span><span className="font-medium">{fmt2(c.sellExVat)} lei</span></div>
-                    <div className="flex justify-between"><span className="text-gray-400">TVA {vat}%</span><span className="font-medium">+{fmt2(c.vatAmt)} lei</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">TVA {item.vat}%</span><span className="font-medium">+{fmt2(c.vatAmt)} lei</span></div>
                     <div className="col-span-2 flex justify-between items-center pt-1 border-t border-gray-200 mt-1">
                       <span className="text-gray-600 font-semibold">Pret vanzare</span>
                       <span className="text-blue-600 font-bold text-base">{fmt2(c.final)} lei/{item.unit}</span>
@@ -325,7 +335,7 @@ export default function PricingPage() {
           })}
         </div>
 
-        <button onClick={() => setItems(prev => [...prev, emptyItem()])}
+        <button onClick={() => setItems(prev => [...prev, emptyItem(vat)])}
           className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-sm font-semibold text-gray-500">
           + Adauga produs manual
         </button>
@@ -338,11 +348,11 @@ export default function PricingPage() {
           <div className="max-w-2xl mx-auto space-y-2">
             <p className="text-xs text-center text-gray-400">{validItems.length} produs{validItems.length !== 1 ? 'e' : ''} cu pret calculat</p>
             <div className="flex gap-3">
-              <button onClick={() => exportPDFContabil(validItems, adaosNum, vat, roundStep, roundMode, supplier)}
+              <button onClick={() => exportPDFContabil(validItems, adaosNum, roundStep, roundMode, supplier)}
                 className="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-xl text-sm">
                 PDF Contabil
               </button>
-              <button onClick={() => exportPDFMagazin(validItems, adaosNum, vat, roundStep, roundMode, supplier)}
+              <button onClick={() => exportPDFMagazin(validItems, adaosNum, roundStep, roundMode, supplier)}
                 className="flex-1 py-3.5 bg-green-600 text-white font-bold rounded-xl text-sm">
                 PDF Magazin
               </button>

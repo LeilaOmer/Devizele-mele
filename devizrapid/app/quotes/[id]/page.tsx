@@ -98,7 +98,7 @@ const emptyRow = (): NewRow => ({ service_id: "", description: "", quantity: "1"
 
 // ─── PDF ───────────────────────────────────────────────────────────────────────
 
-function exportPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: number, discountType: "pct" | "val") {
+function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: number, discountType: "pct" | "val"): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210; const margin = 15; let y = 20;
 
@@ -182,7 +182,7 @@ function exportPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: num
 
   doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(160, 160, 160);
   doc.text("Document generat de Tarifator • Tarifator.ro", W / 2, 290, { align: "center" });
-  window.open(doc.output('bloburl'), '_blank');
+  return doc;
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -392,23 +392,21 @@ export default function QuoteDetailPage() {
     await loadQuote();
   }
 
-  const shareWhatsApp = () => {
+  const shareWhatsApp = async () => {
     if (!quote || !profile) return;
     const isPro = profile.account_type === "pro";
-    const subtotalBrut = quote.quote_items.reduce((s, i) => s + i.total, 0);
-    const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
-    const subtotalNet = subtotalBrut - dVal;
-    const vatAmount = isPro ? Math.round(subtotalNet * quote.vat_rate / 100 * 100) / 100 : 0;
-    const total = subtotalNet + vatAmount;
-    const c = quote.clients;
-    const text = encodeURIComponent(
-      `*DEVIZ ${quote.quote_number}*\nData: ${fmtDate(quote.created_at)}\nClient: ${c.name}\n\n` +
-      quote.quote_items.map(i => `• ${i.description}: ${i.quantity} buc x ${fmt(i.unit_price)} = ${fmt(i.total)}`).join("\n") +
-      (parseFloat(discount || "0") > 0 ? `\nDiscount: -${fmt(dVal)}` : "") +
-      (isPro ? `\nTVA ${quote.vat_rate}%: ${fmt(vatAmount)}` : "") +
-      `\n*TOTAL: ${fmt(total)}*`
-    );
-    window.open(`https://wa.me/?text=${text}`, "_blank");
+    const doc = buildPDF(quote, emitent, isPro, parseFloat(discount || "0"), discountType);
+    const fileName = `Deviz_${quote.quote_number}.pdf`;
+
+    if (typeof navigator !== "undefined" && navigator.canShare) {
+      const file = new File([doc.output("blob")], fileName, { type: "application/pdf" });
+      if (navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], title: `Deviz ${quote.quote_number}` }); return; }
+        catch { /* utilizatorul a anulat */ }
+      }
+    }
+    // fallback desktop: deschide PDF in tab nou
+    window.open(doc.output("bloburl"), "_blank");
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Se incarca...</p></div>;
@@ -608,7 +606,7 @@ export default function QuoteDetailPage() {
             </svg>
             WhatsApp
           </button>
-          <button onClick={() => exportPDF(quote, emitent, isPro, parseFloat(discount || "0"), discountType)}
+          <button onClick={() => window.open(buildPDF(quote, emitent, isPro, parseFloat(discount || "0"), discountType).output("bloburl"), "_blank")}
             className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold rounded-xl py-3 text-sm active:bg-blue-800">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
