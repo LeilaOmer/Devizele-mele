@@ -126,12 +126,17 @@ export default function Dashboard() {
       <div className="max-w-lg mx-auto space-y-4">
 
         {/* Header */}
-        <div className="flex justify-between items-center pt-2 pb-1">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Tarifator</h1>
-            {displayName && (
-              <p className="text-xs text-gray-400 truncate max-w-[200px]">{displayName}</p>
-            )}
+        <div className="flex justify-between items-center pt-4 pb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-sm shrink-0">
+              <span className="text-white font-black text-xl leading-none">T</span>
+            </div>
+            <div>
+              <h1 className="text-3xl font-black text-gray-900 tracking-tight leading-none">Tarifator</h1>
+              {displayName && (
+                <p className="text-xs text-gray-400 truncate max-w-[200px] mt-0.5">{displayName}</p>
+              )}
+            </div>
           </div>
           <div className="flex gap-4 items-center">
             <a href="/settings" className="text-sm text-gray-500 hover:text-gray-700">Setari</a>
@@ -195,16 +200,16 @@ export default function Dashboard() {
         {/* Unelte principale — carduri mari */}
         <div className="grid grid-cols-2 gap-3">
           <a href="/quick"
-            className="bg-blue-600 text-white p-5 rounded-2xl shadow hover:bg-blue-700 active:scale-95 transition-all flex flex-col min-h-[130px]">
-            <span className="text-3xl mb-3">🎙️</span>
-            <h2 className="font-bold text-base leading-tight">Fisa Servicii Voce</h2>
-            <p className="text-blue-200 text-xs mt-1">Dicteaza si genereaza instant</p>
+            className="bg-blue-600 text-white p-5 rounded-2xl shadow hover:bg-blue-700 active:scale-95 transition-all flex flex-col min-h-[160px]">
+            <span className="text-4xl mb-3">🎙️</span>
+            <h2 className="font-bold text-xl leading-tight">Fișă Servicii Voce</h2>
+            <p className="text-blue-200 text-sm mt-1.5">Dictează și generează instant</p>
           </a>
           <a href="/pricing"
-            className="bg-amber-500 text-white p-5 rounded-2xl shadow hover:bg-amber-600 active:scale-95 transition-all flex flex-col min-h-[130px]">
-            <span className="text-3xl mb-3">🏷️</span>
-            <h2 className="font-bold text-base leading-tight">Calculator Pret Vanzare</h2>
-            <p className="text-amber-100 text-xs mt-1">Adaos · TVA · PDF</p>
+            className="bg-amber-500 text-white p-5 rounded-2xl shadow hover:bg-amber-600 active:scale-95 transition-all flex flex-col min-h-[160px]">
+            <span className="text-4xl mb-3">🏷️</span>
+            <h2 className="font-bold text-xl leading-tight">Calculator Preț Vânzare</h2>
+            <p className="text-amber-100 text-sm mt-1.5">Adaos · TVA · PDF</p>
           </a>
         </div>
 
