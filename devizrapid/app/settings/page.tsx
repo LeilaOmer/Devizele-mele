@@ -356,7 +356,7 @@ function CompanyForm({ form, setForm, onSave, onCancel, saved }: {
       <div>
         <label className="text-xs font-medium text-gray-600 mb-1 block">Cota TVA implicita</label>
         <div className="flex gap-2">
-          {[0, 21].map(r => (
+          {[0, 11, 21].map(r => (
             <button key={r} onClick={() => setForm({ ...form, vat_rate: r })}
               className={`flex-1 py-2 rounded-xl border-2 text-sm font-bold ${form.vat_rate === r ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-600'}`}>
               {r === 0 ? 'Fara TVA' : `${r}%`}
