@@ -57,7 +57,7 @@ function UpgradeContent() {
             <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Fise Servicii nelimitate</li>
             <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Calcule Pret nelimitate</li>
             <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> TVA · Firme multiple</li>
-            <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Clienti si devize avansate</li>
+            <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Clienti si fise avansate</li>
           </ul>
         </div>
 

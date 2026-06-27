@@ -41,7 +41,7 @@ export default function ConfidentialitatePage() {
                 <td className="py-1.5">Gestionare clienti</td>
               </tr>
               <tr className="border-b border-gray-50">
-                <td className="py-1.5 pr-4">Date fise si devize</td>
+                <td className="py-1.5 pr-4">Date fise servicii</td>
                 <td className="py-1.5 pr-4">Introduse de dvs.</td>
                 <td className="py-1.5">Furnizarea Serviciului</td>
               </tr>

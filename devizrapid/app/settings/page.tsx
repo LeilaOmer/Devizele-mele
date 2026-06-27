@@ -110,7 +110,7 @@ export default function SettingsPage() {
   }
 
   async function deleteCompany(id: string) {
-    if (!confirm('Stergi firma? Devizele asociate raman dar fara firma.')) return
+    if (!confirm('Stergi firma? Fisele asociate raman dar fara firma.')) return
     await supabase.from('companies').delete().eq('id', id)
     load()
   }
