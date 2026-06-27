@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import jsPDF from 'jspdf'
 import { supabase } from '@/lib/supabase'
@@ -146,11 +146,41 @@ export default function PricingPage() {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const silenceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [voiceMsg, setVoiceMsg] = useState('')
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('pricing_state')
+      if (saved) {
+        const s = JSON.parse(saved)
+        if (s.items?.length) setItems(s.items)
+        if (s.adaos) setAdaos(s.adaos)
+        if (s.supplier) setSupplier(s.supplier)
+        if (s.roundStep) setRoundStep(s.roundStep)
+        if (s.roundMode) setRoundMode(s.roundMode)
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pricing_state', JSON.stringify({ items, adaos, supplier, roundStep, roundMode }))
+    } catch {}
+  }, [items, adaos, supplier, roundStep, roundMode])
 
   const adaosNum = parseFloat(adaos) || 0
 
+  function stopVoice() {
+    if (silenceTimerRef.current) { clearInterval(silenceTimerRef.current); silenceTimerRef.current = null }
+    if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null }
+    mediaRecorderRef.current?.stop()
+  }
+
   async function handleVoice() {
-    if (listening) { mediaRecorderRef.current?.stop(); return }
+    if (listening) { stopVoice(); return }
+    setVoiceMsg('')
     let stream: MediaStream
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }) }
     catch { alert('Nu am acces la microfon.'); return }
@@ -167,7 +197,7 @@ export default function PricingPage() {
       form.append('file', blob, 'audio.webm')
       const tr = await fetch('/api/transcribe', { method: 'POST', body: form })
       const { text } = await tr.json()
-      if (!text) { setLoading(false); return }
+      if (!text) { setLoading(false); setVoiceMsg('Nu am prins nimic. Vorbeste mai tare sau mai aproape de microfon.'); return }
       const res = await fetch('/api/parse-pricing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -182,12 +212,39 @@ export default function PricingPage() {
         discount: String(i.discount || 0),
         vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
       })).filter((i: Item) => i.name)
-      if (parsed.length > 0) setItems(prev => {
-        const clean = prev.filter(p => p.name || p.supplierPrice)
-        return [...clean, ...parsed]
-      })
+      if (parsed.length > 0) {
+        setItems(prev => {
+          const clean = prev.filter(p => p.name || p.supplierPrice)
+          return [...clean, ...parsed]
+        })
+        setVoiceMsg(`${parsed.length} produs${parsed.length !== 1 ? 'e' : ''} adaugat${parsed.length !== 1 ? 'e' : ''}.`)
+      } else {
+        setVoiceMsg('Nu am gasit produse in inregistrare. Incearca din nou.')
+      }
       setLoading(false)
     }
+
+    // auto-stop dupa 2s de tacere
+    const audioCtx = new AudioContext()
+    audioCtxRef.current = audioCtx
+    const analyser = audioCtx.createAnalyser()
+    analyser.fftSize = 256
+    const source = audioCtx.createMediaStreamSource(stream)
+    source.connect(analyser)
+    const recordStart = Date.now()
+    let silenceSince: number | null = null
+    silenceTimerRef.current = setInterval(() => {
+      const data = new Uint8Array(analyser.frequencyBinCount)
+      analyser.getByteFrequencyData(data)
+      const avg = data.reduce((a, b) => a + b, 0) / data.length
+      if (avg < 5) {
+        if (!silenceSince) silenceSince = Date.now()
+        else if (Date.now() - silenceSince > 2000 && Date.now() - recordStart > 1500) stopVoice()
+      } else {
+        silenceSince = null
+      }
+    }, 100)
+
     mediaRecorder.start(); setListening(true)
   }
 
@@ -296,6 +353,9 @@ export default function PricingPage() {
           {listening ? '🔴 Opreste inregistrarea' : '🎤 Dicteaza produse de pe factura'}
         </button>
         {loading && <p className="text-center text-sm text-gray-400">Procesez...</p>}
+        {!loading && voiceMsg && (
+          <p className={`text-center text-sm ${voiceMsg.startsWith('Nu') ? 'text-red-400' : 'text-green-600'}`}>{voiceMsg}</p>
+        )}
 
         {/* Produse */}
         <div className="space-y-3">
