@@ -27,7 +27,8 @@ export default function Dashboard() {
         .from('profiles').select('account_type, company_name, email').eq('id', session.user.id).single()
       if (!prof) {
         await supabase.from('profiles').insert({ id: session.user.id, account_type: 'meseriaș' })
-        prof = { account_type: 'meseriaș', company_name: null, email: null }
+        router.push('/settings')
+        return
       }
       const type: 'meseriaș' | 'pro' = prof.account_type || 'meseriaș'
       setAccountType(type)

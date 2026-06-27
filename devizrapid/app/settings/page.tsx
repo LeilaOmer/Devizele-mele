@@ -261,7 +261,12 @@ function MeseriasForm() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return
       supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
-        if (data) setForm({ company_name: data.company_name||'', phone: data.phone||'', email: data.email||'', address: data.address||'' })
+        if (data) setForm({
+          company_name: data.company_name || '',
+          phone: data.phone || '',
+          email: data.email || session.user.email || '',
+          address: data.address || '',
+        })
       })
     })
   }, [])
@@ -274,25 +279,52 @@ function MeseriasForm() {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  const fields = [
-    { key: 'company_name', label: 'Nume / Brand', placeholder: 'Ex: Ion Instalatii' },
-    { key: 'phone', label: 'Telefon', placeholder: '07xx xxx xxx' },
-    { key: 'email', label: 'Email', placeholder: 'contact@mail.ro' },
-    { key: 'address', label: 'Adresa', placeholder: 'Str. Exemplu nr. 1' },
-  ]
-
   return (
     <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Date personale</p>
-      {fields.map(f => (
-        <div key={f.key}>
-          <label className="text-xs font-medium text-gray-600 mb-1 block">{f.label}</label>
-          <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
-            placeholder={f.placeholder}
-            value={form[f.key as keyof typeof form]}
-            onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
-        </div>
-      ))}
+
+      <div>
+        <label className="text-xs font-medium text-gray-600 mb-1 block">Nume / Brand</label>
+        <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+          placeholder="Ex: Ion Instalatii"
+          autoCapitalize="words"
+          value={form.company_name}
+          onChange={e => setForm({ ...form, company_name: e.target.value })} />
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-gray-600 mb-1 block">Telefon</label>
+        <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+          placeholder="07xx xxx xxx"
+          type="tel"
+          inputMode="tel"
+          autoCapitalize="none"
+          autoCorrect="off"
+          value={form.phone}
+          onChange={e => setForm({ ...form, phone: e.target.value })} />
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-gray-600 mb-1 block">Email</label>
+        <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+          placeholder="contact@mail.ro"
+          type="email"
+          inputMode="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          value={form.email}
+          onChange={e => setForm({ ...form, email: e.target.value })} />
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-gray-600 mb-1 block">Adresa</label>
+        <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
+          placeholder="Str. Exemplu nr. 1"
+          autoCapitalize="sentences"
+          value={form.address}
+          onChange={e => setForm({ ...form, address: e.target.value })} />
+      </div>
       <button onClick={save} className={`w-full py-4 rounded-2xl font-bold text-base text-white ${saved ? 'bg-green-500' : 'bg-blue-600'}`}>
         {saved ? '✓ Salvat!' : 'Salveaza'}
       </button>
