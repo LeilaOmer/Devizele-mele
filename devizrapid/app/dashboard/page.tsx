@@ -22,9 +22,13 @@ export default function Dashboard() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
-      const { data: prof } = await supabase
+      let { data: prof } = await supabase
         .from('profiles').select('account_type').eq('id', session.user.id).single()
-      if (prof) setAccountType(prof.account_type || 'meseriaș')
+      if (!prof) {
+        await supabase.from('profiles').insert({ id: session.user.id, account_type: 'meseriaș' })
+        prof = { account_type: 'meseriaș' }
+      }
+      setAccountType(prof.account_type || 'meseriaș')
 
       if (prof?.account_type === 'pro') {
         const { data: cos } = await supabase.from('companies').select('id, name, cui').order('name')

@@ -24,11 +24,27 @@ export default function LoginPage() {
       if (error) { setError('Email sau parola incorecte.'); return }
       router.push('/dashboard')
     } else {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { data, error } = await supabase.auth.signUp({ email, password })
       setLoading(false)
-      if (error) { setError(error.message); return }
-      setSuccess('Cont creat! Verifica emailul pentru confirmare, apoi autentifica-te.')
-      setMode('login')
+      if (error) {
+        if (error.message.includes('already registered') || error.message.includes('already exists')) {
+          setError('Acest email este deja inregistrat. Incearca sa te autentifici.')
+        } else if (error.message.includes('Invalid') || error.message.includes('path') || error.message.includes('URL')) {
+          setError('Eroare de configurare server. Contacteaza administratorul.')
+        } else {
+          setError(error.message)
+        }
+        return
+      }
+      if (data.user && !data.session) {
+        setSuccess('Cont creat! Verifica emailul pentru confirmare, apoi autentifica-te.')
+        setMode('login')
+      } else if (data.session) {
+        router.push('/dashboard')
+      } else {
+        setSuccess('Cont creat! Verifica emailul pentru confirmare, apoi autentifica-te.')
+        setMode('login')
+      }
     }
   }
 
