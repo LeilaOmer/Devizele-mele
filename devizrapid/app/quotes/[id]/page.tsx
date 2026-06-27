@@ -7,7 +7,7 @@ import jsPDF from "jspdf";
 interface Profile {
   id: string;
   company_name: string | null;
-  account_type: "meseriaș" | "pro" | null;
+  account_type: "artizan" | "pro" | null;
   cui: string | null;
   address: string | null;
   phone: string | null;

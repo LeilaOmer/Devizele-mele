@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [editing, setEditing] = useState<string | null>(null)
   const [form, setForm] = useState(emptyCompany())
-  const [accountType, setAccountType] = useState<'meseriaș' | 'pro'>('meseriaș')
+  const [accountType, setAccountType] = useState<'artizan' | 'pro'>('artizan')
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null)
@@ -46,7 +46,7 @@ export default function SettingsPage() {
     setUserEmail(user.email || '')
     const { data: prof } = await supabase.from('profiles').select('account_type, plan_active_until').eq('id', user.id).single()
     if (prof) {
-      setAccountType(prof.account_type || 'meseriaș')
+      setAccountType(prof.account_type || 'artizan')
       setPlanActiveUntil(prof.plan_active_until || null)
     }
     const { data: cos } = await supabase.from('companies').select('*').order('name')
@@ -54,11 +54,11 @@ export default function SettingsPage() {
     setLoading(false)
   }
 
-  async function saveAccountType(type: 'meseriaș' | 'pro') {
+  async function saveAccountType(type: 'artizan' | 'pro') {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
     setAccountType(type)
-    if (type === 'meseriaș') {
+    if (type === 'artizan') {
       localStorage.removeItem('activeCompanyId')
       localStorage.removeItem('activeCompanyName')
     }
@@ -158,7 +158,7 @@ export default function SettingsPage() {
         <div className="bg-white rounded-2xl shadow-sm p-5">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Tip cont</p>
           <div className="grid grid-cols-2 gap-3">
-            {(['meseriaș', 'pro'] as const).map(type => (
+            {(['artizan', 'pro'] as const).map(type => (
               <button key={type} onClick={() => saveAccountType(type)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                   accountType === type
@@ -210,7 +210,7 @@ export default function SettingsPage() {
         )}
 
         {/* Artizan — profil simplu */}
-        {accountType === 'meseriaș' && <MeseriasForm />}
+        {accountType === 'artizan' && <MeseriasForm />}
 
         {/* Contul meu */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">

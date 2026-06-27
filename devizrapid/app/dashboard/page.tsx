@@ -15,8 +15,8 @@ interface Company {
 export default function Dashboard() {
   const router = useRouter()
   // plan = ce a achizitionat (din DB), mode = modul activ curent (din localStorage)
-  const [plan, setPlan] = useState<'meseriaș' | 'pro' | null>(null)
-  const [mode, setMode] = useState<'meseriaș' | 'pro'>('meseriaș')
+  const [plan, setPlan] = useState<'artizan' | 'pro' | null>(null)
+  const [mode, setMode] = useState<'artizan' | 'pro'>('artizan')
   const [companies, setCompanies] = useState<Company[]>([])
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
@@ -53,19 +53,19 @@ export default function Dashboard() {
       let { data: prof } = await supabase
         .from('profiles').select('account_type, company_name, email').eq('id', session.user.id).single()
       if (!prof) {
-        await supabase.from('profiles').insert({ id: session.user.id, account_type: 'meseriaș' })
+        await supabase.from('profiles').insert({ id: session.user.id, account_type: 'artizan' })
         router.push('/settings')
         return
       }
 
       // in trial, toata lumea are acces complet (pro)
-      const userPlan: 'meseriaș' | 'pro' = 'pro'
+      const userPlan: 'artizan' | 'pro' = 'pro'
       setPlan(userPlan)
 
       // modul activ: localStorage > account_type din DB > meserias
-      const savedMode = localStorage.getItem('dashboardMode') as 'meseriaș' | 'pro' | null
-      const dbMode = prof?.account_type === 'pro' ? 'pro' : 'meseriaș'
-      const activeMode: 'meseriaș' | 'pro' = userPlan === 'pro' && (savedMode === 'pro' || (savedMode === null && dbMode === 'pro')) ? 'pro' : 'meseriaș'
+      const savedMode = localStorage.getItem('dashboardMode') as 'artizan' | 'pro' | null
+      const dbMode = prof?.account_type === 'pro' ? 'pro' : 'artizan'
+      const activeMode: 'artizan' | 'pro' = userPlan === 'pro' && (savedMode === 'pro' || (savedMode === null && dbMode === 'pro')) ? 'pro' : 'artizan'
       setMode(activeMode)
 
       setDisplayName(prof.email || session.user.email || '')
@@ -89,11 +89,11 @@ export default function Dashboard() {
     load()
   }, [])
 
-  function switchMode(newMode: 'meseriaș' | 'pro') {
+  function switchMode(newMode: 'artizan' | 'pro') {
     if (plan !== 'pro') return
     setMode(newMode)
     localStorage.setItem('dashboardMode', newMode)
-    if (newMode === 'meseriaș') {
+    if (newMode === 'artizan') {
       setDisplayName('')
     } else {
       const active = companies.find(c => c.id === activeCompanyId) || companies[0]
@@ -289,19 +289,19 @@ export default function Dashboard() {
 
             {/* Tab artizan */}
             <button
-              onClick={() => switchMode('meseriaș')}
+              onClick={() => switchMode('artizan')}
               disabled={plan !== 'pro'}
               className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                mode === 'meseriaș'
+                mode === 'artizan'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 bg-white hover:border-blue-300 active:scale-95'
               }`}>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-lg">🔨</span>
-                <span className={`font-bold text-sm ${mode === 'meseriaș' ? 'text-blue-700' : 'text-gray-600'}`}>
+                <span className={`font-bold text-sm ${mode === 'artizan' ? 'text-blue-700' : 'text-gray-600'}`}>
                   Artizan
                 </span>
-                {mode === 'meseriaș' && (
+                {mode === 'artizan' && (
                   <span className="ml-auto text-[10px] font-bold text-blue-500 uppercase tracking-wide">activ</span>
                 )}
               </div>
