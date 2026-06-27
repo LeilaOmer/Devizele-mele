@@ -48,7 +48,7 @@ export default function ConfidentialitatePage() {
               <tr className="border-b border-gray-50">
                 <td className="py-1.5 pr-4">Inregistrari vocale</td>
                 <td className="py-1.5 pr-4">Functia de dictare</td>
-                <td className="py-1.5">Transcriere AI (transmise Groq, nestocate de noi)</td>
+                <td className="py-1.5">Transcriere AI (transmise Groq; politica Zero Data Retention — sterse imediat dupa transcriere, nestocate de noi sau de Groq)</td>
               </tr>
               <tr className="border-b border-gray-50">
                 <td className="py-1.5 pr-4">Date de utilizare (numar fise/calcule)</td>
@@ -77,7 +77,7 @@ export default function ConfidentialitatePage() {
           <ul className="list-disc pl-5 space-y-1">
             <li>Datele contului activ: pe durata existentei contului</li>
             <li>Datele contului dupa stergere: sterse in termen de 30 de zile, cu exceptia celor cu obligatie legala</li>
-            <li>Inregistrarile vocale: transmise Groq pentru transcriere si nestocate de noi; verificati politica Groq privind retentia datelor la <a href="https://groq.com/privacy-policy/" target="_blank" className="text-blue-600 underline">groq.com/privacy-policy</a></li>
+            <li>Inregistrarile vocale: transmise Groq exclusiv pentru transcriere, acoperite de politica Zero Data Retention (ZDR) a Groq — datele sunt sterse imediat dupa generarea raspunsului, nu sunt stocate de Groq si nu sunt folosite pentru antrenarea modelelor AI (interzis contractual conform Groq Services Agreement). DPA disponibil la <a href="https://console.groq.com/docs/legal/customer-data-processing-addendum" target="_blank" className="text-blue-600 underline">console.groq.com/docs/legal</a></li>
             <li>Documentele de facturare: 10 ani (obligatie legala — Legea 82/1991 republicata)</li>
             <li>Jurnalele de utilizare: 12 luni</li>
             <li>Hash email post-stergere: 24 de luni (interes legitim — prevenire abuz)</li>
@@ -89,7 +89,7 @@ export default function ConfidentialitatePage() {
           <div className="mt-2 space-y-2">
             <Processor name="Supabase Inc." role="Baza de date si autentificare" location="UE (date stocate in Frankfurt) / SUA — DPA disponibil la supabase.com/privacy" />
             <Processor name="Vercel Inc." role="Hosting aplicatie" location="SUA — transfer acoperit de Clauze Contractuale Standard UE (Art. 46 GDPR)" />
-            <Processor name="Groq Inc." role="Transcriere vocala AI" location="SUA — inregistrarile vocale sunt transmise exclusiv pentru transcriere; verificati termenii Groq privind retentia" />
+            <Processor name="Groq Inc." role="Transcriere vocala AI" location="SUA — Zero Data Retention: date sterse imediat post-transcriere, interzis contractual folosirea pentru antrenare AI. Transfer acoperit de Clauze Contractuale Standard UE (Art. 46 GDPR). DPA disponibil." />
           </div>
           <p className="mt-3">Nu vindem si nu inchiriem datele dvs. catre terti. Puteti solicita lista completa a subprocesorilor activi la leyla.omer@gmail.com.</p>
         </Section>
