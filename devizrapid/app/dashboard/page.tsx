@@ -30,8 +30,14 @@ export default function Dashboard() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
-      // verifica trial
-      const t = trialInfo(session.user.created_at)
+      // verifica daca emailul a fost sters anterior (anti-abuz)
+      const { data: wasDeleted } = await supabase.rpc('is_account_deleted', {
+        user_email: session.user.email,
+      })
+
+      // verifica trial (sarit daca contul a fost recreat)
+      const rawTrial = trialInfo(session.user.created_at)
+      const t = wasDeleted ? { ...rawTrial, isActive: false } : rawTrial
       setTrial(t)
       if (!t.isActive) {
         const [active, fise, calcule] = await Promise.all([
