@@ -2,6 +2,9 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import jsPDF from 'jspdf'
+import { supabase } from '@/lib/supabase'
+import { trialInfo } from '@/lib/trial'
+import { getMonthlyCalcule, isPlanActive, logCalcul, FREE_CALCULE_LIMIT } from '@/lib/usage'
 
 type RoundStep = 'none' | '0.10' | '0.50' | '1.00'
 type RoundMode = 'nearest' | 'up'
@@ -202,6 +205,26 @@ export default function PricingPage() {
 
   const validItems = items.filter(i => i.name && parseFloat(i.supplierPrice) > 0)
 
+  async function handleExport(exportFn: () => void) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { exportFn(); return }
+
+    const t = trialInfo(session.user.created_at)
+    if (!t.isActive) {
+      const [active, calcule] = await Promise.all([
+        isPlanActive(session.user.id),
+        getMonthlyCalcule(session.user.id),
+      ])
+      if (!active && calcule >= FREE_CALCULE_LIMIT) {
+        router.push('/upgrade?type=calcule')
+        return
+      }
+      await logCalcul(session.user.id)
+    }
+
+    exportFn()
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
@@ -349,11 +372,11 @@ export default function PricingPage() {
           <div className="max-w-2xl mx-auto space-y-2">
             <p className="text-xs text-center text-gray-400">{validItems.length} produs{validItems.length !== 1 ? 'e' : ''} cu pret calculat</p>
             <div className="flex gap-3">
-              <button onClick={() => exportPDFContabil(validItems, adaosNum, roundStep, roundMode, supplier)}
+              <button onClick={() => handleExport(() => exportPDFContabil(validItems, adaosNum, roundStep, roundMode, supplier))}
                 className="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-xl text-sm">
                 PDF Contabil
               </button>
-              <button onClick={() => exportPDFMagazin(validItems, adaosNum, roundStep, roundMode, supplier)}
+              <button onClick={() => handleExport(() => exportPDFMagazin(validItems, adaosNum, roundStep, roundMode, supplier))}
                 className="flex-1 py-3.5 bg-green-600 text-white font-bold rounded-xl text-sm">
                 PDF Magazin
               </button>

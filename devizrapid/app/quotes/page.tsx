@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { trialInfo } from '@/lib/trial'
+import { getMonthlyFise, isPlanActive, FREE_FISE_LIMIT } from '@/lib/usage'
 import { useRouter } from 'next/navigation'
 
 type Quote = { id: string; title: string; status: string; total: number; created_at: string; client_id: string | null; company_id: string | null }
@@ -44,14 +46,30 @@ async function fetchData() {
   async function handleCreate() {
     if (!title) return
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setLoading(false); return }
+
+    const t = trialInfo(session.user.created_at)
+    if (!t.isActive) {
+      const [active, fise] = await Promise.all([
+        isPlanActive(session.user.id),
+        getMonthlyFise(session.user.id),
+      ])
+      if (!active && fise >= FREE_FISE_LIMIT) {
+        setLoading(false)
+        router.push('/upgrade?type=fise')
+        return
+      }
+    }
+
+    const user = session.user
     const now = new Date()
     const year = now.getFullYear()
     const month = String(now.getMonth() + 1).padStart(2, '0')
     const { data: counter } = await supabase.rpc('increment_counter', { counter_key: 'quote_number' })
     const quote_number = 'DR-' + year + month + '-' + String(counter).padStart(3, '0')
     const { data } = await supabase.from('quotes').insert({
-      title, user_id: user?.id, status: 'draft', total: 0,
+      title, user_id: user.id, status: 'draft', total: 0,
       client_id: clientId || null, quote_number,
       company_id: activeCompanyId || null
     }).select().single()

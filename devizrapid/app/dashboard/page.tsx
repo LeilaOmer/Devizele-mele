@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { trialInfo } from '@/lib/trial'
+import { getMonthlyFise, getMonthlyCalcule, isPlanActive, FREE_FISE_LIMIT, FREE_CALCULE_LIMIT } from '@/lib/usage'
 import { useRouter } from 'next/navigation'
 
 interface Company {
@@ -20,6 +21,8 @@ export default function Dashboard() {
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [trial, setTrial] = useState<{ daysLeft: number; isActive: boolean; urgency: 'ok' | 'warning' | 'critical' } | null>(null)
+  const [usage, setUsage] = useState<{ fise: number; calcule: number } | null>(null)
+  const [subscribed, setSubscribed] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -31,8 +34,13 @@ export default function Dashboard() {
       const t = trialInfo(session.user.created_at)
       setTrial(t)
       if (!t.isActive) {
-        router.push('/trial-expired')
-        return
+        const [active, fise, calcule] = await Promise.all([
+          isPlanActive(session.user.id),
+          getMonthlyFise(session.user.id),
+          getMonthlyCalcule(session.user.id),
+        ])
+        setSubscribed(active)
+        setUsage({ fise, calcule })
       }
 
       let { data: prof } = await supabase
@@ -115,8 +123,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Banner trial */}
-        {trial && (
+        {/* Banner trial activ */}
+        {trial?.isActive && (
           <div className={`rounded-2xl px-4 py-3 flex items-center justify-between ${
             trial.urgency === 'critical' ? 'bg-red-50 border border-red-200' :
             trial.urgency === 'warning'  ? 'bg-amber-50 border border-amber-200' :
@@ -141,6 +149,30 @@ export default function Dashboard() {
               trial.urgency === 'critical' ? 'text-red-300' :
               trial.urgency === 'warning'  ? 'text-amber-300' : 'text-green-300'
             }`}>{trial.daysLeft}</span>
+          </div>
+        )}
+
+        {/* Banner utilizare gratuita (dupa trial) */}
+        {trial && !trial.isActive && !subscribed && usage && (
+          <div className="rounded-2xl px-4 py-3 bg-gray-50 border border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Utilizare luna aceasta</p>
+              <a href="/upgrade" className="text-xs font-bold text-blue-600">Upgradeaza →</a>
+            </div>
+            <div className="flex gap-6">
+              <div>
+                <p className="text-xs text-gray-500">Fise Servicii</p>
+                <p className={`text-sm font-bold ${usage.fise >= FREE_FISE_LIMIT ? 'text-red-500' : 'text-gray-800'}`}>
+                  {usage.fise} / {FREE_FISE_LIMIT}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Calcule Pret</p>
+                <p className={`text-sm font-bold ${usage.calcule >= FREE_CALCULE_LIMIT ? 'text-red-500' : 'text-gray-800'}`}>
+                  {usage.calcule} / {FREE_CALCULE_LIMIT}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
