@@ -1,7 +1,7 @@
 export default function TermeniPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-2xl mx-auto space-y-8">
+      <div className="max-w-2xl mx-auto space-y-6">
 
         <div>
           <a href="/login" className="text-sm text-blue-600 hover:underline">← Inapoi</a>
@@ -9,10 +9,24 @@ export default function TermeniPage() {
           <p className="text-xs text-gray-400 mt-1">Ultima actualizare: Iunie 2026</p>
         </div>
 
+        {/* Rezumat pe scurt */}
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 space-y-3">
+          <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Pe scurt — ce trebuie sa stii</p>
+          <ul className="space-y-2 text-sm text-blue-900">
+            <li>✓ <strong>Ce e Tarifator:</strong> aplicatie pentru meseriari — genereaza fise de servicii, calculeaza preturi, exporta PDF.</li>
+            <li>✓ <strong>Trial gratuit:</strong> 30 de zile cu acces complet, fara card.</li>
+            <li>✓ <strong>Dupa trial:</strong> plan gratuit (3 fise + 3 calcule/luna) sau abonament Meserias 25 lei/luna / Pro 65 lei/luna.</li>
+            <li>✓ <strong>Datele tale iti apartin:</strong> fisele, clientii si preturile introduse de tine sunt ale tale si le poti sterge oricand.</li>
+            <li>✓ <strong>Retragere:</strong> ai 14 zile sa te razgandesti dupa plata. Daca ai folosit deja serviciul, rambursarea e proportionala.</li>
+            <li>✓ <strong>Anulare:</strong> oricand, fara penalitati. Accesul continua pana la expirarea perioadei platite.</li>
+            <li>✓ <strong>Contact:</strong> leyla.omer@gmail.com — raspundem in 24 de ore lucratoare.</li>
+          </ul>
+        </div>
+
         <Section title="1. Partile contractante">
           <p>Prezentii Termeni și Conditii ("Termeni") reglementeaza utilizarea aplicatiei <strong>Tarifator</strong> ("Serviciul"), disponibila la adresa <em>devizele-mele.vercel.app</em>.</p>
           <p className="mt-2">Serviciul este furnizat de <strong>[Denumire operator — PFA / SRL / persoana fizica, adresa, CUI]</strong>, denumit in continuare "Furnizor".</p>
-          <p className="mt-2">Prin crearea unui cont confirmati ca ati citit, inteles si acceptat acesti Termeni. Daca nu sunteti de acord, nu utilizati Serviciul.</p>
+          <p className="mt-2">Serviciul este destinat exclusiv persoanelor cu varsta de minimum <strong>18 ani</strong>. Prin crearea unui cont confirmati ca aveti cel putin 18 ani, ati citit, inteles si acceptat acesti Termeni.</p>
         </Section>
 
         <Section title="2. Descrierea Serviciului">
@@ -23,7 +37,7 @@ export default function TermeniPage() {
             <li>Gestionarea clientilor si a firmelor proprii</li>
             <li>Exportul documentelor in format PDF</li>
           </ul>
-          <p className="mt-2">Serviciul este furnizat "asa cum este". Furnizorul depune eforturi rezonabile pentru disponibilitate continua, dar nu garanteaza functionarea neintrerupta.</p>
+          <p className="mt-2">Furnizorul depune eforturi rezonabile pentru disponibilitate continua, insa nu poate garanta functionarea neintrerupta. Furnizorul nu raspunde pentru decizii comerciale luate exclusiv pe baza calculelor generate de Serviciu — verificati intotdeauna rezultatele inainte de utilizare.</p>
         </Section>
 
         <Section title="3. Contul de utilizator">
@@ -39,34 +53,48 @@ export default function TermeniPage() {
           <div className="space-y-2">
             <Row label="Perioada de test" value="30 de zile gratuite cu acces complet (Plan Pro)" />
             <Row label="Plan gratuit" value="3 fise/luna + 3 calcule de pret/luna, dupa expirarea trialului" />
-            <Row label="Plan Meserias" value="25 lei/luna — utilizare nelimitata, fara TVA, fara firme" />
-            <Row label="Plan Pro" value="65 lei/luna — utilizare nelimitata, TVA, firme multiple" />
+            <Row label="Plan Meserias" value="25 lei (RON)/luna — utilizare nelimitata, fara TVA, fara firme" />
+            <Row label="Plan Pro" value="65 lei (RON)/luna — utilizare nelimitata, TVA, firme multiple" />
           </div>
-          <p className="mt-3 text-sm text-gray-600">Tarifele pot fi modificate cu notificare prealabila de minimum 30 de zile transmisa pe adresa de email inregistrata.</p>
+          <p className="mt-3">Tarifele pot fi modificate cu notificare prealabila de minimum <strong>30 de zile</strong> transmisa pe adresa de email inregistrata. Continuarea utilizarii Serviciului dupa data intrarii in vigoare a noilor tarife constituie acceptarea acestora.</p>
+          <p className="mt-2">Modificarile substantiale ale prezentilor Termeni vor fi notificate cu minimum 15 zile inainte. Daca nu sunteti de acord, puteti rezilia contractul inainte de data modificarii.</p>
         </Section>
 
         <Section title="5. Plati si facturare">
-          <p>Abonamentele se activeaza manual prin contact la <strong>leyla.omer@gmail.com</strong>. Plata se efectueaza in avans, la inceputul fiecarei perioade de abonament.</p>
-          <p className="mt-2">Dupa achitarea platii, Furnizorul activeaza abonamentul in termen de 24 de ore lucratoare.</p>
+          <p>Abonamentele se activeaza manual prin contact la <strong>leyla.omer@gmail.com</strong>. Plata se efectueaza in avans, la inceputul fiecarei perioade de abonament, in lei (RON).</p>
+          <p className="mt-2">Dupa confirmarea platii, Furnizorul activeaza abonamentul si emite documentul fiscal aferent in termen de 24 de ore lucratoare.</p>
         </Section>
 
         <Section title="6. Rezilierea si anularea">
-          <p>Puteti solicita anularea abonamentului oricand, prin email la leyla.omer@gmail.com. Accesul la functiile platite continua pana la expirarea perioadei pentru care s-a achitat.</p>
-          <p className="mt-2">Furnizorul isi rezerva dreptul de a suspenda sau inchide conturile care incalca prezentii Termeni, cu notificare prealabila acolo unde este posibil.</p>
+          <p>Puteti solicita anularea abonamentului oricand, prin email la leyla.omer@gmail.com, fara penalitati. Accesul la functiile platite continua pana la expirarea perioadei pentru care s-a achitat. Abonamentele nu se reinnesc automat.</p>
+          <p className="mt-2">Furnizorul isi rezerva dreptul de a suspenda conturile care incalca prezentii Termeni, cu notificare prealabila de 5 zile, cu exceptia cazurilor de frauda sau utilizare abuziva unde suspendarea poate fi imediata.</p>
         </Section>
 
         <Section title="7. Proprietate intelectuala">
-          <p>Codul sursa, interfata, brandingul si continutul Serviciului sunt proprietatea Furnizorului. Datele introduse de dvs. (fise, clienti, preturi) va apartin in totalitate.</p>
+          <p>Codul sursa, interfata, brandingul si continutul Serviciului sunt proprietatea Furnizorului. <strong>Datele introduse de dvs.</strong> (fise, clienti, preturi, firme) va apartin in totalitate si puteti solicita exportul sau stergerea lor oricand.</p>
         </Section>
 
         <Section title="8. Limitarea raspunderii">
-          <p>Furnizorul nu raspunde pentru pierderi indirecte, pierderi de profit sau pierderi de date rezultate din utilizarea sau imposibilitatea utilizarii Serviciului.</p>
-          <p className="mt-2">Raspunderea totala a Furnizorului este limitata la suma platita de utilizator in ultimele 3 luni calendaristice anterioare evenimentului cauzator de prejudiciu.</p>
+          <p>In masura permisa de lege, Furnizorul nu raspunde pentru pierderi indirecte, pierderi de profit sau pierderi de date rezultate din utilizarea Serviciului.</p>
+          <p className="mt-2">Raspunderea totala a Furnizorului este limitata la suma platita de utilizator in ultimele 3 luni anterioare evenimentului cauzator de prejudiciu.</p>
+          <p className="mt-2 font-medium text-gray-700">Aceasta limitare nu se aplica in cazul prejudiciilor cauzate prin dol, culpa grava sau vatamare corporala, si nu afecteaza drepturile legale ale consumatorilor conform legislatiei romane si europene.</p>
         </Section>
 
-        <Section title="9. Legea aplicabila">
-          <p>Prezentii Termeni sunt guvernati de legislatia romana. Orice litigiu se supune jurisdictiei exclusive a instantelor competente din Romania.</p>
-          <p className="mt-2">In calitate de consumator, beneficiati de protectia oferita de legislatia romana si europeana privind drepturile consumatorilor, inclusiv posibilitatea de solutionare alternativa a disputelor prin SAL (solutionarea alternativa a litigiilor) sau platforma ODR a UE.</p>
+        <Section title="9. Legea aplicabila si solutionarea litigiilor">
+          <p>Prezentii Termeni sunt guvernati de legislatia romana. Orice litigiu se solutioneaza pe cale amiabila in primul rand, prin contact la leyla.omer@gmail.com.</p>
+          <p className="mt-2">In calitate de consumator, aveti dreptul de a apela la:</p>
+          <ul className="list-disc pl-5 mt-1 space-y-1">
+            <li><strong>ANPC</strong> (Autoritatea Nationala pentru Protectia Consumatorilor) — anpc.ro</li>
+            <li><strong>SAL</strong> (Solutionarea Alternativa a Litigiilor) — entitati acreditate conform Legii 158/2015</li>
+            <li><strong>Platforma ODR a UE</strong> (Online Dispute Resolution) — <a href="https://ec.europa.eu/consumers/odr" target="_blank" className="text-blue-600 underline">ec.europa.eu/consumers/odr</a></li>
+            <li>Instantele judecatoresti competente din Romania</li>
+          </ul>
+        </Section>
+
+        <Section title="10. Diverse">
+          <p><strong>Separabilitate:</strong> Daca o clauza a prezentilor Termeni este declarata invalida sau inaplicabila, celelalte clauze raman in vigoare.</p>
+          <p className="mt-2"><strong>Renuntare:</strong> Nerevendicarea unui drept prevazut de acesti Termeni nu constituie renuntare definitiva la acel drept.</p>
+          <p className="mt-2"><strong>Forta majora:</strong> Furnizorul nu raspunde pentru neexecutarea obligatiilor cauzata de evenimente in afara controlului sau rezonabil (dezastre naturale, atacuri cibernetice la scara larga, probleme ale furnizorilor de infrastructura).</p>
         </Section>
 
         <div className="text-xs text-gray-400 pt-4 border-t border-gray-100 space-x-4">
