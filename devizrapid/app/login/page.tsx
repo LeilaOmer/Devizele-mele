@@ -99,6 +99,13 @@ export default function LoginPage() {
           {mode === 'login' ? 'Nu ai cont? Creeaza unul' : 'Ai deja cont? Autentifica-te'}
         </button>
 
+        <p className="text-center text-xs text-gray-400 leading-relaxed">
+          Prin utilizarea Tarifator, accepti{' '}
+          <a href="/termeni" className="underline hover:text-gray-600">Termenii si Conditiile</a>,{' '}
+          <a href="/confidentialitate" className="underline hover:text-gray-600">Politica GDPR</a> si{' '}
+          <a href="/retragere" className="underline hover:text-gray-600">Politica de Rambursare</a>.
+        </p>
+
       </div>
     </div>
   )
