@@ -12,7 +12,9 @@ interface Company {
 
 export default function Dashboard() {
   const router = useRouter()
-  const [accountType, setAccountType] = useState<'meseriaș' | 'pro' | null>(null)
+  // plan = ce a achizitionat (din DB), mode = modul activ curent (din localStorage)
+  const [plan, setPlan] = useState<'meseriaș' | 'pro' | null>(null)
+  const [mode, setMode] = useState<'meseriaș' | 'pro'>('meseriaș')
   const [companies, setCompanies] = useState<Company[]>([])
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
@@ -30,13 +32,18 @@ export default function Dashboard() {
         router.push('/settings')
         return
       }
-      const type: 'meseriaș' | 'pro' = prof.account_type || 'meseriaș'
-      setAccountType(type)
 
-      const nameFromProfile = prof.company_name || prof.email || session.user.email || ''
-      setDisplayName(nameFromProfile)
+      const userPlan: 'meseriaș' | 'pro' = prof.account_type || 'meseriaș'
+      setPlan(userPlan)
 
-      if (type === 'pro') {
+      // modul activ: daca are pro, preia din localStorage, altfel meserias
+      const savedMode = localStorage.getItem('dashboardMode') as 'meseriaș' | 'pro' | null
+      const activeMode: 'meseriaș' | 'pro' = (userPlan === 'pro' && savedMode === 'pro') ? 'pro' : 'meseriaș'
+      setMode(activeMode)
+
+      setDisplayName(prof.company_name || prof.email || session.user.email || '')
+
+      if (userPlan === 'pro') {
         const { data: cos } = await supabase.from('companies').select('id, name, cui').order('name')
         setCompanies(cos || [])
         const saved = localStorage.getItem('activeCompanyId')
@@ -44,7 +51,7 @@ export default function Dashboard() {
         const active = match || cos?.[0] || null
         if (active) {
           setActiveCompanyId(active.id)
-          setDisplayName(active.name)
+          if (activeMode === 'pro') setDisplayName(active.name)
           localStorage.setItem('activeCompanyId', active.id)
           localStorage.setItem('activeCompanyName', active.name)
         }
@@ -53,6 +60,18 @@ export default function Dashboard() {
     }
     load()
   }, [])
+
+  function switchMode(newMode: 'meseriaș' | 'pro') {
+    if (plan !== 'pro') return
+    setMode(newMode)
+    localStorage.setItem('dashboardMode', newMode)
+    if (newMode === 'meseriaș') {
+      setDisplayName('')
+    } else {
+      const active = companies.find(c => c.id === activeCompanyId) || companies[0]
+      if (active) setDisplayName(active.name)
+    }
+  }
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -132,48 +151,57 @@ export default function Dashboard() {
             </a>
           </div>
 
-          {/* Dreapta: selector tip cont + firma activa */}
+          {/* Dreapta: selector mod + firma activa */}
           <div className="flex flex-col gap-3">
+
             {/* Tab meserias */}
-            <div className={`p-4 rounded-2xl border-2 ${
-              accountType === 'meseriaș'
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 bg-white'
-            }`}>
+            <button
+              onClick={() => switchMode('meseriaș')}
+              disabled={plan !== 'pro'}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                mode === 'meseriaș'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 bg-white hover:border-blue-300 active:scale-95'
+              }`}>
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-lg">🔨</span>
-                <span className={`font-bold text-sm ${accountType === 'meseriaș' ? 'text-blue-700' : 'text-gray-600'}`}>
+                <span className={`font-bold text-sm ${mode === 'meseriaș' ? 'text-blue-700' : 'text-gray-600'}`}>
                   Meserias
                 </span>
-                {accountType === 'meseriaș' && (
+                {mode === 'meseriaș' && (
                   <span className="ml-auto text-[10px] font-bold text-blue-500 uppercase tracking-wide">activ</span>
                 )}
               </div>
               <p className="text-xs text-gray-400">Fara TVA · Fara firme</p>
-            </div>
+            </button>
 
-            {/* Tab pro — blocat daca nu e achizitionat */}
-            <div className={`p-4 rounded-2xl border-2 ${
-              accountType === 'pro'
-                ? 'border-purple-500 bg-purple-50'
-                : 'border-dashed border-gray-300 bg-gray-50'
-            }`}>
+            {/* Tab pro */}
+            <button
+              onClick={() => plan === 'pro' ? switchMode('pro') : undefined}
+              disabled={plan !== 'pro'}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                plan !== 'pro'
+                  ? 'border-dashed border-gray-300 bg-gray-50 opacity-60 cursor-not-allowed'
+                  : mode === 'pro'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-gray-200 bg-white hover:border-purple-300 active:scale-95'
+              }`}>
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-lg">{accountType === 'pro' ? '⚡' : '🔒'}</span>
-                <span className={`font-bold text-sm ${accountType === 'pro' ? 'text-purple-700' : 'text-gray-400'}`}>
+                <span className="text-lg">{plan === 'pro' ? '⚡' : '🔒'}</span>
+                <span className={`font-bold text-sm ${mode === 'pro' ? 'text-purple-700' : plan === 'pro' ? 'text-gray-600' : 'text-gray-400'}`}>
                   Pro
                 </span>
-                {accountType === 'pro' && (
+                {mode === 'pro' && (
                   <span className="ml-auto text-[10px] font-bold text-purple-500 uppercase tracking-wide">activ</span>
                 )}
               </div>
               <p className="text-xs text-gray-400">
-                {accountType === 'pro' ? 'TVA · Firme multiple' : 'Necesita achizitie'}
+                {plan === 'pro' ? 'TVA · Firme multiple' : 'Necesita achizitie'}
               </p>
-            </div>
+            </button>
 
-            {/* Firma activa — doar pro */}
-            {accountType === 'pro' && (
+            {/* Firma activa — vizibila cand modul e pro */}
+            {plan === 'pro' && mode === 'pro' && (
               <div className="bg-purple-50 border border-purple-100 rounded-2xl p-3">
                 <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wide mb-0.5">Firma activa</p>
                 {activeCompany ? (
