@@ -67,7 +67,7 @@ export default function Dashboard() {
       const activeMode: 'meseriaș' | 'pro' = userPlan === 'pro' && (savedMode === 'pro' || (savedMode === null && dbMode === 'pro')) ? 'pro' : 'meseriaș'
       setMode(activeMode)
 
-      setDisplayName(prof.company_name || prof.email || session.user.email || '')
+      setDisplayName(prof.email || session.user.email || '')
 
       if (userPlan === 'pro') {
         const { data: cos } = await supabase.from('companies').select('id, name, cui').order('name')
@@ -97,6 +97,15 @@ export default function Dashboard() {
       const active = companies.find(c => c.id === activeCompanyId) || companies[0]
       if (active) setDisplayName(active.name)
     }
+  }
+
+  function selectCompany(id: string) {
+    const company = companies.find(c => c.id === id)
+    if (!company) return
+    setActiveCompanyId(id)
+    localStorage.setItem('activeCompanyId', id)
+    localStorage.setItem('activeCompanyName', company.name)
+    setDisplayName(company.name)
   }
 
   async function handleLogout() {
@@ -282,12 +291,16 @@ export default function Dashboard() {
             {/* Firma activa — vizibila cand modul e pro */}
             {plan === 'pro' && mode === 'pro' && (
               <div className="bg-purple-50 border border-purple-100 rounded-2xl p-3">
-                <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wide mb-0.5">Firma activa</p>
-                {activeCompany ? (
-                  <>
-                    <p className="text-sm font-bold text-purple-800 truncate">{activeCompany.name}</p>
-                    <a href="/settings" className="text-xs text-purple-400 hover:text-purple-600">Schimba →</a>
-                  </>
+                <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wide mb-1">Firma activa</p>
+                {companies.length > 0 ? (
+                  <select
+                    value={activeCompanyId || ''}
+                    onChange={e => selectCompany(e.target.value)}
+                    className="w-full text-sm font-bold text-purple-800 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none cursor-pointer">
+                    {companies.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
                 ) : (
                   <a href="/settings" className="text-xs text-purple-500 font-semibold">+ Adauga firma</a>
                 )}
