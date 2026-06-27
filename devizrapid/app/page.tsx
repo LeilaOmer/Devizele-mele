@@ -2,157 +2,132 @@ import Link from 'next/link'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white text-gray-900">
       <style>{`.fixed.bottom-24 { display: none; }`}</style>
 
       {/* Nav */}
-      <nav className="px-6 py-4 flex items-center justify-between max-w-2xl mx-auto">
+      <nav className="px-6 py-5 flex items-center justify-between max-w-3xl mx-auto border-b border-gray-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm">
-            <span className="text-white font-black text-base leading-none">T</span>
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+            <span className="text-white font-black text-sm leading-none">T</span>
           </div>
-          <span className="font-black text-xl text-gray-900">Tarifator</span>
+          <span className="font-bold text-lg text-gray-900">Tarifator</span>
         </div>
-        <Link href="/login" className="text-sm font-semibold text-blue-600 hover:text-blue-700">
-          Autentificare →
+        <Link href="/login" className="text-sm font-medium text-gray-500 hover:text-gray-900">
+          Autentificare
         </Link>
       </nav>
 
       {/* Hero */}
-      <section className="px-6 pt-10 pb-14 max-w-lg mx-auto text-center">
-        <div className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full mb-5 uppercase tracking-wide">
-          30 zile gratuit · Fără card
-        </div>
-        <h1 className="text-4xl font-black text-gray-900 leading-tight mb-4">
-          Tarifează profesionist.<br />Rapid.
+      <section className="px-6 pt-16 pb-16 max-w-3xl mx-auto">
+        <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-4">
+          30 de zile gratuit · Fără card
+        </p>
+        <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-6 max-w-xl">
+          Fișe de servicii și calcul de preț pentru prestatori.
         </h1>
-        <p className="text-lg text-gray-500 mb-8 leading-relaxed">
-          Două unelte într-una: generezi fișe de servicii prin voce și calculezi prețul de vânzare cu adaos și TVA. Tot ce ai nevoie pentru a tărifa corect.
+        <p className="text-xl text-gray-500 mb-10 max-w-lg leading-relaxed">
+          Dictezi ce ai lucrat, aplicația generează fișa cu prețurile tale. Sau calculezi prețul de vânzare cu adaos și TVA. Fără Excel. Fără hârtii.
         </p>
         <Link href="/login"
-          className="block w-full py-4 bg-blue-600 text-white font-bold text-lg rounded-2xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all">
+          className="inline-block px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">
           Încearcă gratuit
         </Link>
-        <p className="text-xs text-gray-400 mt-3">Fără card. Fără angajament. Anulezi oricând.</p>
       </section>
 
-      {/* Cele doua unelte */}
-      <section className="bg-gray-50 px-6 py-12">
-        <div className="max-w-lg mx-auto">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center mb-6">Două unelte, un singur loc</p>
-          <div className="space-y-4">
-
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-3xl">🎙️</span>
-                <h2 className="font-black text-lg text-gray-900">Fișă Servicii prin Voce</h2>
-              </div>
-              <p className="text-sm text-gray-500 mb-3">Dictezi ce ai lucrat — „montaj calorifer Popescu, 2 bucăți" — și fișa apare instant cu prețurile tale, gata de trimis ca PDF.</p>
-              <div className="flex flex-wrap gap-2">
-                {['Dictare vocală', 'PDF instant', 'Clienți salvați'].map(t => (
-                  <span key={t} className="text-xs bg-blue-50 text-blue-600 font-semibold px-2.5 py-1 rounded-full">{t}</span>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-3xl">🏷️</span>
-                <h2 className="font-black text-lg text-gray-900">Calculator Preț Vânzare</h2>
-              </div>
-              <p className="text-sm text-gray-500 mb-3">Introduci prețul de achiziție, setezi adaosul și TVA-ul — calculatorul îți arată instant prețul de vânzare și marja. Exporti PDF sau trimiți direct.</p>
-              <div className="flex flex-wrap gap-2">
-                {['Adaos comercial', 'TVA 11% / 21%', 'PDF & Share'].map(t => (
-                  <span key={t} className="text-xs bg-amber-50 text-amber-600 font-semibold px-2.5 py-1 rounded-full">{t}</span>
-                ))}
-              </div>
-            </div>
-
+      {/* Doua instrumente */}
+      <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-10">Ce face</p>
+        <div className="grid md:grid-cols-2 gap-12">
+          <div>
+            <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-3">Fișă Servicii</p>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Dictezi. Fișa apare.</h2>
+            <p className="text-gray-500 leading-relaxed mb-4">
+              Spui ce ai lucrat — aplicația recunoaște serviciile, completează cantitățile și calculează totalul. PDF-ul e gata de trimis clientului în câteva secunde.
+            </p>
+            <ul className="space-y-2 text-sm text-gray-500">
+              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0"></span>Recunoaștere vocală în română</li>
+              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0"></span>Prețurile tale, aplicate automat</li>
+              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-blue-400 shrink-0"></span>PDF profesional, trimis direct</li>
+            </ul>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-amber-500 uppercase tracking-widest mb-3">Calculator Preț</p>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Prețul corect, la orice produs.</h2>
+            <p className="text-gray-500 leading-relaxed mb-4">
+              Introduci costul de achiziție, setezi adaosul și TVA-ul — obții imediat prețul de vânzare și marja reală. Exporti lista ca PDF sau o trimiți direct.
+            </p>
+            <ul className="space-y-2 text-sm text-gray-500">
+              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-amber-400 shrink-0"></span>Adaos comercial configurabil</li>
+              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-amber-400 shrink-0"></span>TVA 11% și 21%</li>
+              <li className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-amber-400 shrink-0"></span>Export PDF și partajare</li>
+            </ul>
           </div>
         </div>
       </section>
 
-      {/* Cum functioneaza — pe scurt */}
-      <section className="px-6 py-12 max-w-lg mx-auto">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center mb-6">Simplu de folosit</p>
-        <div className="space-y-3">
-          {[
-            { icon: '🔧', title: 'Adaugi serviciile și prețurile tale', desc: 'O singură dată. Le refolosești la fiecare fișă.' },
-            { icon: '🎙️', title: 'Dictezi sau completezi manual', desc: 'Voce pentru fișe rapide, manual pentru calculul de preț.' },
-            { icon: '📄', title: 'Trimiți PDF-ul clientului', desc: 'Direct din aplicație, în câteva secunde.' },
-          ].map((item, i) => (
-            <div key={i} className="bg-gray-50 rounded-2xl p-4 flex items-start gap-4">
-              <span className="text-2xl leading-none mt-0.5">{item.icon}</span>
-              <div>
-                <p className="font-bold text-sm text-gray-900">{item.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
-              </div>
-            </div>
-          ))}
+      {/* Pentru cine */}
+      <section className="border-t border-gray-100 bg-gray-50 px-6 py-16">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-6">Pentru cine</p>
+          <p className="text-2xl font-bold text-gray-900 mb-4 max-w-xl">
+            Orice prestator care lucrează cu prețuri și clienți.
+          </p>
+          <p className="text-gray-500 max-w-lg leading-relaxed">
+            Electricieni, instalatori, tehnicieni HVAC, contabili, mecanici, curățenie — dacă emiți fișe de servicii sau calculezi prețuri de vânzare, Tarifatorul e construit pentru tine.
+          </p>
         </div>
       </section>
 
       {/* Preturi */}
-      <section className="bg-gray-50 px-6 py-12">
-        <div className="max-w-lg mx-auto space-y-3">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center mb-6">Prețuri simple</p>
-
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex justify-between items-center">
+      <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-10">Prețuri</p>
+        <div className="divide-y divide-gray-100 border border-gray-100 rounded-2xl overflow-hidden">
+          <div className="px-6 py-5 flex justify-between items-center bg-green-50">
             <div>
-              <p className="text-xs font-bold text-green-600 uppercase tracking-wide mb-1">Trial</p>
-              <p className="font-bold text-gray-900">30 de zile gratuit</p>
-              <p className="text-xs text-gray-400 mt-0.5">Acces complet la ambele unelte</p>
+              <p className="font-semibold text-gray-900">Trial gratuit</p>
+              <p className="text-sm text-gray-500 mt-0.5">30 de zile · Acces complet · Fără card</p>
             </div>
-            <span className="text-4xl font-black text-green-400">0</span>
+            <p className="text-2xl font-bold text-green-600">0 lei</p>
           </div>
-
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg">🔨</span>
-                  <p className="font-bold text-gray-900">Artizan</p>
-                </div>
-                <p className="text-xs text-gray-500">Fișe și calcule nelimitate · Fără TVA · Fără firme</p>
-              </div>
-              <p className="text-2xl font-black text-gray-900 shrink-0">25 <span className="text-sm font-semibold text-gray-400">lei/lună</span></p>
+          <div className="px-6 py-5 flex justify-between items-center">
+            <div>
+              <p className="font-semibold text-gray-900">Artizan</p>
+              <p className="text-sm text-gray-500 mt-0.5">Fișe și calcule nelimitate · Fără TVA · Fără firme</p>
             </div>
+            <p className="text-2xl font-bold text-gray-900">25 <span className="text-sm font-normal text-gray-400">lei/lună</span></p>
           </div>
-
-          <div className="bg-white rounded-2xl p-5 shadow-sm border-2 border-purple-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg">⚡</span>
-                  <p className="font-bold text-gray-900">Pro</p>
-                  <span className="text-[10px] font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full uppercase tracking-wide">Recomandat</span>
-                </div>
-                <p className="text-xs text-gray-500">Tot Artizan + TVA · Firme multiple</p>
+          <div className="px-6 py-5 flex justify-between items-center">
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-gray-900">Pro</p>
+                <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Recomandat</span>
               </div>
-              <p className="text-2xl font-black text-gray-900 shrink-0">65 <span className="text-sm font-semibold text-gray-400">lei/lună</span></p>
+              <p className="text-sm text-gray-500 mt-0.5">Tot Artizan + TVA · Firme multiple</p>
             </div>
+            <p className="text-2xl font-bold text-gray-900">65 <span className="text-sm font-normal text-gray-400">lei/lună</span></p>
           </div>
         </div>
       </section>
 
       {/* CTA final */}
-      <section className="px-6 py-14 text-center max-w-lg mx-auto">
-        <h2 className="text-2xl font-black text-gray-900 mb-3">Gata să tarifezi corect?</h2>
-        <p className="text-gray-500 text-sm mb-6">Înregistrare în sub un minut. Prima lună complet gratuită.</p>
+      <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Încearcă gratuit 30 de zile.</h2>
+        <p className="text-gray-500 mb-8">Fără card. Fără angajament. Dacă nu e pentru tine, nu plătești nimic.</p>
         <Link href="/login"
-          className="block w-full py-4 bg-blue-600 text-white font-bold text-lg rounded-2xl shadow-lg hover:bg-blue-700 active:scale-95 transition-all">
-          Începe gratuit
+          className="inline-block px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">
+          Creează cont gratuit
         </Link>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 px-6 py-6 text-center space-y-2">
-        <div className="flex justify-center gap-6 text-xs text-gray-400">
+      <footer className="border-t border-gray-100 px-6 py-8 max-w-3xl mx-auto flex flex-wrap justify-between items-center gap-4 text-sm text-gray-400">
+        <span>© 2025 Tarifator</span>
+        <div className="flex gap-6">
           <Link href="/termeni" className="hover:text-gray-600">Termeni</Link>
           <Link href="/confidentialitate" className="hover:text-gray-600">Confidențialitate</Link>
-          <a href="mailto:leyla.omer@gmail.com" className="hover:text-gray-600">Contact</a>
+          <a href="mailto:leyla.omer@gmail.com" className="hover:text-gray-600">leyla.omer@gmail.com</a>
         </div>
-        <p className="text-xs text-gray-300">© 2025 Tarifator</p>
       </footer>
     </div>
   )
