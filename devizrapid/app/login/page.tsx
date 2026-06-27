@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -10,12 +10,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [acceptGdpr, setAcceptGdpr] = useState(false)
+  const [acceptRetragere, setAcceptRetragere] = useState(false)
+  const [acceptMarketing, setAcceptMarketing] = useState(false)
   const router = useRouter()
 
   async function handleSubmit() {
     setError(''); setSuccess('')
     if (!email || !password) { setError('Completeaza email si parola.'); return }
     if (password.length < 6) { setError('Parola trebuie sa aiba minim 6 caractere.'); return }
+    if (mode === 'signup' && (!acceptTerms || !acceptGdpr || !acceptRetragere)) {
+      setError('Trebuie sa accepti toate documentele obligatorii pentru a crea un cont.')
+      return
+    }
     setLoading(true)
 
     if (mode === 'login') {
@@ -94,19 +102,67 @@ export default function LoginPage() {
           {loading ? 'Se proceseaza...' : mode === 'login' ? 'Autentificare' : 'Creeaza cont'}
         </button>
 
+        {mode === 'signup' && (
+          <div className="space-y-3 pt-1">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Acorduri obligatorii</p>
+
+            <ConsentCheck
+              checked={acceptTerms}
+              onChange={setAcceptTerms}
+              required
+              label={<>Am citit si accept <a href="/termeni" target="_blank" className="text-blue-600 underline">Termenii si Conditiile</a></>}
+            />
+            <ConsentCheck
+              checked={acceptGdpr}
+              onChange={setAcceptGdpr}
+              required
+              label={<>Am citit si accept <a href="/confidentialitate" target="_blank" className="text-blue-600 underline">Politica de Confidentialitate (GDPR)</a> si sunt de acord cu prelucrarea datelor mele personale in scopul furnizarii serviciului</>}
+            />
+            <ConsentCheck
+              checked={acceptRetragere}
+              onChange={setAcceptRetragere}
+              required
+              label={<>Am luat la cunostinta <a href="/retragere" target="_blank" className="text-blue-600 underline">Politica de Retragere si Rambursare</a>, inclusiv exceptia pentru servicii digitale cu executie imediata</>}
+            />
+
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-1">Optional</p>
+            <ConsentCheck
+              checked={acceptMarketing}
+              onChange={setAcceptMarketing}
+              label="Sunt de acord sa primesc comunicari comerciale despre Tarifator (noutati, oferte)"
+            />
+          </div>
+        )}
+
         <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setSuccess('') }}
           className="w-full py-2 text-sm text-gray-400 hover:text-gray-600">
           {mode === 'login' ? 'Nu ai cont? Creeaza unul' : 'Ai deja cont? Autentifica-te'}
         </button>
 
-        <p className="text-center text-xs text-gray-400 leading-relaxed">
-          Prin utilizarea Tarifator, accepti{' '}
-          <a href="/termeni" className="underline hover:text-gray-600">Termenii si Conditiile</a>,{' '}
-          <a href="/confidentialitate" className="underline hover:text-gray-600">Politica GDPR</a> si{' '}
-          <a href="/retragere" className="underline hover:text-gray-600">Politica de Rambursare</a>.
-        </p>
-
       </div>
     </div>
+  )
+}
+
+function ConsentCheck({ checked, onChange, label, required }: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  label: ReactNode
+  required?: boolean
+}) {
+  return (
+    <label className="flex items-start gap-3 cursor-pointer group">
+      <div className={`mt-0.5 w-5 h-5 shrink-0 rounded border-2 flex items-center justify-center transition-colors ${
+        checked ? 'bg-blue-600 border-blue-600' : 'border-gray-300 group-hover:border-blue-400'
+      }`} onClick={() => onChange(!checked)}>
+        {checked && <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+          <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>}
+      </div>
+      <span className="text-xs text-gray-600 leading-relaxed">
+        {label}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
+      </span>
+    </label>
   )
 }
