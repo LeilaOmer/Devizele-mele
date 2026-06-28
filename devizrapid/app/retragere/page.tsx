@@ -62,7 +62,7 @@ export default function RetragerePage() {
               then="Rambursare proportionala cu perioada de indisponibilitate confirmata, la cerere motivata trimisa in 30 de zile de la incident."
             />
             <Case
-              when="Perioada de test (30 zile gratuite)"
+              when="Perioada de test (6 luni gratuite)"
               then="Nu se aplica rambursarea — perioada de test este complet gratuita."
             />
           </div>

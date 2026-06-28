@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     'reparatii telefoane', 'reparatii calculatoare', 'service IT', 'mentenanta IT',
     'contabil', 'contabilitate', 'expert contabil', 'consultant fiscal', 'avocat',
     'meditatii', 'instructor auto', 'fotograf', 'cameraman', 'traducator', 'gradinărit',
-    'prestator servicii', 'artizan', 'meserias', 'aplicatie meserias', 'aplicatie prestatori',
+    'prestator servicii', 'artizan', 'aplicatie artizan', 'aplicatie prestatori',
     // calculator pret — tipuri comercianti
     'calculator pret vanzare', 'calculator adaos comercial', 'calculator TVA', 'calculator marja profit',
     'calcul markup', 'calcul adaos', 'pret de vanzare',
