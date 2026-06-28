@@ -5,7 +5,7 @@ export default function TermeniPage() {
 
         <div>
           <a href="/login" className="text-sm text-blue-600 hover:underline">← Inapoi</a>
-          <h1 className="text-2xl font-bold text-gray-900 mt-3">Termeni și Condiții</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mt-3">Termeni si Conditii</h1>
           <p className="text-xs text-gray-400 mt-1">Ultima actualizare: Iunie 2026</p>
         </div>
 
@@ -24,7 +24,7 @@ export default function TermeniPage() {
         </div>
 
         <Section title="1. Partile contractante">
-          <p>Prezentii Termeni și Conditii ("Termeni") reglementeaza utilizarea aplicatiei <strong>Tarifator</strong> ("Serviciul"), disponibila la adresa <em>devizele-mele.vercel.app</em>.</p>
+          <p>Prezentii Termeni si Conditii ("Termeni") reglementeaza utilizarea aplicatiei <strong>Tarifator</strong> ("Serviciul"), disponibila la adresa <em>devizele-mele.vercel.app</em>.</p>
           <p className="mt-2">Serviciul este furnizat de <strong>Tarifator</strong> (serviciu in faza beta, operat de o persoana fizica, in curs de inregistrare ca entitate juridica), denumit in continuare "Furnizor".</p>
           <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">Aceasta versiune a aplicatiei este in faza de testare (beta). Nu se percep plati in aceasta etapa. Accesul este gratuit pe durata perioadei de test.</p>
           <p className="mt-2">Serviciul este destinat exclusiv persoanelor cu varsta de minimum <strong>18 ani</strong>. Prin crearea unui cont confirmati ca aveti cel putin 18 ani, ati citit, inteles si acceptat acesti Termeni.</p>

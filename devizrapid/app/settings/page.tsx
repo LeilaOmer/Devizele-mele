@@ -317,7 +317,7 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-400 mb-2">Documente legale</p>
             <div className="space-y-2">
               {[
-                { href: '/termeni', label: 'Termeni și Condiții' },
+                { href: '/termeni', label: 'Termeni si Conditii' },
                 { href: '/confidentialitate', label: 'Politica de Confidentialitate (GDPR)' },
                 { href: '/retragere', label: 'Drept de Retragere · Rambursare · Anulare' },
               ].map(({ href, label }) => (
@@ -345,7 +345,7 @@ export default function SettingsPage() {
       {pendingCompanyId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full mx-4 space-y-4">
-            <p className="text-sm font-semibold text-gray-800">Copiez nomenclatorul de servicii existent pentru această firmă?</p>
+            <p className="text-sm font-semibold text-gray-800">Copiez nomenclatorul de servicii existent pentru aceasta firma?</p>
             <div className="flex gap-3">
               <button onClick={() => handleCopyServices(false)} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600">Nu</button>
               <button onClick={() => handleCopyServices(true)} className="flex-1 py-3 rounded-xl bg-purple-600 text-white text-sm font-semibold">Da</button>
@@ -377,7 +377,7 @@ export default function SettingsPage() {
             <div className="text-center">
               <div className="text-4xl mb-2">⚠️</div>
               <h2 className="font-bold text-gray-900">Stergi contul?</h2>
-              <p className="text-sm text-gray-500 mt-1">Aceasta actiune este <strong>ireversibila</strong>. Fișele, clienții, serviciile și toate datele tale vor fi șterse definitiv.</p>
+              <p className="text-sm text-gray-500 mt-1">Aceasta actiune este <strong>ireversibila</strong>. Fisele, clientii, serviciile si toate datele tale vor fi sterse definitiv.</p>
             </div>
             <button onClick={handleDeleteAccount} disabled={deletingAccount}
               className="w-full py-3 bg-red-600 text-white font-bold rounded-xl text-sm disabled:bg-red-300">

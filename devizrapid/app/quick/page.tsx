@@ -218,7 +218,7 @@ export default function QuickPage() {
 
         <div className="bg-white p-6 rounded shadow mb-4 space-y-4">
           <button onClick={handleVoice} className={'w-full p-4 rounded text-white text-lg font-medium ' + (listening ? 'bg-red-500' : 'bg-purple-600 hover:bg-purple-700')}>
-            {listening ? '🔴 Ascult...' : preview ? '✏️ Modifică prin voce' : '🎤 Dictează'}
+            {listening ? '🔴 Ascult...' : preview ? '✏️ Modifica prin voce' : '🎤 Dicteaza'}
           </button>
           {transcript && (
             <div className="border rounded p-3 text-gray-700 text-sm">{transcript}</div>
@@ -228,7 +228,7 @@ export default function QuickPage() {
           )}
           <button onClick={() => { setPreview(null); setTranscript(''); committedRef.current = '' }}
             className="w-full bg-gray-100 text-gray-600 p-3 rounded font-medium">
-            Fișă nouă
+            Fisa noua
           </button>
         </div>
 
@@ -252,7 +252,7 @@ export default function QuickPage() {
               <span className="text-blue-600">{preview.items.reduce((s, i) => s + i.total, 0)} lei</span>
             </div>
             <button onClick={handleConfirm} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded font-medium disabled:bg-gray-300">
-              {loading ? 'Salvez...' : 'Confirmă și salvează'}
+              {loading ? 'Salvez...' : 'Confirma si salveaza'}
             </button>
           </div>
         )}

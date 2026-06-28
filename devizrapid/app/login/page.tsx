@@ -69,8 +69,8 @@ export default function LoginPage() {
 
         {mode === 'signup' && (
           <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-center space-y-0.5">
-            <p className="text-xs font-bold text-green-600 uppercase tracking-wide">Ofertă Early Adopter</p>
-            <p className="text-sm font-semibold text-green-900">6 luni gratuit · Acces complet · Fără card</p>
+            <p className="text-xs font-bold text-green-600 uppercase tracking-wide">Oferta Early Adopter</p>
+            <p className="text-sm font-semibold text-green-900">6 luni gratuit · Acces complet · Fara card</p>
             <p className="text-xs text-green-600">Disponibil pentru primii 100 de utilizatori</p>
           </div>
         )}

@@ -39,7 +39,7 @@ function UpgradeContent() {
           <ul className="space-y-1.5 text-sm text-gray-600">
             <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Fise Servicii nelimitate</li>
             <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Calcule Pret nelimitate</li>
-            <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Fără TVA · Fără firme</li>
+            <li className="flex items-center gap-2"><span className="text-green-500 font-bold">✓</span> Fara TVA · Fara firme</li>
           </ul>
         </div>
 

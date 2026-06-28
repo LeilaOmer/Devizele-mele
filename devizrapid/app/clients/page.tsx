@@ -52,7 +52,7 @@ export default function ClientsPage() {
         <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
           <span className="text-xl">‹</span> Dashboard
         </button>
-        <h1 className="text-base font-bold text-gray-800">Clienți</h1>
+        <h1 className="text-base font-bold text-gray-800">Clienti</h1>
         <div className="w-20" />
       </div>
 
@@ -62,20 +62,20 @@ export default function ClientsPage() {
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Client nou</p>
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
-            placeholder="Nume / Denumire firmă *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            placeholder="Nume / Denumire firma *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
             placeholder="CUI" value={form.cui} onChange={e => setForm({ ...form, cui: e.target.value })} />
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
-            placeholder="Adresă" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+            placeholder="Adresa" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
-            placeholder="Persoană de contact" value={form.contact_person} onChange={e => setForm({ ...form, contact_person: e.target.value })} />
+            placeholder="Persoana de contact" value={form.contact_person} onChange={e => setForm({ ...form, contact_person: e.target.value })} />
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
             placeholder="Telefon" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
             placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
           <button onClick={handleAdd} disabled={loading || !form.name}
             className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
-            {loading ? 'Se adaugă...' : '+ Adaugă client'}
+            {loading ? 'Se adauga...' : '+ Adauga client'}
           </button>
         </div>
 
@@ -92,9 +92,9 @@ export default function ClientsPage() {
                     <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
                       placeholder="CUI" value={editing.cui || ''} onChange={e => setEditing({ ...editing, cui: e.target.value })} />
                     <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
-                      placeholder="Adresă" value={editing.address || ''} onChange={e => setEditing({ ...editing, address: e.target.value })} />
+                      placeholder="Adresa" value={editing.address || ''} onChange={e => setEditing({ ...editing, address: e.target.value })} />
                     <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
-                      placeholder="Persoană de contact" value={editing.contact_person || ''} onChange={e => setEditing({ ...editing, contact_person: e.target.value })} />
+                      placeholder="Persoana de contact" value={editing.contact_person || ''} onChange={e => setEditing({ ...editing, contact_person: e.target.value })} />
                     <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
                       placeholder="Telefon" value={editing.phone || ''} onChange={e => setEditing({ ...editing, phone: e.target.value })} />
                     <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
@@ -102,11 +102,11 @@ export default function ClientsPage() {
                     <div className="flex gap-2 pt-1">
                       <button onClick={handleSaveEdit} disabled={loading}
                         className="flex-1 py-2.5 bg-green-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
-                        Salvează
+                        Salveaza
                       </button>
                       <button onClick={() => setEditing(null)}
                         className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium">
-                        Anulează
+                        Anuleaza
                       </button>
                     </div>
                   </div>
@@ -123,7 +123,7 @@ export default function ClientsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
-                      <button onClick={() => setEditing(c)} className="text-blue-500 text-sm font-medium">Editează</button>
+                      <button onClick={() => setEditing(c)} className="text-blue-500 text-sm font-medium">Editeaza</button>
                       <button onClick={() => handleDelete(c.id)} className="text-red-400 text-xl leading-none">×</button>
                     </div>
                   </div>

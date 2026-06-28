@@ -44,7 +44,7 @@ function calcItem(item: Item, adaos: number, step: RoundStep, mode: RoundMode) {
 
 const fmt2 = (n: number) => n.toFixed(2)
 const fmtDate = () => new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
-const noDiac = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[șŞ]/g, 's').replace(/[țŢ]/g, 't').replace(/[ăÂâ]/g, 'a').replace(/[îÎ]/g, 'i')
+const noDiac = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[sS]/g, 's').replace(/[tT]/g, 't').replace(/[aAa]/g, 'a').replace(/[iI]/g, 'i')
 
 function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })

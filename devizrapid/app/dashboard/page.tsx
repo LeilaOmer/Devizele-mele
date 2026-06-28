@@ -195,13 +195,13 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               <span className="text-xl">👋</span>
               <div>
-                <p className="text-sm font-bold text-blue-900">Primul pas: adaugă-ți serviciile</p>
-                <p className="text-xs text-blue-500">Fără ele, nici fișele nici calculatorul nu funcționează.</p>
+                <p className="text-sm font-bold text-blue-900">Primul pas: adauga-ti serviciile</p>
+                <p className="text-xs text-blue-500">Fara ele, nici fisele nici calculatorul nu functioneaza.</p>
               </div>
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <a href="/services" onClick={() => localStorage.setItem('welcomed', '1')}
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 whitespace-nowrap">Adaugă →</a>
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 whitespace-nowrap">Adauga →</a>
               <button onClick={() => { localStorage.setItem('welcomed', '1'); setShowWelcome(false) }}
                 className="text-blue-300 hover:text-blue-500 text-xl leading-none">×</button>
             </div>
@@ -268,8 +268,8 @@ export default function Dashboard() {
             <svg className="w-8 h-8 mb-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
             </svg>
-            <h2 className="font-bold text-xl leading-tight text-gray-900">Fișă Servicii Voce</h2>
-            <p className="text-blue-700 text-sm mt-1.5">Dictează și generează instant</p>
+            <h2 className="font-bold text-xl leading-tight text-gray-900">Fisa Servicii Voce</h2>
+            <p className="text-blue-700 text-sm mt-1.5">Dicteaza si genereaza instant</p>
           </a>
           <a href="/pricing"
             className="bg-amber-100 p-5 rounded-2xl shadow hover:bg-amber-200 active:scale-95 transition-all flex flex-col min-h-[160px]">
@@ -277,7 +277,7 @@ export default function Dashboard() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
             </svg>
-            <h2 className="font-bold text-xl leading-tight text-gray-900">Calculator Preț Vânzare</h2>
+            <h2 className="font-bold text-xl leading-tight text-gray-900">Calculator Pret Vanzare</h2>
             <p className="text-amber-700 text-sm mt-1.5">Adaos · TVA · PDF</p>
           </a>
         </div>
@@ -322,24 +322,24 @@ export default function Dashboard() {
                   </svg>
                   <div>
                     <p className="font-semibold text-sm text-gray-900">Feedback</p>
-                    <p className="text-gray-400 text-xs">Ce am putea îmbunătăți?</p>
+                    <p className="text-gray-400 text-xs">Ce am putea imbunatati?</p>
                   </div>
                 </button>
               ) : (
                 <div className="p-4 space-y-3">
                   {fbDone ? (
-                    <p className="text-sm font-semibold text-green-600 text-center py-3">Mulțumim! Am primit mesajul.</p>
+                    <p className="text-sm font-semibold text-green-600 text-center py-3">Multumim! Am primit mesajul.</p>
                   ) : (
                     <>
                       <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Sugestie sau problemă</p>
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Sugestie sau problema</p>
                         <button onClick={() => { setFbOpen(false); setFbText('') }}
                           className="text-gray-300 hover:text-gray-500 text-xl leading-none">×</button>
                       </div>
                       <textarea
                         value={fbText}
                         onChange={e => setFbText(e.target.value)}
-                        placeholder="Spune-ne ce ai vrea să fie diferit..."
+                        placeholder="Spune-ne ce ai vrea sa fie diferit..."
                         rows={3}
                         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 resize-none focus:outline-none focus:border-blue-400"
                       />
@@ -359,7 +359,7 @@ export default function Dashboard() {
                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
                               </svg>
-                              Dictează
+                              Dicteaza
                             </>
                           )}
                         </button>
@@ -398,7 +398,7 @@ export default function Dashboard() {
                   <span className="ml-auto text-[10px] font-bold text-blue-500 uppercase tracking-wide">activ</span>
                 )}
               </div>
-              <p className="text-xs text-gray-400">Fără TVA · Fără firme</p>
+              <p className="text-xs text-gray-400">Fara TVA · Fara firme</p>
             </button>
 
             {/* Tab pro */}

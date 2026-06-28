@@ -89,7 +89,7 @@ export default function ServicesPage() {
         {isPro && (
           <div className="flex items-center gap-2 px-1">
             <span className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
-              {activeCompanyName ? `Firma: ${activeCompanyName}` : 'Nicio firmă activă'}
+              {activeCompanyName ? `Firma: ${activeCompanyName}` : 'Nicio firma activa'}
             </span>
           </div>
         )}
@@ -103,18 +103,18 @@ export default function ServicesPage() {
             <input className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 w-32"
               placeholder="UM (buc, h, mp)" value={unit} onChange={e => setUnit(e.target.value)} />
             <input className="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 flex-1"
-              placeholder="Preț / UM (lei)" type="number" value={price} onChange={e => setPrice(e.target.value)} />
+              placeholder="Pret / UM (lei)" type="number" value={price} onChange={e => setPrice(e.target.value)} />
           </div>
           <button onClick={handleAdd} disabled={loading || !name || !unit || !price}
             className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
-            {loading ? 'Se adaugă...' : '+ Adaugă serviciu'}
+            {loading ? 'Se adauga...' : '+ Adauga serviciu'}
           </button>
         </div>
 
         {/* Lista servicii */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           {services.length === 0 && (
-            <p className="p-5 text-sm text-gray-400">Niciun serviciu adăugat.</p>
+            <p className="p-5 text-sm text-gray-400">Niciun serviciu adaugat.</p>
           )}
           <div className="divide-y divide-gray-50">
             {services.map(s => (

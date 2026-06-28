@@ -116,7 +116,7 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
   doc.setFontSize(14); doc.setFont("helvetica", "bold"); doc.setTextColor(20, 20, 20);
   doc.text(emitent.name, margin, y);
   doc.setFontSize(11); doc.setTextColor(59, 130, 246);
-  doc.text(`FIȘĂ SERVICII ${quote.quote_number}`, W - margin, y, { align: "right" }); y += 6;
+  doc.text(`FISA SERVICII ${quote.quote_number}`, W - margin, y, { align: "right" }); y += 6;
 
   if (isPro && emitent.cui) addLine(`CUI: ${emitent.cui}`, 9, false, [80, 80, 80]);
   if (isPro && emitent.reg_com) addLine(`Reg. Com.: ${emitent.reg_com}`, 9, false, [80, 80, 80]);
@@ -225,7 +225,7 @@ export default function QuoteDetailPage() {
       `).eq("id", id).single(),
     ]);
 
-    if (qErr || !q) { setError("Fișa nu a putut fi incarcata."); setLoading(false); return; }
+    if (qErr || !q) { setError("Fisa nu a putut fi incarcata."); setLoading(false); return; }
 
     const companyId = (q as any)?.company_id;
 
@@ -408,7 +408,7 @@ export default function QuoteDetailPage() {
     if (typeof navigator !== "undefined" && navigator.canShare) {
       const file = new File([doc.output("blob")], fileName, { type: "application/pdf" });
       if (navigator.canShare({ files: [file] })) {
-        try { await navigator.share({ files: [file], title: `Fișă Servicii ${quote.quote_number}` }); return; }
+        try { await navigator.share({ files: [file], title: `Fisa Servicii ${quote.quote_number}` }); return; }
         catch { /* utilizatorul a anulat */ }
       }
     }

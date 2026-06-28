@@ -51,7 +51,7 @@ export default function RetragerePage() {
             />
             <Case
               when="Retragere in 14 zile, serviciu partial utilizat"
-              then="Rambursare proportionala: suma × (zile rămase din luna / zile totale ale lunii platite)."
+              then="Rambursare proportionala: suma × (zile ramase din luna / zile totale ale lunii platite)."
             />
             <Case
               when="Anulare dupa 14 zile"

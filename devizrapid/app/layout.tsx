@@ -12,13 +12,13 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   metadataBase: new URL('https://devizele-mele.vercel.app'),
   title: {
-    default: 'Tarifator – Răspunsul la „Cât costă?" | Fișă Servicii & Calculator Preț',
+    default: 'Tarifator – Raspunsul la „Cat costa?" | Fisa Servicii & Calculator Pret',
     template: '%s | Tarifator',
   },
-  description: 'Răspunsul instant la „cât costă?" — fișă de servicii prin dictare vocală pentru prestatori (electricieni, instalatori, mecanici, coafori) și calculator preț cu adaos și TVA pentru comercianți. Gratuit 6 luni, fără card.',
+  description: 'Raspunsul instant la „cat costa?" — fisa de servicii prin dictare vocala pentru prestatori (electricieni, instalatori, mecanici, coafori) si calculator pret cu adaos si TVA pentru comercianti. Gratuit 6 luni, fara card.',
   keywords: [
     // fise servicii — domenii
-    'fisa servicii', 'fișă servicii', 'bon de lucru', 'bon manopera', 'raport de lucru',
+    'fisa servicii', 'fisa servicii', 'bon de lucru', 'bon manopera', 'raport de lucru',
     'electrician', 'instalator', 'instalatii sanitare', 'instalatii termice', 'instalatii gaz',
     'frigotehnist', 'aer conditionat', 'climatizare', 'HVAC', 'ventilatie', 'pompe de caldura',
     'zugrav', 'zugravit', 'zugravitor', 'vopsitor', 'faiantar', 'gresist', 'rigipsar',
@@ -26,10 +26,10 @@ export const metadata: Metadata = {
     'mecanic auto', 'service auto', 'vopsitor auto', 'tinichigiu', 'electrician auto',
     'curatenie', 'curatenie birouri', 'spalatorie', 'dezinsectie', 'deratizare',
     'coafor', 'frizerie', 'manichiura', 'pedichiura', 'nail art', 'epilare', 'cosmetica',
-    'masaj', 'maseur', 'kinetoterapie', 'fizioterapie', 'antrenor personal', 'nutriționist',
+    'masaj', 'maseur', 'kinetoterapie', 'fizioterapie', 'antrenor personal', 'nutritionist',
     'reparatii telefoane', 'reparatii calculatoare', 'service IT', 'mentenanta IT',
     'contabil', 'contabilitate', 'expert contabil', 'consultant fiscal', 'avocat',
-    'meditatii', 'instructor auto', 'fotograf', 'cameraman', 'traducator', 'gradinărit',
+    'meditatii', 'instructor auto', 'fotograf', 'cameraman', 'traducator', 'gradinarit',
     'prestator servicii', 'artizan', 'aplicatie artizan', 'aplicatie prestatori',
     // calculator pret — tipuri comercianti
     'calculator pret vanzare', 'calculator adaos comercial', 'calculator TVA', 'calculator marja profit',
@@ -49,13 +49,13 @@ export const metadata: Metadata = {
     locale: 'ro_RO',
     url: 'https://devizele-mele.vercel.app',
     siteName: 'Tarifator',
-    title: 'Tarifator – Răspunsul la „Cât costă?"',
-    description: '„Cât costă?" — răspunsul în secunde. Fișă servicii prin dictare vocală pentru prestatori + calculator preț cu adaos și TVA pentru comercianți. Gratuit 6 luni.',
+    title: 'Tarifator – Raspunsul la „Cat costa?"',
+    description: '„Cat costa?" — raspunsul in secunde. Fisa servicii prin dictare vocala pentru prestatori + calculator pret cu adaos si TVA pentru comercianti. Gratuit 6 luni.',
   },
   twitter: {
     card: 'summary',
-    title: 'Tarifator – Răspunsul la „Cât costă?"',
-    description: 'Fișă servicii prin dictare + calculator preț cu adaos și TVA. Răspunsul instant la „cât costă?" pentru prestatori și comercianți. Gratuit 6 luni.',
+    title: 'Tarifator – Raspunsul la „Cat costa?"',
+    description: 'Fisa servicii prin dictare + calculator pret cu adaos si TVA. Raspunsul instant la „cat costa?" pentru prestatori si comercianti. Gratuit 6 luni.',
   },
   appleWebApp: {
     capable: true,
