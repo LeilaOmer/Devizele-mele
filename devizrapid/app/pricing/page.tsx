@@ -339,6 +339,7 @@ export default function PricingPage() {
       setUsageInfo(prev => prev ? { ...prev, calcule: prev.calcule + 1 } : prev)
     }
 
+    await saveDraft()
     exportFn()
   }
 
@@ -500,15 +501,7 @@ export default function PricingPage() {
                 </p>
               )}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={saveDraft}
-                disabled={saving}
-                className={`px-4 py-3.5 rounded-xl text-sm font-bold border-2 transition-all ${
-                  draftSaved ? 'border-green-400 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600 hover:border-amber-300 hover:bg-amber-50'
-                }`}>
-                {draftSaved ? '✓ Salvat' : saving ? '...' : 'Salveaza'}
-              </button>
+            <div className="flex gap-3">
               <button onClick={() => handleExport(() => exportPDFContabil(validItems, adaosNum, roundStep, roundMode, supplier))}
                 className="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-xl text-sm">
                 PDF Contabil
