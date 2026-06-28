@@ -343,7 +343,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between shadow-sm">
         <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
           <span className="text-2xl leading-none">‹</span>
         </button>
