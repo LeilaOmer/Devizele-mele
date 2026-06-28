@@ -36,6 +36,9 @@ export default function SettingsPage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [profileForm, setProfileForm] = useState({ company_name: '', phone: '', email: '', address: '' })
+  const [profileEditing, setProfileEditing] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -44,14 +47,29 @@ export default function SettingsPage() {
     if (!session) { router.push('/login'); return }
     const user = session.user
     setUserEmail(user.email || '')
-    const { data: prof } = await supabase.from('profiles').select('account_type, plan_active_until').eq('id', user.id).single()
+    const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     if (prof) {
       setAccountType(prof.account_type || 'artizan')
       setPlanActiveUntil(prof.plan_active_until || null)
+      setProfileForm({
+        company_name: prof.company_name || '',
+        phone: prof.phone || '',
+        email: prof.email || user.email || '',
+        address: prof.address || '',
+      })
     }
     const { data: cos } = await supabase.from('companies').select('*').order('name')
     setCompanies(cos || [])
     setLoading(false)
+  }
+
+  async function saveProfile() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await supabase.from('profiles').upsert({ id: session.user.id, ...profileForm })
+    setProfileSaved(true)
+    setProfileEditing(false)
+    setTimeout(() => setProfileSaved(false), 2000)
   }
 
   async function saveAccountType(type: 'artizan' | 'pro') {
@@ -210,13 +228,15 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* Artizan — profil simplu */}
-        {accountType === 'artizan' && <MeseriasForm />}
-
         {/* Contul meu */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100">
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Contul meu</p>
+            {!profileEditing && (
+              <button onClick={() => setProfileEditing(true)} className="text-sm font-semibold text-blue-600">
+                Editeaza
+              </button>
+            )}
           </div>
 
           <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
@@ -225,6 +245,56 @@ export default function SettingsPage() {
               <p className="text-sm font-semibold text-gray-800">{userEmail}</p>
             </div>
           </div>
+
+          {!profileEditing ? (
+            <div className="divide-y divide-gray-50">
+              {[
+                { label: 'Nume / Brand', value: profileForm.company_name },
+                { label: 'Telefon', value: profileForm.phone },
+                { label: 'Email contact', value: profileForm.email },
+                { label: 'Adresa', value: profileForm.address },
+              ].map(({ label, value }) => (
+                <div key={label} className="px-5 py-3">
+                  <p className="text-xs text-gray-400">{label}</p>
+                  <p className="text-sm font-semibold text-gray-800">{value || <span className="text-gray-300 font-normal">—</span>}</p>
+                </div>
+              ))}
+              {profileSaved && <p className="px-5 py-2 text-xs text-green-600 font-semibold">✓ Salvat!</p>}
+            </div>
+          ) : (
+            <div className="px-5 py-4 space-y-3 bg-gray-50">
+              {[
+                { key: 'company_name', label: 'Nume / Brand', placeholder: 'Ex: Ion Instalatii', type: 'text', inputMode: 'text' },
+                { key: 'phone', label: 'Telefon', placeholder: '07xx xxx xxx', type: 'tel', inputMode: 'tel' },
+                { key: 'email', label: 'Email contact', placeholder: 'contact@mail.ro', type: 'email', inputMode: 'email' },
+                { key: 'address', label: 'Adresa', placeholder: 'Str. Exemplu nr. 1', type: 'text', inputMode: 'text' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">{f.label}</label>
+                  <input
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white"
+                    placeholder={f.placeholder}
+                    type={f.type}
+                    inputMode={f.inputMode as React.HTMLAttributes<HTMLInputElement>['inputMode']}
+                    autoCapitalize={f.type === 'email' || f.type === 'tel' ? 'none' : 'sentences'}
+                    autoCorrect="off"
+                    value={profileForm[f.key as keyof typeof profileForm]}
+                    onChange={e => setProfileForm({ ...profileForm, [f.key]: e.target.value })}
+                  />
+                </div>
+              ))}
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setProfileEditing(false)}
+                  className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600">
+                  Anuleaza
+                </button>
+                <button onClick={saveProfile}
+                  className="flex-1 py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold">
+                  Salveaza
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
             <div>
@@ -375,81 +445,3 @@ function CompanyForm({ form, setForm, onSave, onCancel, saved }: {
   )
 }
 
-function MeseriasForm() {
-  const [form, setForm] = useState({ company_name: '', phone: '', email: '', address: '' })
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) return
-      supabase.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => {
-        if (data) setForm({
-          company_name: data.company_name || '',
-          phone: data.phone || '',
-          email: data.email || session.user.email || '',
-          address: data.address || '',
-        })
-      })
-    })
-  }, [])
-
-  async function save() {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
-    await supabase.from('profiles').upsert({ id: session.user.id, ...form })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
-  return (
-    <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Date personale</p>
-
-      <div>
-        <label className="text-xs font-medium text-gray-600 mb-1 block">Nume / Brand</label>
-        <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
-          placeholder="Ex: Ion Instalatii"
-          autoCapitalize="words"
-          value={form.company_name}
-          onChange={e => setForm({ ...form, company_name: e.target.value })} />
-      </div>
-
-      <div>
-        <label className="text-xs font-medium text-gray-600 mb-1 block">Telefon</label>
-        <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
-          placeholder="07xx xxx xxx"
-          type="tel"
-          inputMode="tel"
-          autoCapitalize="none"
-          autoCorrect="off"
-          value={form.phone}
-          onChange={e => setForm({ ...form, phone: e.target.value })} />
-      </div>
-
-      <div>
-        <label className="text-xs font-medium text-gray-600 mb-1 block">Email</label>
-        <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
-          placeholder="contact@mail.ro"
-          type="email"
-          inputMode="email"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          value={form.email}
-          onChange={e => setForm({ ...form, email: e.target.value })} />
-      </div>
-
-      <div>
-        <label className="text-xs font-medium text-gray-600 mb-1 block">Adresa</label>
-        <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm"
-          placeholder="Str. Exemplu nr. 1"
-          autoCapitalize="sentences"
-          value={form.address}
-          onChange={e => setForm({ ...form, address: e.target.value })} />
-      </div>
-      <button onClick={save} className={`w-full py-4 rounded-2xl font-bold text-base text-white ${saved ? 'bg-green-500' : 'bg-blue-600'}`}>
-        {saved ? '✓ Salvat!' : 'Salveaza'}
-      </button>
-    </div>
-  )
-}
