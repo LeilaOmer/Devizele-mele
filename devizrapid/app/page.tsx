@@ -1,8 +1,33 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Tarifator – Fișă Servicii prin Dictare & Calculator Preț cu Adaos și TVA',
+  description: 'Dictezi ce ai lucrat, fișa de servicii apare instant cu prețurile tale. Calculator preț vânzare cu adaos comercial și TVA pentru comercianți. Gratuit 30 de zile, fără card.',
+  alternates: { canonical: 'https://devizele-mele.vercel.app' },
+}
 
 export default function LandingPage() {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Tarifator',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web, Android, iOS',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'RON',
+      description: 'Trial gratuit 30 de zile',
+    },
+    description: 'Aplicație pentru generarea fișelor de servicii prin dictare vocală și calculul prețului de vânzare cu adaos comercial și TVA.',
+    url: 'https://devizele-mele.vercel.app',
+    inLanguage: 'ro',
+  }
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <style>{`.fixed.bottom-24 { display: none; }`}</style>
 
       {/* Nav */}

@@ -10,8 +10,53 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Tarifator",
-  description: "Genereaza fise de servicii rapid",
+  metadataBase: new URL('https://devizele-mele.vercel.app'),
+  title: {
+    default: 'Tarifator – Fișă Servicii & Calculator Preț | Gratuit 30 zile',
+    template: '%s | Tarifator',
+  },
+  description: 'Generează fișe de servicii prin dictare vocală și calculează prețul de vânzare cu adaos și TVA. Pentru electricieni, instalatori, mecanici, coafori, comercianți și orice prestator de servicii.',
+  keywords: [
+    // fise servicii — domenii
+    'fisa servicii', 'fișă servicii', 'bon de lucru', 'bon manopera', 'raport de lucru',
+    'electrician', 'instalator', 'instalatii sanitare', 'instalatii termice', 'instalatii gaz',
+    'frigotehnist', 'aer conditionat', 'climatizare', 'HVAC', 'ventilatie', 'pompe de caldura',
+    'zugrav', 'zugravit', 'zugravitor', 'vopsitor', 'faiantar', 'gresist', 'rigipsar',
+    'tamplar', 'tamplarie', 'montaj ferestre', 'lacatus', 'sudor', 'acoperisuri', 'izolator',
+    'mecanic auto', 'service auto', 'vopsitor auto', 'tinichigiu', 'electrician auto',
+    'curatenie', 'curatenie birouri', 'spalatorie', 'dezinsectie', 'deratizare',
+    'coafor', 'frizerie', 'manichiura', 'pedichiura', 'nail art', 'epilare', 'cosmetica',
+    'masaj', 'maseur', 'kinetoterapie', 'fizioterapie', 'antrenor personal', 'nutriționist',
+    'reparatii telefoane', 'reparatii calculatoare', 'service IT', 'mentenanta IT',
+    'contabil', 'contabilitate', 'expert contabil', 'consultant fiscal', 'avocat',
+    'meditatii', 'instructor auto', 'fotograf', 'cameraman', 'traducator', 'gradinărit',
+    'prestator servicii', 'artizan', 'meserias', 'aplicatie meserias', 'aplicatie prestatori',
+    // calculator pret — tipuri comercianti
+    'calculator pret vanzare', 'calculator adaos comercial', 'calculator TVA', 'calculator marja profit',
+    'calcul markup', 'calcul adaos', 'pret de vanzare',
+    'magazin', 'boutique', 'grossist', 'angrosist', 'en-gros', 'importator', 'distribuitor',
+    'producator', 'revanzator', 'reseller', 'dropshipping',
+    'produse alimentare', 'non-alimentar', 'fashion', 'imbracaminte', 'cosmetice',
+    'electronice', 'electrocasnice', 'materiale constructii', 'piese auto', 'bijuterii', 'mobilier',
+    // general
+    'Tarifator', 'Romania', 'TVA 11', 'TVA 21',
+  ],
+  authors: [{ name: 'Tarifator' }],
+  creator: 'Tarifator',
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: 'website',
+    locale: 'ro_RO',
+    url: 'https://devizele-mele.vercel.app',
+    siteName: 'Tarifator',
+    title: 'Tarifator – Fișă Servicii & Calculator Preț',
+    description: 'Dictezi ce ai lucrat, fișa apare cu prețurile tale. Calculator preț cu adaos și TVA pentru comercianți. Gratuit 30 de zile.',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Tarifator – Fișă Servicii & Calculator Preț',
+    description: 'Fișe de servicii prin dictare vocală + calculator preț cu adaos și TVA. Gratuit 30 zile.',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
