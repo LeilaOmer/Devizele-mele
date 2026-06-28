@@ -7,31 +7,41 @@ export async function GET(req: NextRequest) {
   const cuiNum = parseInt(cui.replace(/[^0-9]/g, ''), 10)
   if (!cuiNum) return NextResponse.json({ error: 'CUI invalid' }, { status: 400 })
 
-  const apiKey = process.env.OPENAPI_RO_KEY
-  if (!apiKey) return NextResponse.json({ error: 'API key lipsa (OPENAPI_RO_KEY)' }, { status: 500 })
+  const today = new Date().toISOString().split('T')[0]
 
   try {
-    const res = await fetch(`https://api.openapi.ro/api/companies/${cuiNum}`, {
+    const anafRes = await fetch('https://webservicesp.anaf.ro/PlatitorTvaRest/api/v9/ws/tva', {
+      method: 'POST',
       headers: {
-        'x-api-key': apiKey,
+        'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
+      body: JSON.stringify([{ cui: cuiNum, data: today }]),
     })
 
-    if (res.status === 404) return NextResponse.json({ error: 'CUI negasit' }, { status: 404 })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      return NextResponse.json({ error: `Eroare ${res.status}`, detail: text }, { status: 502 })
+    const raw = await anafRes.text()
+
+    if (!anafRes.ok) {
+      return NextResponse.json({ error: `ANAF HTTP ${anafRes.status}`, detail: raw.slice(0, 300) }, { status: 502 })
     }
 
-    const data = await res.json()
+    let data: Record<string, unknown>
+    try { data = JSON.parse(raw) } catch {
+      return NextResponse.json({ error: 'Raspuns invalid ANAF', detail: raw.slice(0, 300) }, { status: 502 })
+    }
+
+    const found = (data?.found as Array<{ date_generale?: Record<string, string> }>)?.[0]?.date_generale
+    if (!found) {
+      return NextResponse.json({ error: 'CUI negasit in ANAF', detail: JSON.stringify(data).slice(0, 300) }, { status: 404 })
+    }
+
     return NextResponse.json({
-      name: data.denumire || '',
-      address: data.adresa || '',
-      reg_com: data.nrRegCom || '',
+      name: found.denumire || '',
+      address: found.adresa || '',
+      reg_com: found.nrRegCom || '',
     })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: 'Eroare conexiune', detail: msg }, { status: 502 })
+    return NextResponse.json({ error: 'Eroare conexiune ANAF', detail: msg }, { status: 502 })
   }
 }
