@@ -148,6 +148,43 @@ export default function PricingPage() {
   const [saving, setSaving] = useState(false)
   const [draftSaved, setDraftSaved] = useState(false)
 
+  const [scanningInvoice, setScanningInvoice] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleInvoiceScan(file: File) {
+    setScanningInvoice(true)
+    try {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = async () => {
+        const dataUrl = reader.result as string
+        const base64 = dataUrl.split(',')[1]
+        const mimeType = file.type || 'image/jpeg'
+        const res = await fetch('/api/parse-invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64, mimeType }),
+        })
+        const data = await res.json()
+        if (data.supplier) setSupplier(data.supplier)
+        if (data.items?.length) {
+          const parsed: Item[] = data.items.map((i: { name: string; unit: string; supplier_price: number; discount: number; vat: number }) => ({
+            id: crypto.randomUUID(),
+            name: i.name || '',
+            unit: i.unit || 'buc',
+            supplierPrice: i.supplier_price ? String(i.supplier_price) : '',
+            discount: i.discount ? String(i.discount) : '0',
+            vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
+          }))
+          setItems(parsed)
+        }
+        setScanningInvoice(false)
+      }
+    } catch {
+      setScanningInvoice(false)
+    }
+  }
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -354,6 +391,14 @@ export default function PricingPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-3 pt-3 space-y-3">
+
+        {/* Scan factura */}
+        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleInvoiceScan(f); e.target.value = '' }} />
+        <button onClick={() => fileInputRef.current?.click()} disabled={scanningInvoice}
+          className="w-full py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:bg-blue-300 shadow-sm">
+          {scanningInvoice ? 'Se analizeaza factura...' : 'Scaneaza factura / aviz'}
+        </button>
 
         {/* Setari */}
         <div className="bg-white rounded-2xl shadow-sm p-3 space-y-3">
