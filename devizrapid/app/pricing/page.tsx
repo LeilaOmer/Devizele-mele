@@ -177,7 +177,6 @@ export default function PricingPage() {
         const saved = localStorage.getItem('pricing_settings')
         if (saved) {
           const s = JSON.parse(saved)
-          if (s.adaos) setAdaos(s.adaos)
           if (s.roundStep) setRoundStep(s.roundStep)
           if (s.roundMode) setRoundMode(s.roundMode)
         }
@@ -224,9 +223,9 @@ export default function PricingPage() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('pricing_settings', JSON.stringify({ adaos, roundStep, roundMode }))
+      localStorage.setItem('pricing_settings', JSON.stringify({ roundStep, roundMode }))
     } catch {}
-  }, [adaos, roundStep, roundMode])
+  }, [roundStep, roundMode])
 
   const adaosNum = parseFloat(adaos) || 0
 
