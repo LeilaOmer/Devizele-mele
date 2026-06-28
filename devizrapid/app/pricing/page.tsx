@@ -149,38 +149,40 @@ export default function PricingPage() {
   const [draftSaved, setDraftSaved] = useState(false)
 
   const [scanningInvoice, setScanningInvoice] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [scanError, setScanError] = useState('')
 
   async function handleInvoiceScan(file: File) {
     setScanningInvoice(true)
+    setScanError('')
     try {
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      reader.onload = async () => {
-        const dataUrl = reader.result as string
-        const base64 = dataUrl.split(',')[1]
-        const mimeType = file.type || 'image/jpeg'
-        const res = await fetch('/api/parse-invoice', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64, mimeType }),
-        })
-        const data = await res.json()
-        if (data.supplier) setSupplier(data.supplier)
-        if (data.items?.length) {
-          const parsed: Item[] = data.items.map((i: { name: string; unit: string; supplier_price: number; discount: number; vat: number }) => ({
-            id: crypto.randomUUID(),
-            name: i.name || '',
-            unit: i.unit || 'buc',
-            supplierPrice: i.supplier_price ? String(i.supplier_price) : '',
-            discount: i.discount ? String(i.discount) : '0',
-            vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
-          }))
-          setItems(parsed)
-        }
-        setScanningInvoice(false)
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve((reader.result as string).split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+      const res = await fetch('/api/parse-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mimeType: file.type || 'image/jpeg' }),
+      })
+      const data = await res.json()
+      if (data.supplier) setSupplier(data.supplier)
+      if (data.items?.length) {
+        setItems(data.items.map((i: { name: string; unit: string; supplier_price: number; discount: number; vat: number }) => ({
+          id: crypto.randomUUID(),
+          name: i.name || '',
+          unit: i.unit || 'buc',
+          supplierPrice: i.supplier_price ? String(i.supplier_price) : '',
+          discount: i.discount ? String(i.discount) : '0',
+          vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
+        })))
+      } else {
+        setScanError('Nu s-au gasit produse. Incearca o poza mai clara.')
       }
     } catch {
+      setScanError('Eroare la procesare. Incearca din nou.')
+    } finally {
       setScanningInvoice(false)
     }
   }
@@ -393,12 +395,27 @@ export default function PricingPage() {
       <div className="max-w-2xl mx-auto px-3 pt-3 space-y-3">
 
         {/* Scan factura */}
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
+        <input id="scan-camera" type="file" accept="image/*" capture="environment" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) handleInvoiceScan(f); e.target.value = '' }} />
-        <button onClick={() => fileInputRef.current?.click()} disabled={scanningInvoice}
-          className="w-full py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:bg-blue-300 shadow-sm">
-          {scanningInvoice ? 'Se analizeaza factura...' : 'Scaneaza factura / aviz'}
-        </button>
+        <input id="scan-gallery" type="file" accept="image/*" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleInvoiceScan(f); e.target.value = '' }} />
+        {scanningInvoice ? (
+          <div className="w-full py-3.5 rounded-2xl bg-blue-300 text-white font-bold text-sm flex items-center justify-center shadow-sm">
+            Se analizeaza factura...
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <label htmlFor="scan-camera"
+              className="flex-1 py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+              Fa poza
+            </label>
+            <label htmlFor="scan-gallery"
+              className="flex-1 py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+              Incarca din galerie
+            </label>
+          </div>
+        )}
+        {scanError && <p className="text-xs text-red-500 text-center -mt-1">{scanError}</p>}
 
         {/* Setari */}
         <div className="bg-white rounded-2xl shadow-sm p-3 space-y-3">
