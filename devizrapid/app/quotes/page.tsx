@@ -24,7 +24,7 @@ export default function QuotesPage() {
   const mode = localStorage.getItem('dashboardMode')
   const saved = mode === 'pro' ? localStorage.getItem('activeCompanyId') : null
   setActiveCompanyId(saved)
-  setFilterCompanyId('all')
+  setFilterCompanyId(saved || 'all')
   fetchData()
 }, [])
 
@@ -93,34 +93,39 @@ const filteredQuotes = filterCompanyId === 'all' || !filterCompanyId
 
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
-        <button onClick={() => router.push('/dashboard')} className="flex items-center gap-2 text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
-          <span className="text-xl">‹</span> Dashboard
-        </button>
-        <h1 className="text-base font-bold text-gray-800">Fise Servicii</h1>
-        <div className="w-20" />
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
-
-        {/* Filtru firma */}
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+            <span className="text-2xl leading-none">‹</span>
+          </button>
+          <h1 className="text-base font-bold text-gray-800">Fise Servicii</h1>
+          <div className="w-8" />
+        </div>
         {companies.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Filtreaza dupa firma</p>
-            <div className="flex gap-2 flex-wrap">
-              <button onClick={() => setFilterCompanyId('all')}
-                className={`px-3 py-1.5 rounded-xl text-sm font-semibold border-2 transition-all ${filterCompanyId === 'all' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600'}`}>
-                Toate
+          <div className="flex overflow-x-auto gap-0 border-t border-gray-100 scrollbar-hide">
+            {companies.map(c => (
+              <button key={c.id} onClick={() => setFilterCompanyId(c.id)}
+                className={`flex-shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${
+                  filterCompanyId === c.id
+                    ? 'border-purple-500 text-purple-700'
+                    : 'border-transparent text-gray-500 hover:text-gray-800'
+                }`}>
+                {c.name}
               </button>
-              {companies.map(c => (
-                <button key={c.id} onClick={() => setFilterCompanyId(c.id)}
-                  className={`px-3 py-1.5 rounded-xl text-sm font-semibold border-2 transition-all ${filterCompanyId === c.id ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-600'}`}>
-                  {c.name}
-                </button>
-              ))}
-            </div>
+            ))}
+            <button onClick={() => setFilterCompanyId('all')}
+              className={`flex-shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${
+                filterCompanyId === 'all'
+                  ? 'border-blue-500 text-blue-700'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}>
+              Toate
+            </button>
           </div>
         )}
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 pt-4 space-y-4">
 
         {/* Creare fisa nou */}
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
