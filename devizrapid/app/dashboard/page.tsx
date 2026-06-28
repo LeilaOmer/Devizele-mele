@@ -62,7 +62,7 @@ export default function Dashboard() {
       const userPlan: 'artizan' | 'pro' = 'pro'
       setPlan(userPlan)
 
-      // modul activ: localStorage > account_type din DB > meserias
+      // modul activ: localStorage > account_type din DB > artizan
       const savedMode = localStorage.getItem('dashboardMode') as 'artizan' | 'pro' | null
       const dbMode = prof?.account_type === 'pro' ? 'pro' : 'artizan'
       const activeMode: 'artizan' | 'pro' = userPlan === 'pro' && (savedMode === 'pro' || (savedMode === null && dbMode === 'pro')) ? 'pro' : 'artizan'
