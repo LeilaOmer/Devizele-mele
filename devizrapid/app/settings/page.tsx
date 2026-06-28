@@ -409,26 +409,17 @@ function CompanyForm({ form, setForm, onSave, onCancel, saved }: {
     setLookingUp(true)
     setAnafError('')
     try {
-      const cuiNum = parseInt(form.cui.replace(/[^0-9]/g, ''), 10)
-      if (!cuiNum) { setAnafError('CUI invalid'); return }
-      const today = new Date().toISOString().split('T')[0]
-      const res = await fetch('https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([{ cui: cuiNum, data: today }]),
-      })
-      if (!res.ok) { setAnafError('ANAF indisponibil'); return }
+      const res = await fetch(`/api/anaf-lookup?cui=${encodeURIComponent(form.cui)}`)
       const data = await res.json()
-      const found = data?.found?.[0]?.date_generale
-      if (!found) { setAnafError('CUI negasit in ANAF'); return }
+      if (!res.ok) { setAnafError(data.error || 'Eroare ANAF'); return }
       setForm({
         ...form,
-        name: found.denumire || form.name,
-        address: found.adresa || form.address,
-        reg_com: found.nrRegCom || form.reg_com,
+        name: data.name || form.name,
+        address: data.address || form.address,
+        reg_com: data.reg_com || form.reg_com,
       })
     } catch {
-      setAnafError('Eroare conexiune ANAF')
+      setAnafError('Eroare conexiune')
     } finally {
       setLookingUp(false)
     }
