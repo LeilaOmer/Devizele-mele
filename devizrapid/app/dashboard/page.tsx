@@ -57,7 +57,7 @@ export default function Dashboard() {
       }
 
       let { data: prof } = await supabase
-        .from('profiles').select('account_type, company_name, email').eq('id', session.user.id).single()
+        .from('profiles').select('account_type, company_name, email, cui, address, phone, bank, iban, vat_rate').eq('id', session.user.id).single()
       if (!prof) {
         await supabase.from('profiles').insert({ id: session.user.id, account_type: 'artizan' })
         router.push('/settings')
@@ -77,7 +77,24 @@ export default function Dashboard() {
       setDisplayName(prof.email || session.user.email || '')
 
       if (userPlan === 'pro') {
-        const { data: cos } = await supabase.from('companies').select('id, name, cui').order('name')
+        let { data: cos } = await supabase.from('companies').select('id, name, cui').order('name')
+
+        // Auto-creeaza firma din profil daca nu exista niciuna
+        if ((!cos || cos.length === 0) && prof?.company_name) {
+          const { data: newCo } = await supabase.from('companies').insert({
+            user_id: session.user.id,
+            name: prof.company_name,
+            cui: prof.cui || null,
+            address: prof.address || null,
+            phone: prof.phone || null,
+            email: prof.email || null,
+            bank: prof.bank || null,
+            iban: prof.iban || null,
+            vat_rate: prof.vat_rate || 0,
+          }).select('id, name, cui').single()
+          if (newCo) cos = [newCo]
+        }
+
         setCompanies(cos || [])
         const saved = localStorage.getItem('activeCompanyId')
         const match = cos?.find(c => c.id === saved)
