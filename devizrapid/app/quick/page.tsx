@@ -8,6 +8,12 @@ import { useRouter } from 'next/navigation'
 type Service = { id: string; name: string; unit: string; price_per_unit: number }
 type PreviewItem = { service_id: string; name: string; quantity: number; unit_price: number; total: number }
 
+function playSuccessSound() {
+  const audio = new Audio('/sounds/success.mp3')
+  audio.volume = 0.5
+  audio.play().catch(() => {})
+}
+
 export default function QuickPage() {
   const [services, setServices] = useState<Service[]>([])
   const [transcript, setTranscript] = useState('')
@@ -197,6 +203,7 @@ export default function QuickPage() {
     }
     const total = preview.items.reduce((sum, i) => sum + i.total, 0)
     await supabase.from('quotes').update({ total }).eq('id', quote.id)
+    playSuccessSound()
     router.push('/quotes/' + quote.id)
   }
 

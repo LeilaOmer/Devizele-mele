@@ -187,6 +187,12 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
+function playSuccessSound() {
+  const audio = new Audio('/sounds/success.mp3')
+  audio.volume = 0.5
+  audio.play().catch(() => {})
+}
+
 export default function QuoteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -330,6 +336,7 @@ export default function QuoteDetailPage() {
 
     setRows([emptyRow()]);
     setSaving(false);
+    playSuccessSound();
     await loadQuote();
   }
 
@@ -376,6 +383,7 @@ export default function QuoteDetailPage() {
     setSavedDiscount(discount);
     setSavedDiscountType(discountType);
     setSavingDiscount(false);
+    playSuccessSound();
     await loadQuote();
   }
 
