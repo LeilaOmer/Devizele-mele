@@ -22,7 +22,7 @@ useEffect(() => {
   if (!name) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9998] bg-purple-600 text-white text-xs text-center py-1 font-semibold">
+    <div className="sticky top-0 w-full z-[9998] bg-purple-600 text-white text-xs text-center py-1.5 font-semibold shrink-0">
       Firma activa: {name}
     </div>
   )

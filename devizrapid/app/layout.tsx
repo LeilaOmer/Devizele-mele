@@ -72,14 +72,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="google-site-verification" content="1oT_kVaquGCv5mRyuLehEXtvVb05ICwJ8ToNfDAqs84" />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="h-full flex flex-col">
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'))
           }
         `}} />
         <ActiveCompanyBanner />
-        {children}
+        <div className="flex-1 overflow-y-auto">
+          {children}
+        </div>
         <CookieBanner />
       </body>
     </html>
