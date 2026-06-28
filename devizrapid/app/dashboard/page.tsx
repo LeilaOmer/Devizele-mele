@@ -121,12 +121,12 @@ export default function Dashboard() {
     const chunks: BlobPart[] = []
     const rec = new MediaRecorder(stream)
     fbRecorderRef.current = rec
-    rec.ondataavailable = e => chunks.push(e.data)
+    rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) }
     rec.onstop = async () => {
       stream.getTracks().forEach(t => t.stop())
       const blob = new Blob(chunks, { type: 'audio/webm' })
       const form = new FormData()
-      form.append('audio', blob, 'audio.webm')
+      form.append('file', blob, 'audio.webm')
       const res = await fetch('/api/transcribe', { method: 'POST', body: form })
       const { text } = await res.json()
       if (text) setFbText(prev => prev ? prev + ' ' + text : text)
