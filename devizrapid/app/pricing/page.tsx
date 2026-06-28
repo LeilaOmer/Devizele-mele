@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import jsPDF from 'jspdf'
 import { supabase } from '@/lib/supabase'
 import { trialInfo } from '@/lib/trial'
@@ -135,6 +135,7 @@ function exportPDFMagazin(items: Item[], adaos: number, step: RoundStep, mode: R
 
 export default function PricingPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [supplier, setSupplier] = useState('')
   const [adaos, setAdaos] = useState('30')
   const [vat, setVat] = useState<11 | 21>(21)
@@ -144,6 +145,9 @@ export default function PricingPage() {
   const [listening, setListening] = useState(false)
   const [loading, setLoading] = useState(false)
   const [usageInfo, setUsageInfo] = useState<{ calcule: number; limit: number; show: boolean } | null>(null)
+  const [draftId, setDraftId] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [draftSaved, setDraftSaved] = useState(false)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -152,16 +156,33 @@ export default function PricingPage() {
   const [voiceMsg, setVoiceMsg] = useState('')
 
   useEffect(() => {
-    // restaureaza doar setarile, NU produsele (produsele sunt per factura)
-    try {
-      const saved = localStorage.getItem('pricing_settings')
-      if (saved) {
-        const s = JSON.parse(saved)
-        if (s.adaos) setAdaos(s.adaos)
-        if (s.roundStep) setRoundStep(s.roundStep)
-        if (s.roundMode) setRoundMode(s.roundMode)
+    const draftParam = searchParams.get('draft')
+    if (draftParam) {
+      async function loadDraft() {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
+        const { data } = await supabase.from('pricing_drafts').select('*').eq('id', draftParam).single()
+        if (!data) return
+        setDraftId(data.id)
+        setSupplier(data.supplier || '')
+        setAdaos(String(data.adaos ?? 30))
+        setRoundStep((data.round_step as RoundStep) || '0.50')
+        setRoundMode((data.round_mode as RoundMode) || 'nearest')
+        setItems(data.items?.length ? data.items : [emptyItem(21)])
       }
-    } catch {}
+      loadDraft()
+    } else {
+      // restaureaza doar setarile, NU produsele (produsele sunt per factura)
+      try {
+        const saved = localStorage.getItem('pricing_settings')
+        if (saved) {
+          const s = JSON.parse(saved)
+          if (s.adaos) setAdaos(s.adaos)
+          if (s.roundStep) setRoundStep(s.roundStep)
+          if (s.roundMode) setRoundMode(s.roundMode)
+        }
+      } catch {}
+    }
 
     // incarca contorul de calcule
     async function loadUsage() {
@@ -173,7 +194,33 @@ export default function PricingPage() {
       if (!active) setUsageInfo({ calcule, limit: FREE_CALCULE_LIMIT, show: true })
     }
     loadUsage()
-  }, [])
+  }, [searchParams])
+
+  async function saveDraft() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    setSaving(true)
+    const title = supplier.trim() || ('Calcul ' + new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }))
+    const payload = {
+      user_id: session.user.id,
+      title,
+      supplier,
+      adaos: parseFloat(adaos) || 0,
+      round_step: roundStep,
+      round_mode: roundMode,
+      items,
+      updated_at: new Date().toISOString(),
+    }
+    if (draftId) {
+      await supabase.from('pricing_drafts').update(payload).eq('id', draftId)
+    } else {
+      const { data } = await supabase.from('pricing_drafts').insert(payload).select('id').single()
+      if (data) setDraftId(data.id)
+    }
+    setSaving(false)
+    setDraftSaved(true)
+    setTimeout(() => setDraftSaved(false), 2000)
+  }
 
   useEffect(() => {
     try {
@@ -302,7 +349,9 @@ export default function PricingPage() {
           <span className="text-xl">‹</span> Dashboard
         </button>
         <h1 className="text-base font-bold text-gray-800">Calculator Pret</h1>
-        <div className="w-20" />
+        <button onClick={() => router.push('/calcule')} className="text-xs font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl">
+          Salvate
+        </button>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
@@ -439,7 +488,7 @@ export default function PricingPage() {
 
       </div>
 
-      {/* Butoane fixe PDF */}
+      {/* Butoane fixe PDF + Salveaza */}
       {validItems.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3">
           <div className="max-w-2xl mx-auto space-y-2">
@@ -451,7 +500,15 @@ export default function PricingPage() {
                 </p>
               )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2">
+              <button
+                onClick={saveDraft}
+                disabled={saving}
+                className={`px-4 py-3.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                  draftSaved ? 'border-green-400 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600 hover:border-amber-300 hover:bg-amber-50'
+                }`}>
+                {draftSaved ? '✓ Salvat' : saving ? '...' : 'Salveaza'}
+              </button>
               <button onClick={() => handleExport(() => exportPDFContabil(validItems, adaosNum, roundStep, roundMode, supplier))}
                 className="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-xl text-sm">
                 PDF Contabil
