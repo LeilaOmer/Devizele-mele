@@ -444,31 +444,12 @@ export default function QuoteDetailPage() {
         <span className={`px-3 py-1 rounded-full text-sm font-semibold ${st.color}`}>{st.label}</span>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
+      <div className="max-w-2xl mx-auto px-3 pt-3 space-y-3">
 
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-sm p-5 flex items-start justify-between">
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide">Numar fisa</p>
-            <p className="text-2xl font-bold text-gray-900">{quote.quote_number}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Data emiterii</p>
-            <p className="text-sm font-medium text-gray-700">{fmtDate(quote.created_at)}</p>
-          </div>
-        </div>
-
-        {/* Emitent */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-            Emitent {isPro && company && <span className="ml-1 text-purple-500 normal-case font-normal">• {company.name}</span>}
-          </p>
-          <p className="text-base font-bold text-gray-900">{emitent.name}</p>
-          {isPro && emitent.cui && <p className="text-sm text-gray-500">CUI: {emitent.cui}</p>}
-          {isPro && emitent.reg_com && <p className="text-sm text-gray-500">Reg. Com.: {emitent.reg_com}</p>}
-          {emitent.address && <p className="text-sm text-gray-500">{emitent.address}</p>}
-          {emitent.phone && <p className="text-sm text-gray-500">Tel: {emitent.phone}</p>}
-          {emitent.email && <p className="text-sm text-gray-500">{emitent.email}</p>}
+        {/* Header compact */}
+        <div className="bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center justify-between">
+          <p className="text-sm font-bold text-blue-600">{quote.quote_number}</p>
+          <p className="text-xs text-gray-400">{fmtDate(quote.created_at)}</p>
         </div>
 
         {/* Client */}
@@ -523,17 +504,25 @@ export default function QuoteDetailPage() {
                   <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
                     placeholder="Descriere serviciu *" value={row.description}
                     onChange={e => updateRow(idx, "description", e.target.value)} />
-                  <div className="flex gap-2">
-                    <input type="number" min="0.01" step="0.01"
-                      className="w-1/3 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                      placeholder="Cant." value={row.quantity}
-                      onChange={e => updateRow(idx, "quantity", e.target.value)} />
-                    <input type="number" min="0" step="0.01"
-                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                      placeholder="Pret unitar (RON) *" value={row.unit_price}
-                      onChange={e => updateRow(idx, "unit_price", e.target.value)} />
-                    {rowTotal > 0 && <span className="shrink-0 self-center text-sm font-semibold text-blue-600">{fmt(rowTotal)}</span>}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-400 mb-0.5 block">Cantitate</label>
+                      <input type="number" min="0.01" step="0.01" inputMode="decimal"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        placeholder="1" value={row.quantity}
+                        onChange={e => updateRow(idx, "quantity", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-0.5 block">Pret unitar (RON)</label>
+                      <input type="number" min="0" step="0.01" inputMode="decimal"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                        placeholder="0.00" value={row.unit_price}
+                        onChange={e => updateRow(idx, "unit_price", e.target.value)} />
+                    </div>
                   </div>
+                  {rowTotal > 0 && (
+                    <div className="text-right text-sm font-bold text-blue-600">Total: {fmt(rowTotal)}</div>
+                  )}
                   <div className="flex justify-between items-center">
                     <button onClick={() => removeRow(idx)} className="text-xs text-red-400">Sterge rand</button>
                     {idx === rows.length - 1 && <button onClick={addRow} className="text-xs text-blue-600 font-semibold">+ Rand nou</button>}
