@@ -155,16 +155,27 @@ export default function PricingPage() {
     setScanningInvoice(true)
     setScanError('')
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve((reader.result as string).split(',')[1])
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
+      const isImage = file.type.startsWith('image/')
+      let body: Record<string, string>
+
+      if (isImage) {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1])
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+        body = { imageBase64: base64, mimeType: file.type || 'image/jpeg' }
+      } else {
+        // PDF sau XML — citit ca text
+        const text = await file.text()
+        body = { text }
+      }
+
       const res = await fetch('/api/parse-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mimeType: file.type || 'image/jpeg' }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (data.supplier) setSupplier(data.supplier)
@@ -397,7 +408,7 @@ export default function PricingPage() {
         {/* Scan factura */}
         <input id="scan-camera" type="file" accept="image/*" capture="environment" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) handleInvoiceScan(f); e.target.value = '' }} />
-        <input id="scan-gallery" type="file" accept="image/*" className="hidden"
+        <input id="scan-gallery" type="file" accept="image/*,.pdf,.xml,application/pdf,text/xml,application/xml" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) handleInvoiceScan(f); e.target.value = '' }} />
         {scanningInvoice ? (
           <div className="w-full py-3.5 rounded-2xl bg-blue-300 text-white font-bold text-sm flex items-center justify-center shadow-sm">
