@@ -19,7 +19,7 @@ export default function TermeniPage() {
             <li>✓ <strong>Datele tale iti apartin:</strong> fisele, clientii si preturile introduse de tine sunt ale tale si le poti sterge oricand.</li>
             <li>✓ <strong>Retragere:</strong> ai 14 zile sa te razgandesti dupa plata. Daca ai folosit deja serviciul, rambursarea e proportionala.</li>
             <li>✓ <strong>Anulare:</strong> oricand, fara penalitati. Accesul continua pana la expirarea perioadei platite.</li>
-            <li>✓ <strong>Contact:</strong> tarifator@gmail.com — raspundem in 24 de ore lucratoare.</li>
+            <li>✓ <strong>Contact:</strong> contact.tarifator@gmail.com — raspundem in 24 de ore lucratoare.</li>
           </ul>
         </div>
 
@@ -62,12 +62,12 @@ export default function TermeniPage() {
         </Section>
 
         <Section title="5. Plati si facturare">
-          <p>Abonamentele se activeaza manual prin contact la <strong>tarifator@gmail.com</strong>. Plata se efectueaza in avans, la inceputul fiecarei perioade de abonament, in lei (RON).</p>
+          <p>Abonamentele se activeaza manual prin contact la <strong>contact.tarifator@gmail.com</strong>. Plata se efectueaza in avans, la inceputul fiecarei perioade de abonament, in lei (RON).</p>
           <p className="mt-2">Dupa confirmarea platii, Furnizorul activeaza abonamentul si emite documentul fiscal aferent in termen de 24 de ore lucratoare.</p>
         </Section>
 
         <Section title="6. Rezilierea si anularea">
-          <p>Puteti solicita anularea abonamentului oricand, prin email la tarifator@gmail.com, fara penalitati. Accesul la functiile platite continua pana la expirarea perioadei pentru care s-a achitat. Abonamentele nu se reinnesc automat.</p>
+          <p>Puteti solicita anularea abonamentului oricand, prin email la contact.tarifator@gmail.com, fara penalitati. Accesul la functiile platite continua pana la expirarea perioadei pentru care s-a achitat. Abonamentele nu se reinnesc automat.</p>
           <p className="mt-2">Furnizorul isi rezerva dreptul de a suspenda conturile care incalca prezentii Termeni, cu notificare prealabila de 5 zile, cu exceptia cazurilor de frauda sau utilizare abuziva unde suspendarea poate fi imediata.</p>
         </Section>
 
@@ -82,7 +82,7 @@ export default function TermeniPage() {
         </Section>
 
         <Section title="9. Legea aplicabila si solutionarea litigiilor">
-          <p>Prezentii Termeni sunt guvernati de legislatia romana. Orice litigiu se solutioneaza pe cale amiabila in primul rand, prin contact la tarifator@gmail.com.</p>
+          <p>Prezentii Termeni sunt guvernati de legislatia romana. Orice litigiu se solutioneaza pe cale amiabila in primul rand, prin contact la contact.tarifator@gmail.com.</p>
           <p className="mt-2">In calitate de consumator, aveti dreptul de a apela la:</p>
           <ul className="list-disc pl-5 mt-1 space-y-1">
             <li><strong>ANPC</strong> (Autoritatea Nationala pentru Protectia Consumatorilor) — anpc.ro</li>

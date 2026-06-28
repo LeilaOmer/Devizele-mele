@@ -23,7 +23,7 @@ export default function RetragerePage() {
         </Section>
 
         <Section title="2. Cum sa exercitati dreptul de retragere">
-          <p>Transmiteti o declaratie clara si neechivoca prin email la <strong>tarifator@gmail.com</strong>, cu urmatoarele informatii:</p>
+          <p>Transmiteti o declaratie clara si neechivoca prin email la <strong>contact.tarifator@gmail.com</strong>, cu urmatoarele informatii:</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li>Numele si adresa de email ale contului</li>
             <li>Data activarii abonamentului</li>
@@ -31,7 +31,7 @@ export default function RetragerePage() {
           </ul>
           <p className="mt-3">Model de declaratie (puteti folosi propriile cuvinte, esential este sa fie clara intentia):</p>
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 mt-2 text-xs font-mono text-gray-700 leading-relaxed">
-            Catre: tarifator@gmail.com<br /><br />
+            Catre: contact.tarifator@gmail.com<br /><br />
             Prin prezenta, ma retrag din contractul de abonament Tarifator<br />
             incheiat pe data de [DATA ACTIVARII].<br /><br />
             Nume: [NUME COMPLET]<br />
@@ -70,7 +70,7 @@ export default function RetragerePage() {
         </Section>
 
         <Section title="4. Politica de anulare abonament">
-          <p>Puteti anula abonamentul oricand, fara penalitati, trimitand un email la <strong>tarifator@gmail.com</strong>.</p>
+          <p>Puteti anula abonamentul oricand, fara penalitati, trimitand un email la <strong>contact.tarifator@gmail.com</strong>.</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li>Anularea intra in vigoare la sfarsitul perioadei de abonament curente platite.</li>
             <li>Abonamentele nu se reinnesc automat — fiecare perioada necesita confirmare separata.</li>
@@ -84,7 +84,7 @@ export default function RetragerePage() {
           <p>Puteti solicita stergerea completa a contului si a tuturor datelor asociate prin:</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li><strong>Din aplicatie:</strong> Setari → Contul meu → Sterge contul (stergere imediata automata)</li>
-            <li><strong>Prin email:</strong> tarifator@gmail.com — procesam cererea in termen de 30 de zile (Art. 12(3) GDPR)</li>
+            <li><strong>Prin email:</strong> contact.tarifator@gmail.com — procesam cererea in termen de 30 de zile (Art. 12(3) GDPR)</li>
           </ul>
           <p className="mt-2">Anumite date pot fi retinute daca exista obligatie legala (ex: documente contabile — 10 ani conform Legii 82/1991). Un hash criptografic al emailului dvs. este retinut 24 de luni in scopul prevenirii abuzului de re-inregistrare (interes legitim — Art. 6(1)(f) GDPR).</p>
           <p className="mt-2">Dupa stergerea contului, nu veti mai putea accesa datele introduse. Va recomandam sa exportati documentele importante inainte de stergere.</p>

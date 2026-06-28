@@ -359,7 +359,7 @@ export default function SettingsPage() {
           <div className="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full space-y-4">
             <h2 className="font-bold text-gray-900">Anulare abonament</h2>
             <p className="text-sm text-gray-600">Trimite un email la adresa de mai jos cu subiectul <strong>"Anulare abonament"</strong>. Accesul continua pana la expirarea perioadei platite.</p>
-            <a href={`mailto:tarifator@gmail.com?subject=Anulare%20abonament&body=Doresc%20anularea%20abonamentului%20pentru%20contul%3A%20${encodeURIComponent(userEmail)}`}
+            <a href={`mailto:contact.tarifator@gmail.com?subject=Anulare%20abonament&body=Doresc%20anularea%20abonamentului%20pentru%20contul%3A%20${encodeURIComponent(userEmail)}`}
               className="block w-full py-3 bg-amber-500 text-white font-bold rounded-xl text-sm text-center">
               Deschide email
             </a>
