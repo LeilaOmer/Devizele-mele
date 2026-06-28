@@ -401,32 +401,14 @@ function CompanyForm({ form, setForm, onSave, onCancel, saved }: {
   onCancel: () => void
   saved: boolean
 }) {
-  const [lookingUp, setLookingUp] = useState(false)
-  const [anafError, setAnafError] = useState('')
+  const cuiNum = form.cui ? form.cui.replace(/[^0-9]/g, '') : ''
+  const anafUrl = cuiNum
+    ? `https://www.anaf.ro/anaf/internet/IE/cautareFirma/cautareFirmaPublic.do?query=${cuiNum}`
+    : 'https://www.anaf.ro/anaf/internet/IE/cautareFirma/cautareFirmaPublic.do'
 
-  async function lookupAnaf() {
-    if (!form.cui) return
-    setLookingUp(true)
-    setAnafError('')
-    try {
-      const res = await fetch(`/api/anaf-lookup?cui=${encodeURIComponent(form.cui)}`)
-      const data = await res.json()
-      if (!res.ok) { setAnafError(data.error || 'Eroare ANAF'); return }
-      setForm({
-        ...form,
-        name: data.name || form.name,
-        address: data.address || form.address,
-        reg_com: data.reg_com || form.reg_com,
-      })
-    } catch {
-      setAnafError('Eroare conexiune')
-    } finally {
-      setLookingUp(false)
-    }
-  }
-
-  const otherFields = [
+  const allFields = [
     { key: 'name', label: 'Nume firma *', placeholder: 'Ex: Instalatii Nord SRL' },
+    { key: 'cui', label: 'CUI / CIF', placeholder: 'RO12345678' },
     { key: 'reg_com', label: 'Reg. Com.', placeholder: 'J40/1234/2020' },
     { key: 'address', label: 'Adresa', placeholder: 'Str. Exemplu nr. 1, oras' },
     { key: 'phone', label: 'Telefon', placeholder: '07xx xxx xxx' },
@@ -436,26 +418,12 @@ function CompanyForm({ form, setForm, onSave, onCancel, saved }: {
   ]
   return (
     <div className="px-5 py-4 space-y-3 bg-gray-50 border-b border-gray-100">
-      {/* CUI with ANAF lookup */}
-      <div>
-        <label className="text-xs font-medium text-gray-600 mb-1 block">CUI / CIF</label>
-        <div className="flex gap-2">
-          <input
-            className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white"
-            placeholder="RO12345678"
-            value={form.cui as string}
-            onChange={e => { setForm({ ...form, cui: e.target.value }); setAnafError('') }}
-          />
-          <button
-            onClick={lookupAnaf}
-            disabled={lookingUp || !form.cui}
-            className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold disabled:bg-gray-300 shrink-0 whitespace-nowrap">
-            {lookingUp ? '...' : 'Cauta ANAF'}
-          </button>
-        </div>
-        {anafError && <p className="text-xs text-red-500 mt-1">{anafError}</p>}
-      </div>
-      {otherFields.map(f => (
+      <a href={anafUrl} target="_blank" rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-sm font-semibold">
+        Cauta firma pe ANAF ↗
+      </a>
+      <p className="text-xs text-gray-400 -mt-1">Gasesti CUI, nume si adresa acolo — copiaza-le mai jos.</p>
+      {allFields.map(f => (
         <div key={f.key}>
           <label className="text-xs font-medium text-gray-600 mb-1 block">{f.label}</label>
           <input
