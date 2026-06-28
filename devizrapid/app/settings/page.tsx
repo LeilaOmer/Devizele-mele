@@ -58,6 +58,7 @@ export default function SettingsPage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
     setAccountType(type)
+    localStorage.setItem('dashboardMode', type)
     if (type === 'artizan') {
       localStorage.removeItem('activeCompanyId')
       localStorage.removeItem('activeCompanyName')

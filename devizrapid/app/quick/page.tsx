@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { trialInfo } from '@/lib/trial'
+import { getMonthlyFise, isPlanActive, FREE_FISE_LIMIT } from '@/lib/usage'
 import { useRouter } from 'next/navigation'
 
 type Service = { id: string; name: string; unit: string; price_per_unit: number }
@@ -143,7 +145,22 @@ export default function QuickPage() {
   async function handleConfirm() {
     if (!preview) return
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
+    if (!user) { setLoading(false); return }
+
+    const t = trialInfo(user.created_at)
+    if (!t.isActive) {
+      const [active, fise] = await Promise.all([
+        isPlanActive(user.id),
+        getMonthlyFise(user.id),
+      ])
+      if (!active && fise >= FREE_FISE_LIMIT) {
+        setLoading(false)
+        router.push('/upgrade?type=fise')
+        return
+      }
+    }
     let client_id = null
     if (preview.client_name) {
       const { data: existing } = await supabase.from('clients').select('id').ilike('name', preview.client_name).single()
