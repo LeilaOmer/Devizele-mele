@@ -25,7 +25,7 @@ export default function QuickPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       const { data: prof } = await supabase.from('profiles').select('account_type').eq('id', session.user.id).single()
-      const isPro = prof?.account_type === 'pro'
+      const isPro = prof?.account_type === 'pro' && localStorage.getItem('dashboardMode') === 'pro'
       const companyId = isPro ? localStorage.getItem('activeCompanyId') : null
       const { data } = companyId
         ? await supabase.from('services').select('*').eq('company_id', companyId).order('name')

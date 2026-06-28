@@ -11,6 +11,7 @@ useEffect(() => {
   async function check() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { setName(null); return }
+    if (localStorage.getItem('dashboardMode') !== 'pro') { setName(null); return }
     const { data: prof } = await supabase.from('profiles').select('account_type').eq('id', session.user.id).single()
     if (prof?.account_type !== 'pro') { setName(null); return }
     setName(localStorage.getItem('activeCompanyName') || null)
