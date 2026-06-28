@@ -12,10 +12,10 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   metadataBase: new URL('https://devizele-mele.vercel.app'),
   title: {
-    default: 'Tarifator – Fișă Servicii & Calculator Preț | Gratuit 30 zile',
+    default: 'Tarifator – Răspunsul la „Cât costă?" | Fișă Servicii & Calculator Preț',
     template: '%s | Tarifator',
   },
-  description: 'Generează fișe de servicii prin dictare vocală și calculează prețul de vânzare cu adaos și TVA. Pentru electricieni, instalatori, mecanici, coafori, comercianți și orice prestator de servicii.',
+  description: 'Răspunsul instant la „cât costă?" — fișă de servicii prin dictare vocală pentru prestatori (electricieni, instalatori, mecanici, coafori) și calculator preț cu adaos și TVA pentru comercianți. Gratuit 6 luni, fără card.',
   keywords: [
     // fise servicii — domenii
     'fisa servicii', 'fișă servicii', 'bon de lucru', 'bon manopera', 'raport de lucru',
@@ -49,13 +49,13 @@ export const metadata: Metadata = {
     locale: 'ro_RO',
     url: 'https://devizele-mele.vercel.app',
     siteName: 'Tarifator',
-    title: 'Tarifator – Fișă Servicii & Calculator Preț',
-    description: 'Dictezi ce ai lucrat, fișa apare cu prețurile tale. Calculator preț cu adaos și TVA pentru comercianți. Gratuit 6 luni.',
+    title: 'Tarifator – Răspunsul la „Cât costă?"',
+    description: '„Cât costă?" — răspunsul în secunde. Fișă servicii prin dictare vocală pentru prestatori + calculator preț cu adaos și TVA pentru comercianți. Gratuit 6 luni.',
   },
   twitter: {
     card: 'summary',
-    title: 'Tarifator – Fișă Servicii & Calculator Preț',
-    description: 'Fișe de servicii prin dictare vocală + calculator preț cu adaos și TVA. Gratuit 30 zile.',
+    title: 'Tarifator – Răspunsul la „Cât costă?"',
+    description: 'Fișă servicii prin dictare + calculator preț cu adaos și TVA. Răspunsul instant la „cât costă?" pentru prestatori și comercianți. Gratuit 6 luni.',
   },
   appleWebApp: {
     capable: true,
