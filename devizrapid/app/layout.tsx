@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     url: 'https://devizele-mele.vercel.app',
     siteName: 'Tarifator',
     title: 'Tarifator – Fișă Servicii & Calculator Preț',
-    description: 'Dictezi ce ai lucrat, fișa apare cu prețurile tale. Calculator preț cu adaos și TVA pentru comercianți. Gratuit 30 de zile.',
+    description: 'Dictezi ce ai lucrat, fișa apare cu prețurile tale. Calculator preț cu adaos și TVA pentru comercianți. Gratuit 6 luni.',
   },
   twitter: {
     card: 'summary',

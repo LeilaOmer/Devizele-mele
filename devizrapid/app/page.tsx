@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Tarifator – Fișă Servicii prin Dictare & Calculator Preț cu Adaos și TVA',
-  description: 'Dictezi ce ai lucrat, fișa de servicii apare instant cu prețurile tale. Calculator preț vânzare cu adaos comercial și TVA pentru comercianți. Gratuit 30 de zile, fără card.',
+  description: 'Dictezi ce ai lucrat, fișa de servicii apare instant cu prețurile tale. Calculator preț vânzare cu adaos comercial și TVA pentru comercianți. Gratuit 6 luni, fără card.',
   alternates: { canonical: 'https://devizele-mele.vercel.app' },
 }
 
@@ -18,7 +18,7 @@ export default function LandingPage() {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'RON',
-      description: 'Trial gratuit 30 de zile',
+      description: 'Trial gratuit 6 luni',
     },
     description: 'Aplicație pentru generarea fișelor de servicii prin dictare vocală și calculul prețului de vânzare cu adaos comercial și TVA.',
     url: 'https://devizele-mele.vercel.app',
@@ -46,7 +46,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="px-6 pt-16 pb-16 max-w-3xl mx-auto">
         <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-4">
-          30 de zile gratuit · Fără card
+          6 luni gratuit · Fără card
         </p>
         <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-6 max-w-xl">
           Fișa clientului, gata înainte să pleci de la el.
@@ -121,7 +121,7 @@ export default function LandingPage() {
           <div className="px-6 py-5 flex justify-between items-center bg-green-50">
             <div>
               <p className="font-semibold text-gray-900">Trial gratuit</p>
-              <p className="text-sm text-gray-500 mt-0.5">30 de zile · Acces complet · Fără card</p>
+              <p className="text-sm text-gray-500 mt-0.5">6 luni · Acces complet · Fără card</p>
             </div>
             <p className="text-2xl font-bold text-green-600">0 lei</p>
           </div>
@@ -147,7 +147,7 @@ export default function LandingPage() {
 
       {/* CTA final */}
       <section className="border-t border-gray-100 px-6 py-16 max-w-3xl mx-auto">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Încearcă gratuit 30 de zile.</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Încearcă gratuit 6 luni.</h2>
         <p className="text-gray-500 mb-8">Fără card. Fără angajament. Dacă nu e pentru tine, nu plătești nimic.</p>
         <Link href="/login"
           className="inline-block px-8 py-3.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">

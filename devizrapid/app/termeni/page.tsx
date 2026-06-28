@@ -14,7 +14,7 @@ export default function TermeniPage() {
           <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Pe scurt — ce trebuie sa stii</p>
           <ul className="space-y-2 text-sm text-blue-900">
             <li>✓ <strong>Ce e Tarifator:</strong> aplicatie pentru artizani si prestatori de servicii — genereaza fise de servicii, calculeaza preturi, exporta PDF.</li>
-            <li>✓ <strong>Trial gratuit:</strong> 30 de zile cu acces complet, fara card.</li>
+            <li>✓ <strong>Trial gratuit:</strong> 6 luni cu acces complet, fara card (promotie early adopter).</li>
             <li>✓ <strong>Dupa trial:</strong> plan gratuit (3 fise + 3 calcule/luna) sau abonament Artizan 25 lei/luna / Pro 65 lei/luna.</li>
             <li>✓ <strong>Datele tale iti apartin:</strong> fisele, clientii si preturile introduse de tine sunt ale tale si le poti sterge oricand.</li>
             <li>✓ <strong>Retragere:</strong> ai 14 zile sa te razgandesti dupa plata. Daca ai folosit deja serviciul, rambursarea e proportionala.</li>
@@ -51,7 +51,7 @@ export default function TermeniPage() {
 
         <Section title="4. Planuri si tarife">
           <div className="space-y-2">
-            <Row label="Perioada de test" value="30 de zile gratuite cu acces complet (Plan Pro)" />
+            <Row label="Perioada de test" value="6 luni gratuite cu acces complet — promotie early adopter (inregistrare inainte de lansarea pe tarifator.ro)" />
             <Row label="Plan gratuit" value="3 fise/luna + 3 calcule de pret/luna, dupa expirarea trialului" />
             <Row label="Plan Artizan" value="25 lei (RON)/luna — utilizare nelimitata, fara TVA, fara firme" />
             <Row label="Plan Pro" value="65 lei (RON)/luna — utilizare nelimitata, TVA, firme multiple" />

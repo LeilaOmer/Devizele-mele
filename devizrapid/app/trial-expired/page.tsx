@@ -19,7 +19,7 @@ export default function TrialExpiredPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Perioada de test a expirat</h1>
           <p className="text-gray-500 text-sm mt-2">
-            Cele 30 de zile gratuite s-au incheiat. Pentru a continua sa folosesti Tarifator, contacteaza-ne pentru activarea abonamentului.
+            Perioada de test gratuita s-a incheiat. Pentru a continua sa folosesti Tarifator, contacteaza-ne pentru activarea abonamentului.
           </p>
         </div>
 
