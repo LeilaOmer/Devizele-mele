@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import jsPDF from 'jspdf'
 import { supabase } from '@/lib/supabase'
 import { trialInfo } from '@/lib/trial'
@@ -135,7 +135,6 @@ function exportPDFMagazin(items: Item[], adaos: number, step: RoundStep, mode: R
 
 export default function PricingPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [supplier, setSupplier] = useState('')
   const [adaos, setAdaos] = useState('30')
   const [vat, setVat] = useState<11 | 21>(21)
@@ -156,7 +155,7 @@ export default function PricingPage() {
   const [voiceMsg, setVoiceMsg] = useState('')
 
   useEffect(() => {
-    const draftParam = searchParams.get('draft')
+    const draftParam = new URLSearchParams(window.location.search).get('draft')
     if (draftParam) {
       async function loadDraft() {
         const { data: { session } } = await supabase.auth.getSession()
@@ -193,7 +192,7 @@ export default function PricingPage() {
       if (!active) setUsageInfo({ calcule, limit: FREE_CALCULE_LIMIT, show: true })
     }
     loadUsage()
-  }, [searchParams])
+  }, [])
 
   async function saveDraft() {
     const { data: { session } } = await supabase.auth.getSession()
