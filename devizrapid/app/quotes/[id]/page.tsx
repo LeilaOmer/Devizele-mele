@@ -218,7 +218,7 @@ export default function QuoteDetailPage() {
     const [{ data: prof }, { data: q, error: qErr }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       supabase.from("quotes").select(`
-        id, quote_number, created_at, status,
+        id, quote_number, created_at, status, company_id,
         vat_rate, vat_amount, total_with_vat, discount, discount_type,
         clients ( id, name, cui, address, contact_person, phone, email ),
         quote_items ( id, description, quantity, unit_price, total )
