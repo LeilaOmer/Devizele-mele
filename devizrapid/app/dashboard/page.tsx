@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { trialInfo } from '@/lib/trial'
 import { getMonthlyFise, getMonthlyCalcule, isPlanActive, FREE_FISE_LIMIT, FREE_CALCULE_LIMIT } from '@/lib/usage'
@@ -25,6 +25,12 @@ export default function Dashboard() {
   const [subscribed, setSubscribed] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showWelcome, setShowWelcome] = useState(false)
+  const [fbOpen, setFbOpen] = useState(false)
+  const [fbText, setFbText] = useState('')
+  const [fbRecording, setFbRecording] = useState(false)
+  const [fbSending, setFbSending] = useState(false)
+  const [fbDone, setFbDone] = useState(false)
+  const fbRecorderRef = useRef<MediaRecorder | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -108,6 +114,43 @@ export default function Dashboard() {
     localStorage.setItem('activeCompanyId', id)
     localStorage.setItem('activeCompanyName', company.name)
     setDisplayName(company.name)
+  }
+
+  async function startFbVoice() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    const chunks: BlobPart[] = []
+    const rec = new MediaRecorder(stream)
+    fbRecorderRef.current = rec
+    rec.ondataavailable = e => chunks.push(e.data)
+    rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop())
+      const blob = new Blob(chunks, { type: 'audio/webm' })
+      const form = new FormData()
+      form.append('audio', blob, 'audio.webm')
+      const res = await fetch('/api/transcribe', { method: 'POST', body: form })
+      const { text } = await res.json()
+      if (text) setFbText(prev => prev ? prev + ' ' + text : text)
+      setFbRecording(false)
+    }
+    rec.start()
+    setFbRecording(true)
+  }
+
+  function stopFbVoice() {
+    fbRecorderRef.current?.stop()
+  }
+
+  async function sendFeedback() {
+    if (!fbText.trim()) return
+    setFbSending(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      await supabase.from('feedback').insert({ user_id: session.user.id, message: fbText.trim() })
+    }
+    setFbText('')
+    setFbDone(true)
+    setFbSending(false)
+    setTimeout(() => { setFbDone(false); setFbOpen(false) }, 2000)
   }
 
   async function handleLogout() {
@@ -268,6 +311,70 @@ export default function Dashboard() {
                 <p className="text-gray-400 text-xs">Lista de clienti</p>
               </div>
             </a>
+
+            {/* Widget feedback */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              {!fbOpen ? (
+                <button onClick={() => setFbOpen(true)}
+                  className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 active:scale-95 transition-all text-left">
+                  <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                  </svg>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">Feedback</p>
+                    <p className="text-gray-400 text-xs">Ce am putea îmbunătăți?</p>
+                  </div>
+                </button>
+              ) : (
+                <div className="p-4 space-y-3">
+                  {fbDone ? (
+                    <p className="text-sm font-semibold text-green-600 text-center py-3">Mulțumim! Am primit mesajul.</p>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Sugestie sau problemă</p>
+                        <button onClick={() => { setFbOpen(false); setFbText('') }}
+                          className="text-gray-300 hover:text-gray-500 text-xl leading-none">×</button>
+                      </div>
+                      <textarea
+                        value={fbText}
+                        onChange={e => setFbText(e.target.value)}
+                        placeholder="Spune-ne ce ai vrea să fie diferit..."
+                        rows={3}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 resize-none focus:outline-none focus:border-blue-400"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={fbRecording ? stopFbVoice : startFbVoice}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border-2 transition-all ${
+                            fbRecording ? 'border-red-400 bg-red-50 text-red-600' : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                          }`}>
+                          {fbRecording ? (
+                            <>
+                              <span className="w-2 h-2 rounded-sm bg-red-500 animate-pulse" />
+                              Stop
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+                              </svg>
+                              Dictează
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={sendFeedback}
+                          disabled={fbSending || !fbText.trim()}
+                          className="flex-1 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl disabled:bg-gray-300 transition-colors">
+                          {fbSending ? 'Se trimite...' : 'Trimite'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Dreapta: selector mod + firma activa */}
