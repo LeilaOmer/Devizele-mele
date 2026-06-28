@@ -10,8 +10,9 @@ export default function ConfidentialitatePage() {
         </div>
 
         <Section title="1. Operatorul de date">
-          <p>Operatorul datelor cu caracter personal este <strong>[Denumire operator — PFA / SRL, adresa, CUI]</strong>, denumit in continuare "Operator".</p>
-          <p className="mt-2">Contact privind datele personale: <strong>leyla.omer@gmail.com</strong></p>
+          <p>Operatorul datelor cu caracter personal este <strong>Tarifator</strong> (serviciu in faza beta, operat de o persoana fizica, in curs de inregistrare ca entitate juridica), denumit in continuare "Operator".</p>
+          <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">Aceasta versiune a aplicatiei este in faza de testare (beta). Nu se percep plati. Datele tale sunt prelucrate exclusiv pentru furnizarea serviciului gratuit de test.</p>
+          <p className="mt-2">Contact privind datele personale: <strong>tarifator@gmail.com</strong></p>
           <p className="mt-2">Nu am desemnat un Responsabil cu Protectia Datelor (DPO), intrucat nu indeplinim criteriile de la Art. 37 GDPR. Solicitarile privind datele personale se adreseaza direct la emailul de mai sus.</p>
         </Section>
 
@@ -68,7 +69,7 @@ export default function ConfidentialitatePage() {
           <ul className="list-disc pl-5 space-y-1">
             <li><strong>Executarea contractului</strong> (Art. 6(1)(b) GDPR) — pentru furnizarea Serviciului</li>
             <li><strong>Interesul legitim</strong> (Art. 6(1)(f) GDPR) — pentru securitate, prevenirea fraudelor si prevenirea abuzului de re-inregistrare</li>
-            <li><strong>Consimtamantul</strong> (Art. 6(1)(a) GDPR) — pentru comunicari comerciale optionale. Consimtamantul poate fi retras oricand la fel de usor ca acordarea lui, prin email la leyla.omer@gmail.com, fara consecinte asupra accesului la Serviciu.</li>
+            <li><strong>Consimtamantul</strong> (Art. 6(1)(a) GDPR) — pentru comunicari comerciale optionale. Consimtamantul poate fi retras oricand la fel de usor ca acordarea lui, prin email la tarifator@gmail.com, fara consecinte asupra accesului la Serviciu.</li>
             <li><strong>Obligatia legala</strong> (Art. 6(1)(c) GDPR) — pentru documente contabile si fiscale</li>
           </ul>
         </Section>
@@ -91,16 +92,16 @@ export default function ConfidentialitatePage() {
             <Processor name="Vercel Inc." role="Hosting aplicatie" location="SUA — transfer acoperit de Clauze Contractuale Standard UE (Art. 46 GDPR)" />
             <Processor name="Groq Inc." role="Transcriere vocala AI" location="SUA — Zero Data Retention: date sterse imediat post-transcriere, interzis contractual folosirea pentru antrenare AI. Transfer acoperit de Clauze Contractuale Standard UE (Art. 46 GDPR). DPA disponibil." />
           </div>
-          <p className="mt-3">Nu vindem si nu inchiriem datele dvs. catre terti. Puteti solicita lista completa a subprocesorilor activi la leyla.omer@gmail.com.</p>
+          <p className="mt-3">Nu vindem si nu inchiriem datele dvs. catre terti. Puteti solicita lista completa a subprocesorilor activi la tarifator@gmail.com.</p>
         </Section>
 
         <Section title="6. Decizii automate (Art. 22 GDPR)">
           <p>Serviciul aplica <strong>limitari automate</strong> ale utilizarii bazate pe contorizarea actiunilor dvs. (numar de fise create, numar de calcule exportate pe luna). La depasirea limitelor planului gratuit, accesul la crearea de noi documente este blocat automat pana la inceputul lunii urmatoare sau pana la activarea unui abonament.</p>
-          <p className="mt-2">Aceasta procesare automata se bazeaza pe executarea contractului (Art. 6(1)(b) GDPR). Aveti dreptul de a contesta decizia si de a solicita interventie umana prin contact la leyla.omer@gmail.com.</p>
+          <p className="mt-2">Aceasta procesare automata se bazeaza pe executarea contractului (Art. 6(1)(b) GDPR). Aveti dreptul de a contesta decizia si de a solicita interventie umana prin contact la tarifator@gmail.com.</p>
         </Section>
 
         <Section title="7. Drepturile dvs.">
-          <p>In temeiul GDPR, beneficiati de urmatoarele drepturi, pe care le puteti exercita la <strong>leyla.omer@gmail.com</strong>. Raspundem in termen de <strong>30 de zile</strong> (Art. 12(3) GDPR), termen care poate fi extins cu inca 60 de zile in cazuri complexe, cu notificare prealabila.</p>
+          <p>In temeiul GDPR, beneficiati de urmatoarele drepturi, pe care le puteti exercita la <strong>tarifator@gmail.com</strong>. Raspundem in termen de <strong>30 de zile</strong> (Art. 12(3) GDPR), termen care poate fi extins cu inca 60 de zile in cazuri complexe, cu notificare prealabila.</p>
           <ul className="list-disc pl-5 mt-2 space-y-1">
             <li><strong>Acces</strong> (Art. 15) — sa obtineti o copie a datelor prelucrate</li>
             <li><strong>Rectificare</strong> (Art. 16) — sa corectati datele inexacte</li>

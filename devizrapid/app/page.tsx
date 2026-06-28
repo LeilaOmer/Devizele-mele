@@ -161,7 +161,7 @@ export default function LandingPage() {
         <div className="flex gap-6">
           <Link href="/termeni" className="hover:text-gray-600">Termeni</Link>
           <Link href="/confidentialitate" className="hover:text-gray-600">Confidențialitate</Link>
-          <a href="mailto:leyla.omer@gmail.com" className="hover:text-gray-600">leyla.omer@gmail.com</a>
+          <a href="mailto:tarifator@gmail.com" className="hover:text-gray-600">tarifator@gmail.com</a>
         </div>
       </footer>
     </div>

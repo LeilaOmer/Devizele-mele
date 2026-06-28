@@ -19,13 +19,14 @@ export default function TermeniPage() {
             <li>✓ <strong>Datele tale iti apartin:</strong> fisele, clientii si preturile introduse de tine sunt ale tale si le poti sterge oricand.</li>
             <li>✓ <strong>Retragere:</strong> ai 14 zile sa te razgandesti dupa plata. Daca ai folosit deja serviciul, rambursarea e proportionala.</li>
             <li>✓ <strong>Anulare:</strong> oricand, fara penalitati. Accesul continua pana la expirarea perioadei platite.</li>
-            <li>✓ <strong>Contact:</strong> leyla.omer@gmail.com — raspundem in 24 de ore lucratoare.</li>
+            <li>✓ <strong>Contact:</strong> tarifator@gmail.com — raspundem in 24 de ore lucratoare.</li>
           </ul>
         </div>
 
         <Section title="1. Partile contractante">
           <p>Prezentii Termeni și Conditii ("Termeni") reglementeaza utilizarea aplicatiei <strong>Tarifator</strong> ("Serviciul"), disponibila la adresa <em>devizele-mele.vercel.app</em>.</p>
-          <p className="mt-2">Serviciul este furnizat de <strong>[Denumire operator — PFA / SRL / persoana fizica, adresa, CUI]</strong>, denumit in continuare "Furnizor".</p>
+          <p className="mt-2">Serviciul este furnizat de <strong>Tarifator</strong> (serviciu in faza beta, operat de o persoana fizica, in curs de inregistrare ca entitate juridica), denumit in continuare "Furnizor".</p>
+          <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">Aceasta versiune a aplicatiei este in faza de testare (beta). Nu se percep plati in aceasta etapa. Accesul este gratuit pe durata perioadei de test.</p>
           <p className="mt-2">Serviciul este destinat exclusiv persoanelor cu varsta de minimum <strong>18 ani</strong>. Prin crearea unui cont confirmati ca aveti cel putin 18 ani, ati citit, inteles si acceptat acesti Termeni.</p>
         </Section>
 
@@ -61,12 +62,12 @@ export default function TermeniPage() {
         </Section>
 
         <Section title="5. Plati si facturare">
-          <p>Abonamentele se activeaza manual prin contact la <strong>leyla.omer@gmail.com</strong>. Plata se efectueaza in avans, la inceputul fiecarei perioade de abonament, in lei (RON).</p>
+          <p>Abonamentele se activeaza manual prin contact la <strong>tarifator@gmail.com</strong>. Plata se efectueaza in avans, la inceputul fiecarei perioade de abonament, in lei (RON).</p>
           <p className="mt-2">Dupa confirmarea platii, Furnizorul activeaza abonamentul si emite documentul fiscal aferent in termen de 24 de ore lucratoare.</p>
         </Section>
 
         <Section title="6. Rezilierea si anularea">
-          <p>Puteti solicita anularea abonamentului oricand, prin email la leyla.omer@gmail.com, fara penalitati. Accesul la functiile platite continua pana la expirarea perioadei pentru care s-a achitat. Abonamentele nu se reinnesc automat.</p>
+          <p>Puteti solicita anularea abonamentului oricand, prin email la tarifator@gmail.com, fara penalitati. Accesul la functiile platite continua pana la expirarea perioadei pentru care s-a achitat. Abonamentele nu se reinnesc automat.</p>
           <p className="mt-2">Furnizorul isi rezerva dreptul de a suspenda conturile care incalca prezentii Termeni, cu notificare prealabila de 5 zile, cu exceptia cazurilor de frauda sau utilizare abuziva unde suspendarea poate fi imediata.</p>
         </Section>
 
@@ -81,7 +82,7 @@ export default function TermeniPage() {
         </Section>
 
         <Section title="9. Legea aplicabila si solutionarea litigiilor">
-          <p>Prezentii Termeni sunt guvernati de legislatia romana. Orice litigiu se solutioneaza pe cale amiabila in primul rand, prin contact la leyla.omer@gmail.com.</p>
+          <p>Prezentii Termeni sunt guvernati de legislatia romana. Orice litigiu se solutioneaza pe cale amiabila in primul rand, prin contact la tarifator@gmail.com.</p>
           <p className="mt-2">In calitate de consumator, aveti dreptul de a apela la:</p>
           <ul className="list-disc pl-5 mt-1 space-y-1">
             <li><strong>ANPC</strong> (Autoritatea Nationala pentru Protectia Consumatorilor) — anpc.ro</li>

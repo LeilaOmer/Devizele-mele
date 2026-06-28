@@ -25,7 +25,7 @@ export default function TrialExpiredPage() {
 
         <div className="bg-blue-50 rounded-2xl p-4 text-left space-y-1">
           <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide">Contact</p>
-          <p className="text-sm font-bold text-blue-800">leyla.omer@gmail.com</p>
+          <p className="text-sm font-bold text-blue-800">tarifator@gmail.com</p>
           <p className="text-xs text-blue-500">Raspundem in maxim 24 de ore</p>
         </div>
 
