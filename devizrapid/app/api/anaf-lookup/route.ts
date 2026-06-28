@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const maxDuration = 30
+
 export async function GET(req: NextRequest) {
   const cui = req.nextUrl.searchParams.get('cui')
   if (!cui) return NextResponse.json({ error: 'CUI lipsa' }, { status: 400 })
@@ -10,7 +12,7 @@ export async function GET(req: NextRequest) {
   const today = new Date().toISOString().split('T')[0]
 
   try {
-    const anafRes = await fetch('https://webservicesp.anaf.ro/PlatitorTvaRest/api/v9/ws/tva', {
+    const anafRes = await fetch('https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -32,7 +34,7 @@ export async function GET(req: NextRequest) {
 
     const found = (data?.found as Array<{ date_generale?: Record<string, string> }>)?.[0]?.date_generale
     if (!found) {
-      return NextResponse.json({ error: 'CUI negasit in ANAF', detail: JSON.stringify(data).slice(0, 300) }, { status: 404 })
+      return NextResponse.json({ error: 'CUI negasit', detail: JSON.stringify(data).slice(0, 300) }, { status: 404 })
     }
 
     return NextResponse.json({
@@ -42,6 +44,6 @@ export async function GET(req: NextRequest) {
     })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: 'Eroare conexiune ANAF', detail: msg }, { status: 502 })
+    return NextResponse.json({ error: 'Eroare conexiune', detail: msg }, { status: 502 })
   }
 }
