@@ -314,7 +314,7 @@ export default function QuoteDetailPage() {
     const subtotalBrut = (allItems || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
     const subtotalNet = subtotalBrut - dVal;
-    const isPro = !!company || profile.account_type === "pro";
+    const isPro = !!company;
     const emitent = getEmitent();
     const vatRate = isPro ? emitent.vat_rate : 0;
     const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
@@ -339,7 +339,7 @@ export default function QuoteDetailPage() {
     const subtotalBrut = (remaining || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
     const subtotalNet = subtotalBrut - dVal;
-    const isPro = profile?.account_type === "pro";
+    const isPro = !!company;
     const emitent = getEmitent();
     const vatRate = isPro ? emitent.vat_rate : 0;
     const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
@@ -361,7 +361,7 @@ export default function QuoteDetailPage() {
     const subtotalBrut = (allItems || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
     const subtotalNet = subtotalBrut - dVal;
-    const isPro = !!company || profile.account_type === "pro";
+    const isPro = !!company;
     const emitent = getEmitent();
     const vatRate = isPro ? emitent.vat_rate : 0;
     const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
@@ -393,7 +393,7 @@ export default function QuoteDetailPage() {
 
   const shareWhatsApp = async () => {
     if (!quote || !profile) return;
-    const isPro = !!company || profile.account_type === "pro";
+    const isPro = !!company;
     const doc = buildPDF(quote, emitent, isPro, parseFloat(discount || "0"), discountType);
     const fileName = `Fisa_${quote.quote_number}.pdf`;
 

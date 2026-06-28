@@ -33,7 +33,7 @@ async function fetchData() {
   if (!session) return
 
   const { data: prof } = await supabase.from('profiles').select('account_type').eq('id', session.user.id).single()
-  const isPro = prof?.account_type === 'pro'
+  const isPro = prof?.account_type === 'pro' && localStorage.getItem('dashboardMode') === 'pro'
 
   const [{ data: q }, { data: c }, { data: cos }] = await Promise.all([
     supabase.from('quotes').select('*').order('created_at', { ascending: false }),

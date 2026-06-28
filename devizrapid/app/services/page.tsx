@@ -26,7 +26,7 @@ export default function ServicesPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       const { data: prof } = await supabase.from('profiles').select('account_type').eq('id', session.user.id).single()
-      const pro = prof?.account_type === 'pro'
+      const pro = prof?.account_type === 'pro' && localStorage.getItem('dashboardMode') === 'pro'
       setIsPro(pro)
 
       if (pro) {
