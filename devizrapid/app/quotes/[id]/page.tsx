@@ -188,7 +188,7 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 function playSuccessSound() {
-  const audio = new Audio('/sounds/success.mp3')
+  const audio = new Audio('/sounds/success.wav')
   audio.volume = 0.5
   audio.play().catch(() => {})
 }
