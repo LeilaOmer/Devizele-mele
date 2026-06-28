@@ -312,14 +312,6 @@ export default function Dashboard() {
                 <p className="text-gray-400 text-xs">Creeaza si gestioneaza</p>
               </div>
             </a>
-            <a href="/calcule"
-              className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-              <span className="text-xl">🏷️</span>
-              <div>
-                <p className="font-semibold text-sm text-gray-900">Calcule salvate</p>
-                <p className="text-gray-400 text-xs">Revizuieste si editeaza</p>
-              </div>
-            </a>
             <a href="/services"
               className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
               <span className="text-xl">🔧</span>

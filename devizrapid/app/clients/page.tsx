@@ -10,7 +10,26 @@ export default function ClientsPage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', cui: '', address: '', contact_person: '' })
   const [editing, setEditing] = useState<Client | null>(null)
   const [loading, setLoading] = useState(false)
+  const [lookingUp, setLookingUp] = useState(false)
+  const [anafError, setAnafError] = useState('')
   const router = useRouter()
+
+  async function lookupAnaf(cui: string, onResult: (name: string, address: string) => void) {
+    const cuiNum = cui.replace(/[^0-9]/g, '')
+    if (!cuiNum) return
+    setLookingUp(true)
+    setAnafError('')
+    try {
+      const res = await fetch(`https://anaf-proxy.contact-tarifator.workers.dev/?cui=${cuiNum}`)
+      const data = await res.json()
+      if (!res.ok) { setAnafError(data.error || 'Eroare ANAF'); return }
+      onResult(data.name || '', data.address || '')
+    } catch {
+      setAnafError('Eroare conexiune')
+    } finally {
+      setLookingUp(false)
+    }
+  }
 
   useEffect(() => { fetchClients() }, [])
 
@@ -61,10 +80,18 @@ export default function ClientsPage() {
         {/* Form adaugare */}
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Client nou</p>
+          <div className="flex gap-2">
+            <input className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="CUI (optional)" value={form.cui} onChange={e => { setForm({ ...form, cui: e.target.value }); setAnafError('') }} />
+            <button onClick={() => lookupAnaf(form.cui, (name, address) => setForm(f => ({ ...f, name: name || f.name, address: address || f.address })))}
+              disabled={lookingUp || !form.cui}
+              className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold disabled:bg-gray-300 shrink-0 whitespace-nowrap">
+              {lookingUp ? '...' : 'Cauta ANAF'}
+            </button>
+          </div>
+          {anafError && <p className="text-xs text-red-500 -mt-1">{anafError}</p>}
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
             placeholder="Nume / Denumire firma *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-          <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
-            placeholder="CUI" value={form.cui} onChange={e => setForm({ ...form, cui: e.target.value })} />
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
             placeholder="Adresa" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
@@ -87,10 +114,18 @@ export default function ClientsPage() {
               <div key={c.id}>
                 {editing?.id === c.id ? (
                   <div className="p-4 space-y-3">
+                    <div className="flex gap-2">
+                      <input className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+                        placeholder="CUI (optional)" value={editing.cui || ''} onChange={e => { setEditing({ ...editing, cui: e.target.value }); setAnafError('') }} />
+                      <button onClick={() => lookupAnaf(editing.cui || '', (name, address) => setEditing(ed => ed ? { ...ed, name: name || ed.name, address: address || ed.address } : ed))}
+                        disabled={lookingUp || !editing.cui}
+                        className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold disabled:bg-gray-300 shrink-0 whitespace-nowrap">
+                        {lookingUp ? '...' : 'Cauta ANAF'}
+                      </button>
+                    </div>
+                    {anafError && <p className="text-xs text-red-500 -mt-1">{anafError}</p>}
                     <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
                       placeholder="Nume *" value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })} />
-                    <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
-                      placeholder="CUI" value={editing.cui || ''} onChange={e => setEditing({ ...editing, cui: e.target.value })} />
                     <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
                       placeholder="Adresa" value={editing.address || ''} onChange={e => setEditing({ ...editing, address: e.target.value })} />
                     <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
