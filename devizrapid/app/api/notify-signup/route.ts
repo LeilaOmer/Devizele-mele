@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   await resend.emails.send({
     from: 'Tarifator <onboarding@resend.dev>',
-    to: 'contact.tarifator@gmail.com',
+    to: 'leyla.omer@gmail.com',
     subject: 'Utilizator nou înregistrat în Tarifator',
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
