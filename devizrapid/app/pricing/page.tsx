@@ -393,7 +393,7 @@ export default function PricingPage() {
       <div className="max-w-2xl mx-auto px-3 pt-3 space-y-3">
 
         {/* Scan factura */}
-        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden"
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) handleInvoiceScan(f); e.target.value = '' }} />
         <button onClick={() => fileInputRef.current?.click()} disabled={scanningInvoice}
           className="w-full py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-2 disabled:bg-blue-300 shadow-sm">
