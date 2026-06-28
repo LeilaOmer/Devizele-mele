@@ -28,7 +28,6 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-gray-900">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <style>{`.fixed.bottom-24 { display: none; }`}</style>
 
       {/* Nav */}
       <nav className="px-6 py-5 flex items-center justify-between max-w-3xl mx-auto border-b border-gray-100">

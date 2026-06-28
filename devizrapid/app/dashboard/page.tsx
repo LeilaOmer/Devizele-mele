@@ -222,13 +222,18 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-3">
           <a href="/quick"
             className="bg-blue-100 p-5 rounded-2xl shadow hover:bg-blue-200 active:scale-95 transition-all flex flex-col min-h-[160px]">
-            <span className="text-4xl mb-3">🎙️</span>
+            <svg className="w-8 h-8 mb-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+            </svg>
             <h2 className="font-bold text-xl leading-tight text-gray-900">Fișă Servicii Voce</h2>
             <p className="text-blue-700 text-sm mt-1.5">Dictează și generează instant</p>
           </a>
           <a href="/pricing"
             className="bg-amber-100 p-5 rounded-2xl shadow hover:bg-amber-200 active:scale-95 transition-all flex flex-col min-h-[160px]">
-            <span className="text-4xl mb-3">🏷️</span>
+            <svg className="w-8 h-8 mb-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+            </svg>
             <h2 className="font-bold text-xl leading-tight text-gray-900">Calculator Preț Vânzare</h2>
             <p className="text-amber-700 text-sm mt-1.5">Adaos · TVA · PDF</p>
           </a>
