@@ -158,18 +158,18 @@ export default function PricingPage() {
       const isImage = file.type.startsWith('image/')
       let body: Record<string, string>
 
+      const readBase64 = (f: File) => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve((reader.result as string).split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(f)
+      })
+
       if (isImage) {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve((reader.result as string).split(',')[1])
-          reader.onerror = reject
-          reader.readAsDataURL(file)
-        })
-        body = { imageBase64: base64, mimeType: file.type || 'image/jpeg' }
+        body = { imageBase64: await readBase64(file), mimeType: file.type || 'image/jpeg' }
       } else {
-        // PDF sau XML — citit ca text
-        const text = await file.text()
-        body = { text }
+        // PDF sau XML — trimis ca base64, textul e extras pe server
+        body = { docBase64: await readBase64(file), mimeType: file.type || 'application/pdf', fileName: file.name }
       }
 
       const res = await fetch('/api/parse-invoice', {
@@ -408,21 +408,29 @@ export default function PricingPage() {
         {/* Scan factura */}
         <input id="scan-camera" type="file" accept="image/*" capture="environment" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) handleInvoiceScan(f); e.target.value = '' }} />
-        <input id="scan-gallery" type="file" accept="image/*,.pdf,.xml,application/pdf,text/xml,application/xml" className="hidden"
+        <input id="scan-gallery" type="file" accept="image/*" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleInvoiceScan(f); e.target.value = '' }} />
+        <input id="scan-document" type="file" accept=".pdf,.xml,application/pdf,text/xml,application/xml" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) handleInvoiceScan(f); e.target.value = '' }} />
         {scanningInvoice ? (
           <div className="w-full py-3.5 rounded-2xl bg-blue-300 text-white font-bold text-sm flex items-center justify-center shadow-sm">
             Se analizeaza factura...
           </div>
         ) : (
-          <div className="flex gap-2">
-            <label htmlFor="scan-camera"
-              className="flex-1 py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
-              Fa poza
-            </label>
-            <label htmlFor="scan-gallery"
-              className="flex-1 py-3.5 rounded-2xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
-              Incarca din galerie
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <label htmlFor="scan-camera"
+                className="flex-1 py-3 rounded-2xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+                Fa poza
+              </label>
+              <label htmlFor="scan-gallery"
+                className="flex-1 py-3 rounded-2xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+                Galerie
+              </label>
+            </div>
+            <label htmlFor="scan-document"
+              className="w-full py-3 rounded-2xl bg-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-1.5 shadow-sm cursor-pointer">
+              Incarca PDF / XML
             </label>
           </div>
         )}

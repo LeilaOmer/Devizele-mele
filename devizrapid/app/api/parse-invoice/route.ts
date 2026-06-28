@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   let messages: unknown[]
 
   if (body.imageBase64) {
-    // Poza — folosim Groq Vision
+    // Poza — Groq Vision
     messages = [
       {
         role: 'user',
@@ -18,11 +18,29 @@ export async function POST(req: NextRequest) {
         ],
       },
     ]
-  } else if (body.text) {
-    // PDF sau XML — folosim Groq text
+  } else if (body.docBase64) {
+    // PDF sau XML trimis ca base64 — extragem textul pe server
+    const buf = Buffer.from(body.docBase64, 'base64')
+    let text = ''
+    const mime: string = body.mimeType || ''
+    if (mime.includes('pdf') || (body.fileName as string | undefined)?.toLowerCase().endsWith('.pdf')) {
+      // import din lib/ pentru a evita eroarea cu fisierele de test din pdf-parse v1
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const pdfParse: (buf: Buffer) => Promise<{ text: string }> = require('pdf-parse/lib/pdf-parse.js')
+      const parsed = await pdfParse(buf)
+      text = parsed.text
+    } else {
+      text = buf.toString('utf-8')
+    }
     messages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: body.text.slice(0, 12000) }, // limita token
+      { role: 'user', content: text.slice(0, 12000) },
+    ]
+  } else if (body.text) {
+    // Text direct
+    messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: body.text.slice(0, 12000) },
     ]
   } else {
     return NextResponse.json({ items: [] }, { status: 400 })
@@ -36,7 +54,7 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + process.env.GROQ_API_KEY,
     },
-    body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: 2048 }),
+    body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: 4096 }),
   })
 
   const data = await res.json()
