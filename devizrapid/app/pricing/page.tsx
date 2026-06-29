@@ -203,6 +203,12 @@ export default function PricingPage() {
         body: JSON.stringify(body),
       })
       const data = await res.json()
+      if (!res.ok || data.error) {
+        setScanError(data.error === 'vision_failed'
+          ? 'Poza neclara sau unghi dificil. Incearca mai aproape, cu lumina mai buna, sau incarca PDF-ul direct.'
+          : `Eroare: ${data.error || 'necunoscuta'}`)
+        return
+      }
       if (data.supplier) setSupplier(data.supplier)
       if (data.items?.length) {
         setItems(data.items.map((i: { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number }) => ({
@@ -215,10 +221,10 @@ export default function PricingPage() {
           sgr: i.sgr ? String(i.sgr) : '0',
         })))
       } else {
-        setScanError('Nu s-au gasit produse. Incearca o poza mai clara.')
+        setScanError('Nu s-au gasit produse. Incearca o poza mai clara sau incarca PDF-ul.')
       }
     } catch {
-      setScanError('Eroare la procesare. Incearca din nou.')
+      setScanError('Eroare de retea. Verifica conexiunea si incearca din nou.')
     } finally {
       setScanningInvoice(false)
     }
