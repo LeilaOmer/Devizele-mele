@@ -19,7 +19,8 @@ useEffect(() => {
   check()
 }, [pathname])
 
-  if (!name) return null
+  const publicPages = ['/', '/termeni', '/confidentialitate', '/upgrade']
+  if (!name || publicPages.includes(pathname)) return null
 
   return (
     <div className="sticky top-0 w-full z-[9998] bg-purple-600 text-white text-xs text-center py-1.5 font-semibold shrink-0">
