@@ -37,13 +37,9 @@ export async function POST(req: NextRequest) {
           ],
         },
       ]
-      const raw = await callGroq('llama-3.2-90b-vision-preview', messages)
+      const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages)
       const result = parseJson(raw)
-      if (result?.items?.length) return NextResponse.json(result)
-      // fallback: daca 90B esueaza, incearca 11B
-      const raw2 = await callGroq('llama-3.2-11b-vision-preview', messages)
-      const result2 = parseJson(raw2)
-      return NextResponse.json(result2 ?? { items: [], error: 'vision_failed', raw: raw.slice(0, 200) })
+      return NextResponse.json(result ?? { items: [], error: 'vision_failed', raw: raw.slice(0, 200) })
     }
 
     let text = ''
