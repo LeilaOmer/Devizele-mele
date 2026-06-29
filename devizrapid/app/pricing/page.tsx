@@ -190,8 +190,27 @@ export default function PricingPage() {
         reader.readAsDataURL(f)
       })
 
+      // redimensioneaza imaginile mari inainte de upload (max 1280px, JPEG 0.88)
+      const resizeImage = (f: File): Promise<string> => new Promise((resolve, reject) => {
+        const img = new Image()
+        const url = URL.createObjectURL(f)
+        img.onload = () => {
+          URL.revokeObjectURL(url)
+          const MAX = 1280
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+          const w = Math.round(img.width * scale)
+          const h = Math.round(img.height * scale)
+          const canvas = document.createElement('canvas')
+          canvas.width = w; canvas.height = h
+          canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+          resolve(canvas.toDataURL('image/jpeg', 0.88).split(',')[1])
+        }
+        img.onerror = reject
+        img.src = url
+      })
+
       if (isImage) {
-        body = { imageBase64: await readBase64(file), mimeType: file.type || 'image/jpeg' }
+        body = { imageBase64: await resizeImage(file), mimeType: 'image/jpeg' }
       } else {
         // PDF sau XML — trimis ca base64, textul e extras pe server
         body = { docBase64: await readBase64(file), mimeType: file.type || 'application/pdf', fileName: file.name }
