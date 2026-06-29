@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const SYSTEM_PROMPT = 'Esti asistent pentru comercianti romani. Extrage din documentul primit (factura sau aviz) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown. Format: {"supplier":"Nume Furnizor SRL","items":[{"name":"denumire produs","unit":"buc","supplier_price":0,"discount":0,"vat":21,"sgr":0}]}. supplier_price este pretul per unitate FARA TVA si FARA SGR. Daca e pret cu TVA, scade TVA-ul. discount e procentual (0 daca nu e mentionat). Nu folosi diacritice in text. REGULA TVA: vat=11 pentru alimente si bauturi nealcoolice, apa, lemne de foc, carti, cazare. vat=21 pentru orice altceva inclusiv bauturi alcoolice, cosmetice, electrice, textile, materiale constructii. REGULA SGR CRITICA: Pe facturile romanesti (Metro, Meti, Selgros, etc.) garantia returnabila apare ca linie SEPARATA numita GARANTIE PET, GARANTIE AMBALAJ, SGR sau similar, cu TVA 0% si pret 0.50 lei/buc. NU crea un produs separat pentru aceasta linie - in schimb seteaza sgr=0.50 la produsul din randul ANTERIOR (produsul la care se refera garantia). Daca nu exista garantie, sgr=0.'
+const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura sau aviz) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
+Format: {"supplier":"Nume Furnizor SRL","items":[{"name":"denumire produs","unit":"buc","supplier_price":0,"discount":0,"vat":21,"sgr":0}]}
+
+REGULI OBLIGATORII:
+
+1. supplier_price = pretul per unitate FARA TVA si FARA SGR.
+   - Daca factura arata pretul CU TVA (coloane numite "Pret TTI", "Pret unit. TTI", "Pret cu TVA", "Valoare TTI") => imparte la (1 + cota_tva/100). Ex: 2.60 lei cu TVA 11% => supplier_price = 2.60/1.11 = 2.342
+   - Daca factura arata pretul FARA TVA (coloane "Pret fara TVA", "Pret net", "Valoare fara TVA") => foloseste direct.
+   - Rotunjeste supplier_price la 4 zecimale.
+
+2. REGULA TVA: vat=11 pentru apa, alimente, bauturi nealcoolice, lemne, carti, cazare. vat=21 pentru bauturi alcoolice, cosmetice, electrice, textile, materiale constructii, orice altceva.
+
+3. REGULA SGR CRITICA (Metro, Meti, Selgros, Profi, etc.): Garantia returnabila apare ca linie separata "GARANTIE PET", "GARANTIE AMBALAJ", "SGR", cu TVA 0% si pret 0.50 lei/buc.
+   - NU crea produs separat pentru garantie.
+   - Daca linia GARANTIE apare dupa UN singur produs => seteaza sgr=0.50 doar la acel produs.
+   - Daca linia GARANTIE apare la SFARSIT si cantitatea ei este SUMA cantitatatilor mai multor produse => seteaza sgr=0.50 la TOATE produsele de tip bautura/apa/sticle din factura.
+   - Daca nu exista garantie => sgr=0.
+
+4. discount e procentual (0 daca nu e mentionat). Nu folosi diacritice in text.`
 
 async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
