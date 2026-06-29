@@ -16,12 +16,13 @@ type Item = {
   supplierPrice: string
   discount: string
   vat: 11 | 21
+  sgr: string  // garantie returnabila SGR (lei/unitate) — nu se aplica adaos sau TVA
 }
 
 const emptyItem = (defaultVat: 11 | 21 = 21): Item => ({
   id: crypto.randomUUID(),
   name: '', unit: 'buc', supplierPrice: '', discount: '0',
-  vat: defaultVat,
+  vat: defaultVat, sgr: '0',
 })
 
 function applyRounding(price: number, step: RoundStep, mode: RoundMode): number {
@@ -32,14 +33,15 @@ function applyRounding(price: number, step: RoundStep, mode: RoundMode): number 
 }
 
 function calcItem(item: Item, adaos: number, step: RoundStep, mode: RoundMode) {
-  const sp = parseFloat(item.supplierPrice) || 0
+  const sp = parseFloat(item.supplierPrice) || 0  // pret fara SGR
+  const sgr = parseFloat(item.sgr) || 0           // SGR trece la cost fix, fara adaos si fara TVA
   const disc = parseFloat(item.discount) || 0
   const netPrice = sp * (1 - disc / 100)
   const sellExVat = netPrice * (1 + adaos / 100)
   const vatAmt = sellExVat * (item.vat / 100)
   const withVat = sellExVat + vatAmt
-  const final = applyRounding(withVat, step, mode)
-  return { sp, disc, netPrice, sellExVat, vatAmt, withVat, final }
+  const final = applyRounding(withVat, step, mode) + sgr  // SGR adaugat dupa rotunjire
+  return { sp, disc, sgr, netPrice, sellExVat, vatAmt, withVat, final }
 }
 
 const fmt2 = (n: number) => n.toFixed(2)
@@ -56,19 +58,34 @@ function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: 
   doc.text(`Data: ${fmtDate()}  |  Furnizor: ${noDiac(supplier || '-')}  |  Adaos: ${adaos}%  |  Rotunjire: ${step === 'none' ? 'fara' : step + ' lei (' + (mode === 'nearest' ? 'corect' : 'in sus') + ')'}`, margin, y)
   y += 8
 
-  const cols = [
-    { label: 'Denumire', x: margin, w: 70 },
-    { label: 'UM', x: 82, w: 12 },
-    { label: 'Pret furn.', x: 96, w: 22 },
-    { label: 'Disc%', x: 120, w: 14 },
-    { label: 'Pret net', x: 136, w: 22 },
-    { label: `Adaos ${adaos}%`, x: 160, w: 24 },
-    { label: 'F.TVA', x: 186, w: 20 },
-    { label: 'Cota', x: 208, w: 14 },
-    { label: 'TVA', x: 224, w: 20 },
-    { label: 'Pret final', x: 246, w: 24 },
-    { label: 'Rotunjit', x: 272, w: 22 },
-  ]
+  const hasSgr = items.some(i => parseFloat(i.sgr) > 0)
+  const cols = hasSgr
+    ? [
+        { label: 'Denumire', x: margin, w: 62 },
+        { label: 'UM', x: 73, w: 10 },
+        { label: 'Pret furn.', x: 84, w: 20 },
+        { label: 'Disc%', x: 105, w: 12 },
+        { label: 'Pret net', x: 118, w: 20 },
+        { label: `Adaos ${adaos}%`, x: 139, w: 22 },
+        { label: 'F.TVA', x: 162, w: 18 },
+        { label: 'Cota', x: 181, w: 12 },
+        { label: 'TVA', x: 194, w: 18 },
+        { label: 'SGR', x: 213, w: 14 },
+        { label: 'Vanzare', x: 228, w: 59 },
+      ]
+    : [
+        { label: 'Denumire', x: margin, w: 70 },
+        { label: 'UM', x: 82, w: 12 },
+        { label: 'Pret furn.', x: 96, w: 22 },
+        { label: 'Disc%', x: 120, w: 14 },
+        { label: 'Pret net', x: 136, w: 22 },
+        { label: `Adaos ${adaos}%`, x: 160, w: 24 },
+        { label: 'F.TVA', x: 186, w: 20 },
+        { label: 'Cota', x: 208, w: 14 },
+        { label: 'TVA', x: 224, w: 20 },
+        { label: 'Pret final', x: 246, w: 24 },
+        { label: 'Rotunjit', x: 272, w: 22 },
+      ]
 
   doc.setFillColor(240, 240, 245)
   doc.rect(margin, y - 4, W - 2 * margin, 7, 'F')
@@ -81,12 +98,20 @@ function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: 
     const c = calcItem(item, adaos, step, mode)
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6, 'F') }
     doc.setFontSize(8)
-    const vals = [
-      noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
-      c.disc > 0 ? `${c.disc}%` : '-',
-      fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
-      fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
-    ]
+    const vals = hasSgr
+      ? [
+          noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
+          c.disc > 0 ? `${c.disc}%` : '-',
+          fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
+          fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt),
+          c.sgr > 0 ? fmt2(c.sgr) : '-', fmt2(c.final),
+        ]
+      : [
+          noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
+          c.disc > 0 ? `${c.disc}%` : '-',
+          fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
+          fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
+        ]
     cols.forEach((col, i) => doc.text(vals[i], col.x, y))
     y += 6
     if (y > 185) { doc.addPage(); y = 15 }
@@ -180,13 +205,14 @@ export default function PricingPage() {
       const data = await res.json()
       if (data.supplier) setSupplier(data.supplier)
       if (data.items?.length) {
-        setItems(data.items.map((i: { name: string; unit: string; supplier_price: number; discount: number; vat: number }) => ({
+        setItems(data.items.map((i: { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number }) => ({
           id: crypto.randomUUID(),
           name: i.name || '',
           unit: i.unit || 'buc',
           supplierPrice: i.supplier_price ? String(i.supplier_price) : '',
           discount: i.discount ? String(i.discount) : '0',
           vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
+          sgr: i.sgr ? String(i.sgr) : '0',
         })))
       } else {
         setScanError('Nu s-au gasit produse. Incearca o poza mai clara.')
@@ -217,7 +243,7 @@ export default function PricingPage() {
         setAdaos(String(data.adaos ?? 30))
         setRoundStep((data.round_step as RoundStep) || '0.50')
         setRoundMode((data.round_mode as RoundMode) || 'nearest')
-        setItems(data.items?.length ? data.items : [emptyItem(21)])
+        setItems(data.items?.length ? data.items.map((i: Item) => ({ ...i, sgr: i.sgr ?? '0' })) : [emptyItem(21)])
       }
       loadDraft()
     } else {
@@ -515,18 +541,25 @@ export default function PricingPage() {
                 </div>
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="text-xs text-gray-400 mb-0.5 block">Pret furnizor</label>
+                    <label className="text-xs text-gray-400 mb-0.5 block">Pret furnizor (fara SGR)</label>
                     <input type="number" min="0" step="0.01"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
                       placeholder="0.00" value={item.supplierPrice}
                       onChange={e => updateItem(item.id, 'supplierPrice', e.target.value)} />
                   </div>
-                  <div className="w-24">
+                  <div className="w-20">
                     <label className="text-xs text-gray-400 mb-0.5 block">Disc %</label>
                     <input type="number" min="0" max="100" step="0.5"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
                       placeholder="0" value={item.discount}
                       onChange={e => updateItem(item.id, 'discount', e.target.value)} />
+                  </div>
+                  <div className="w-20">
+                    <label className="text-xs text-gray-400 mb-0.5 block">SGR lei</label>
+                    <input type="number" min="0" step="0.50"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+                      placeholder="0" value={item.sgr}
+                      onChange={e => updateItem(item.id, 'sgr', e.target.value)} />
                   </div>
                 </div>
 
@@ -548,6 +581,9 @@ export default function PricingPage() {
                     <div className="flex justify-between"><span className="text-gray-400">Adaos ({adaos}%)</span><span className="font-medium">+{fmt2(c.sellExVat - c.netPrice)} lei</span></div>
                     <div className="flex justify-between"><span className="text-gray-400">Fara TVA</span><span className="font-medium">{fmt2(c.sellExVat)} lei</span></div>
                     <div className="flex justify-between"><span className="text-gray-400">TVA {item.vat}%</span><span className="font-medium">+{fmt2(c.vatAmt)} lei</span></div>
+                    {c.sgr > 0 && (
+                      <div className="col-span-2 flex justify-between"><span className="text-orange-500 font-medium">Garantie SGR</span><span className="font-medium text-orange-500">+{fmt2(c.sgr)} lei (returnabil)</span></div>
+                    )}
                     <div className="col-span-2 flex justify-between items-center pt-1 border-t border-gray-200 mt-1">
                       <span className="text-gray-600 font-semibold">Pret vanzare</span>
                       <span className="text-blue-600 font-bold text-base">{fmt2(c.final)} lei/{item.unit}</span>
