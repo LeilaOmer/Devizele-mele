@@ -8,12 +8,13 @@ export function usePricingDraft() {
   const [adaos, setAdaos] = useState('30')
   const [roundStep, setRoundStep] = useState<RoundStep>('0.50')
   const [roundMode, setRoundMode] = useState<RoundMode>('nearest')
-  const [vatPayer, setVatPayer] = useState(true)
+  const [vatPayer, setVatPayerState] = useState(true)
   const [items, setItems] = useState<Item[]>([emptyItem(21)])
   const [draftId, setDraftId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [draftSaved, setDraftSaved] = useState(false)
 
+  // Load round settings and draft from URL or localStorage
   useEffect(() => {
     const draftParam = new URLSearchParams(window.location.search).get('draft')
     if (draftParam) {
@@ -27,7 +28,6 @@ export function usePricingDraft() {
             setAdaos(String(data.adaos ?? 30))
             setRoundStep((data.round_step as RoundStep) || '0.50')
             setRoundMode((data.round_mode as RoundMode) || 'nearest')
-            if (typeof data.vat_payer === 'boolean') setVatPayer(data.vat_payer)
             setItems(data.items?.length ? data.items.map((i: Item) => ({ ...i, sgr: i.sgr ?? '0' })) : [emptyItem(21)])
           })
       })
@@ -38,17 +38,55 @@ export function usePricingDraft() {
           const s = JSON.parse(saved)
           if (s.roundStep) setRoundStep(s.roundStep)
           if (s.roundMode) setRoundMode(s.roundMode)
-          if (typeof s.vatPayer === 'boolean') setVatPayer(s.vatPayer)
         }
       } catch {}
     }
   }, [])
 
+  // Load vatPayer from profile or active company
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      const isPro = localStorage.getItem('dashboardMode') === 'pro'
+      const companyId = isPro ? localStorage.getItem('activeCompanyId') : null
+      if (companyId) {
+        supabase.from('companies').select('vat_rate').eq('id', companyId).single()
+          .then(({ data }) => { if (data) setVatPayerState((data.vat_rate ?? 21) !== 0) })
+      } else {
+        supabase.from('profiles').select('vat_rate').eq('id', session.user.id).single()
+          .then(({ data }) => { if (data) setVatPayerState((data.vat_rate ?? 21) !== 0) })
+      }
+    })
+  }, [])
+
   useEffect(() => {
     try {
-      localStorage.setItem('pricing_settings', JSON.stringify({ roundStep, roundMode, vatPayer }))
+      localStorage.setItem('pricing_settings', JSON.stringify({ roundStep, roundMode }))
     } catch {}
-  }, [roundStep, roundMode, vatPayer])
+  }, [roundStep, roundMode])
+
+  async function setVatPayer(v: boolean) {
+    setVatPayerState(v)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const isPro = localStorage.getItem('dashboardMode') === 'pro'
+    const companyId = isPro ? localStorage.getItem('activeCompanyId') : null
+    if (companyId) {
+      if (!v) {
+        supabase.from('companies').update({ vat_rate: 0 }).eq('id', companyId)
+      } else {
+        // Restore to 21 only if currently non-platitor (0)
+        supabase.from('companies').select('vat_rate').eq('id', companyId).single()
+          .then(({ data }) => {
+            if (data && data.vat_rate === 0) {
+              supabase.from('companies').update({ vat_rate: 21 }).eq('id', companyId)
+            }
+          })
+      }
+    } else {
+      supabase.from('profiles').upsert({ id: session.user.id, vat_rate: v ? 21 : 0 })
+    }
+  }
 
   async function saveDraft() {
     const { data: { session } } = await supabase.auth.getSession()

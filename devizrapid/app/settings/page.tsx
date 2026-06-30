@@ -36,7 +36,7 @@ export default function SettingsPage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
-  const [profileForm, setProfileForm] = useState({ company_name: '', phone: '', email: '', address: '' })
+  const [profileForm, setProfileForm] = useState({ company_name: '', phone: '', email: '', address: '', vat_rate: 21 })
   const [profileEditing, setProfileEditing] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
 
@@ -56,6 +56,7 @@ export default function SettingsPage() {
         phone: prof.phone || '',
         email: prof.email || user.email || '',
         address: prof.address || '',
+        vat_rate: typeof prof.vat_rate === 'number' ? prof.vat_rate : 21,
       })
     }
     const { data: cos } = await supabase.from('companies').select('*').order('name')
@@ -259,6 +260,12 @@ export default function SettingsPage() {
                   <p className="text-sm font-semibold text-gray-800">{value || <span className="text-gray-300 font-normal">—</span>}</p>
                 </div>
               ))}
+              <div className="px-5 py-3">
+                <p className="text-xs text-gray-400">Regim TVA</p>
+                <p className="text-sm font-semibold text-gray-800">
+                  {profileForm.vat_rate === 0 ? 'Non-platitor TVA' : `Platitor TVA (${profileForm.vat_rate}%)`}
+                </p>
+              </div>
               {profileSaved && <p className="px-5 py-2 text-xs text-green-600 font-semibold">✓ Salvat!</p>}
             </div>
           ) : (
@@ -278,11 +285,24 @@ export default function SettingsPage() {
                     inputMode={f.inputMode as React.HTMLAttributes<HTMLInputElement>['inputMode']}
                     autoCapitalize={f.type === 'email' || f.type === 'tel' ? 'none' : 'sentences'}
                     autoCorrect="off"
-                    value={profileForm[f.key as keyof typeof profileForm]}
+                    value={profileForm[f.key as keyof Omit<typeof profileForm, 'vat_rate'>] as string}
                     onChange={e => setProfileForm({ ...profileForm, [f.key]: e.target.value })}
                   />
                 </div>
               ))}
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Regim TVA</label>
+                <div className="flex rounded-xl overflow-hidden border border-gray-200">
+                  <button onClick={() => setProfileForm({ ...profileForm, vat_rate: 21 })}
+                    className={`flex-1 py-2.5 text-sm font-bold transition-all ${profileForm.vat_rate !== 0 ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}>
+                    Platitor TVA
+                  </button>
+                  <button onClick={() => setProfileForm({ ...profileForm, vat_rate: 0 })}
+                    className={`flex-1 py-2.5 text-sm font-bold transition-all ${profileForm.vat_rate === 0 ? 'bg-orange-500 text-white' : 'bg-white text-gray-600'}`}>
+                    Non-platitor
+                  </button>
+                </div>
+              </div>
               <div className="flex gap-2 pt-1">
                 <button onClick={() => setProfileEditing(false)}
                   className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600">
@@ -413,7 +433,13 @@ function CompanyForm({ form, setForm, onSave, onCancel, saved }: {
       const res = await fetch(`https://anaf-proxy.contact-tarifator.workers.dev/?cui=${cui}`)
       const data = await res.json()
       if (!res.ok) { setAnafError(data.error || 'Eroare ANAF'); return }
-      setForm({ ...form, name: data.name || form.name, address: data.address || form.address, reg_com: data.reg_com || form.reg_com })
+      setForm({
+        ...form,
+        name: data.name || form.name,
+        address: data.address || form.address,
+        reg_com: data.reg_com || form.reg_com,
+        vat_rate: typeof data.scpTva === 'boolean' ? (data.scpTva ? (form.vat_rate || 21) : 0) : form.vat_rate,
+      })
     } catch {
       setAnafError('Eroare conexiune')
     } finally {
