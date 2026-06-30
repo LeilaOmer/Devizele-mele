@@ -556,10 +556,17 @@ export default function PricingPage() {
             const c = item.supplierPrice ? calcItem(item, adaosNum, roundStep, roundMode) : null
             return (
               <div key={item.id} className="bg-white rounded-2xl shadow-sm p-3 space-y-2">
-                <div className="flex gap-2">
-                  <input className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
-                    placeholder="Denumire produs *" value={item.name}
-                    onChange={e => updateItem(item.id, 'name', e.target.value)} />
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1 relative">
+                    <input className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+                      placeholder="Denumire produs *" value={item.name}
+                      onChange={e => updateItem(item.id, 'name', e.target.value)} />
+                    {parseFloat(item.sgr) > 0 && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-100 text-orange-600 text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
+                        +SGR
+                      </span>
+                    )}
+                  </div>
                   <input className="w-16 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 text-center"
                     placeholder="UM" value={item.unit}
                     onChange={e => updateItem(item.id, 'unit', e.target.value)} />
