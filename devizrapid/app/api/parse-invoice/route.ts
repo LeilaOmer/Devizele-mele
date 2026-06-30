@@ -10,23 +10,23 @@ REGULI OBLIGATORII:
    - Coloane cu pret FARA TVA: "Pret RON", "Pret Ofr", "Pret net", "Pret fara TVA" => foloseste direct ca supplier_price.
    - Rotunjeste la 4 zecimale.
 
-2. EXCLUDE din lista (NU crea produs pentru ele):
-   - Linii cu denumire "AMBALAJ SGR", "GARANTIE PET", "GARANTIE AMBALAJ", "SGR STICLA", "SGR DOZA" sau similar (TVA 0%, pret 0.50) => sunt garantii returnabile, nu produse.
+2. SGR (Sistemul Garantie-Returnare) — CERINTA LEGALA, nu se ignora:
+   - SGR = 0.50 lei fix per unitate de ambalaj returnabil. NU face parte din pretul produsului.
+   - supplier_price se calculeaza FARA SGR. SGR nu intra in baza de calcul a adaosului sau TVA.
+   - In JSON, campul "sgr" reprezinta valoarea per unitate (0 sau 0.50). Niciodata nu combina SGR cu supplier_price.
+   - Linii de tip "SGR", "AMBALAJ SGR", "GARANTIE PET", "GARANTIE AMBALAJ", "SGR STICLA", "SGR DOZA", "Garantie-Returnare", "Doza SGR" => EXCLUDE din lista de produse (sunt pozitii SGR, nu produse).
+   - Daca denumirea produsului contine "SGR" (ex: "URSUS 0.33L SGR") => sgr=0.50 la acel produs.
+   - Daca exista linie "AMBALAJ SGR STICLA" => potriveste cantitatea cu produsele BUC/ST si seteaza sgr=0.50.
+   - Daca exista linie "AMBALAJ SGR DOZA" => seteaza sgr=0.50 la produsele tip doza (DZ/CAN) ale caror cantitati sumate egaleaza cantitatea din linia SGR.
+   - Produse cu "NAV ST", "NAVETA", "NAV" in denumire => sgr=0 (sticla returnata pe naveta, nu individual).
+   - Daca nu exista nicio referinta la SGR => sgr=0 la toate.
 
 3. PROMO / GRATUIT (linii cu pret = 0 si denumire contine "PROMO", "GRATIS", "FREE", "BONUS" sau similar):
-   - NU ignora aceste linii! Ele reprezinta bucati GRATUITE primite impreuna cu un produs platit.
+   - NU ignora aceste linii! Reprezinta bucati GRATUITE primite cu un produs platit.
    - Cauta produsul platit cu denumire similara (acelasi produs fara cuvantul PROMO).
-   - Calculeaza pretul efectiv real: supplier_price = (cantitate_platita x pret_platit) / (cantitate_platita + cantitate_promo).
+   - supplier_price efectiv = (cantitate_platita x pret_platit) / (cantitate_platita + cantitate_promo).
    - Creeaza UN SINGUR produs cu cantitatea totala (platita + gratuita) si pretul efectiv calculat.
-   - Exemplu: 4608 buc x 4.22 RON + 2304 buc PROMO x 0 RON => supplier_price = 19445.76 / 6912 = 2.8133 RON, cantitate totala 6912 buc.
-
-3. SGR (garantie returnabila 0.50 lei/unitate, fara TVA, fara adaos):
-   - Daca denumirea produsului contine "SGR" (ex: "URSUS 0.33L SGR", "URSUS COOLER DZ SGR") => sgr=0.50 pentru acel produs.
-   - Daca exista linii "AMBALAJ SGR STICLA" => potriveste cantitatea cu produsele BUC/ST cu aceeasi cantitate si seteaza sgr=0.50 la ele.
-   - Daca exista linii "AMBALAJ SGR DOZA" => seteaza sgr=0.50 la produsele tip doza (DZ/CAN) ale caror cantitati sumate egaleaza cantitatea din linia SGR DOZA.
-   - Daca exista o singura linie GARANTIE/SGR la final => verifica daca cantitatea ei = suma cantitatilor produselor cu SGR si aplica sgr=0.50 la acele produse.
-   - Produse cu "NAV ST", "NAVETA", "NAV" in denumire => fara SGR (sgr=0), sticla returnata pe naveta.
-   - Daca nu exista nicio referinta la SGR/garantie => sgr=0 la toate.
+   - Exemplu: 4608 buc x 4.22 RON + 2304 buc PROMO x 0 RON => supplier_price = 19445.76 / 6912 = 2.8133 RON.
 
 4. REGULA TVA: vat=11 pentru apa, alimente, bauturi nealcoolice, lemne, carti, cazare. vat=21 pentru bauturi alcoolice (bere, vin, spirtoase), cosmetice, electrice, textile, materiale.
 
