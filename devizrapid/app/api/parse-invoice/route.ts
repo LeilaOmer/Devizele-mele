@@ -11,6 +11,8 @@ function getSupabaseAdmin() {
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura sau aviz) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
 Format: {"supplier":"Nume Furnizor SRL","items":[{"name":"denumire produs","unit":"buc","supplier_price":0,"discount":0,"vat":21,"sgr":0}]}
 
+INAINTE DE ORICE — citeste intreaga factura de la cap la coadă si identifica liniile de tip scont/discount global (ex: "SCONTURI ACORDATE 5.00%", "SCONT 10%", "REMIZA 15%", "REDUCERE 5%" cu cantitate sau valoare negativa). Noteaza procentul si TVA-ul fiecarei astfel de linii. Aceste linii NU sunt produse — nu le include in JSON — dar procentul lor se aplica ca camp "discount" la TOATE produsele cu acelasi TVA. Daca nu gasesti nicio astfel de linie, discount=0.
+
 REGULI OBLIGATORII:
 
 1. supplier_price = pretul per unitate FARA TVA si FARA SGR.
@@ -164,7 +166,7 @@ export async function POST(req: NextRequest) {
       const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages)
       const result = validateAndSanitize(parseJson(raw))
       if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
-      return NextResponse.json({ ...(result ?? { items: [] }), _debug_raw: raw.slice(0, 1000) })
+      return NextResponse.json({ ...(result ?? { items: [] }), _debug_raw: raw.slice(-800) })
     }
 
     let text = ''
@@ -192,7 +194,7 @@ export async function POST(req: NextRequest) {
     const raw = await callGroq('llama-3.3-70b-versatile', messages)
     const result = validateAndSanitize(parseJson(raw))
     if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
-    return NextResponse.json({ ...(result ?? { items: [] }), _debug_raw: raw.slice(0, 1000) })
+    return NextResponse.json({ ...(result ?? { items: [] }), _debug_raw: raw.slice(-800) })
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown'
