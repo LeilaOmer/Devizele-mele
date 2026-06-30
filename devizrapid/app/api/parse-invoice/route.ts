@@ -6,19 +6,27 @@ Format: {"supplier":"Nume Furnizor SRL","items":[{"name":"denumire produs","unit
 REGULI OBLIGATORII:
 
 1. supplier_price = pretul per unitate FARA TVA si FARA SGR.
-   - Daca factura arata pretul CU TVA (coloane numite "Pret TTI", "Pret unit. TTI", "Pret cu TVA", "Valoare TTI") => imparte la (1 + cota_tva/100). Ex: 2.60 lei cu TVA 11% => supplier_price = 2.60/1.11 = 2.342
-   - Daca factura arata pretul FARA TVA (coloane "Pret fara TVA", "Pret net", "Valoare fara TVA") => foloseste direct.
-   - Rotunjeste supplier_price la 4 zecimale.
+   - Coloane cu pret CU TVA: "Pret TTI", "Pret unit. TTI", "Pret cu TVA", "Valoare TTI" => imparte la (1 + cota_tva/100). Ex: 2.60 lei cu TVA 11% => 2.60/1.11 = 2.3423
+   - Coloane cu pret FARA TVA: "Pret RON", "Pret Ofr", "Pret net", "Pret fara TVA" => foloseste direct ca supplier_price.
+   - Rotunjeste la 4 zecimale.
 
-2. REGULA TVA: vat=11 pentru apa, alimente, bauturi nealcoolice, lemne, carti, cazare. vat=21 pentru bauturi alcoolice, cosmetice, electrice, textile, materiale constructii, orice altceva.
+2. EXCLUDE din lista (NU crea produs pentru ele):
+   - Linii cu denumire "AMBALAJ SGR", "GARANTIE PET", "GARANTIE AMBALAJ", "SGR STICLA", "SGR DOZA" sau similar (TVA 0%, pret 0.50) => sunt garantii returnabile, nu produse.
+   - Linii cu pret = 0 si valoare = 0 => produse promotionale/gratuite, nu le include.
 
-3. REGULA SGR CRITICA (Metro, Meti, Selgros, Profi, etc.): Garantia returnabila apare ca linie separata "GARANTIE PET", "GARANTIE AMBALAJ", "SGR", cu TVA 0% si pret 0.50 lei/buc.
-   - NU crea produs separat pentru garantie.
-   - Daca linia GARANTIE apare dupa UN singur produs => seteaza sgr=0.50 doar la acel produs.
-   - Daca linia GARANTIE apare la SFARSIT si cantitatea ei este SUMA cantitatatilor mai multor produse => seteaza sgr=0.50 la TOATE produsele de tip bautura/apa/sticle din factura.
-   - Daca nu exista garantie => sgr=0.
+3. SGR (garantie returnabila 0.50 lei/unitate, fara TVA, fara adaos):
+   - Daca denumirea produsului contine "SGR" (ex: "URSUS 0.33L SGR", "URSUS COOLER DZ SGR") => sgr=0.50 pentru acel produs.
+   - Daca exista linii "AMBALAJ SGR STICLA" => potriveste cantitatea cu produsele BUC/ST cu aceeasi cantitate si seteaza sgr=0.50 la ele.
+   - Daca exista linii "AMBALAJ SGR DOZA" => seteaza sgr=0.50 la produsele tip doza (DZ/CAN) ale caror cantitati sumate egaleaza cantitatea din linia SGR DOZA.
+   - Daca exista o singura linie GARANTIE/SGR la final => verifica daca cantitatea ei = suma cantitatilor produselor cu SGR si aplica sgr=0.50 la acele produse.
+   - Produse cu "NAV ST", "NAVETA", "NAV" in denumire => fara SGR (sgr=0), sticla returnata pe naveta.
+   - Daca nu exista nicio referinta la SGR/garantie => sgr=0 la toate.
 
-4. discount e procentual (0 daca nu e mentionat). Nu folosi diacritice in text.`
+4. REGULA TVA: vat=11 pentru apa, alimente, bauturi nealcoolice, lemne, carti, cazare. vat=21 pentru bauturi alcoolice (bere, vin, spirtoase), cosmetice, electrice, textile, materiale.
+
+5. discount = valoarea din coloana "% Disc", "Disc%", "Discount%" (0 daca nu e mentionat sau e 0.00).
+
+6. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).`
 
 async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -45,7 +53,6 @@ export async function POST(req: NextRequest) {
 
   try {
     if (body.imageBase64) {
-      // Poza — Groq Vision 90B
       const messages = [
         {
           role: 'user',
