@@ -216,16 +216,22 @@ export default function PricingPage() {
         body = { docBase64: await readBase64(file), mimeType: file.type || 'application/pdf', fileName: file.name }
       }
 
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/parse-invoice', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok || data.error) {
-        setScanError(data.error === 'vision_failed'
-          ? 'Poza neclara sau unghi dificil. Incearca mai aproape, cu lumina mai buna, sau incarca PDF-ul direct.'
-          : `Eroare: ${data.error || 'necunoscuta'}`)
+        setScanError(
+          res.status === 401 ? 'Trebuie sa fii autentificat pentru a scana facturi.' :
+          res.status === 429 ? 'Ai atins limita de 50 scanari pe zi. Revino maine.' :
+          data.error === 'vision_failed' ? 'Poza neclara sau unghi dificil. Incearca mai aproape, cu lumina mai buna, sau incarca PDF-ul direct.' :
+          `Eroare: ${data.error || 'necunoscuta'}`)
         return
       }
       if (data.supplier) setSupplier(data.supplier)

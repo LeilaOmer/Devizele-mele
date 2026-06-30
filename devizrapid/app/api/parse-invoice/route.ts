@@ -1,4 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+}
 
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura sau aviz) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
 Format: {"supplier":"Nume Furnizor SRL","items":[{"name":"denumire produs","unit":"buc","supplier_price":0,"discount":0,"vat":21,"sgr":0}]}
@@ -63,6 +71,26 @@ function parseJson(raw: string) {
 }
 
 export async function POST(req: NextRequest) {
+  // Auth check
+  const authHeader = req.headers.get('authorization')
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+  if (!token) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  const supabase = getSupabaseAdmin()
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  // Rate limiting: max 50 scans/zi pentru toti userii (contor simplu in DB)
+  const today = new Date().toISOString().slice(0, 10)
+  const { count } = await supabase
+    .from('invoice_scan_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .gte('created_at', today)
+  if ((count ?? 0) >= 50) {
+    return NextResponse.json({ error: 'rate_limit', message: 'Limita de 50 scanari/zi atinsa.' }, { status: 429 })
+  }
+
   const body = await req.json()
 
   try {
@@ -78,6 +106,7 @@ export async function POST(req: NextRequest) {
       ]
       const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages)
       const result = parseJson(raw)
+      if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
       return NextResponse.json(result ?? { items: [], error: 'vision_failed', raw: raw.slice(0, 200) })
     }
 
@@ -105,6 +134,7 @@ export async function POST(req: NextRequest) {
     ]
     const raw = await callGroq('llama-3.3-70b-versatile', messages)
     const result = parseJson(raw)
+    if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
     return NextResponse.json(result ?? { items: [] })
 
   } catch (err) {
