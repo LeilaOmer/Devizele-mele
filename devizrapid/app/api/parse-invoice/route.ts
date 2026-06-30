@@ -23,7 +23,11 @@ REGULI OBLIGATORII:
    - Linia "Discount cumulat TVA XX%" de la sfarsit este un TOTAL al facturii — ignor-o complet, nu e un produs.
    - Exemplu corect WinMENTOR: rand "KONGA HARD Buc 5,00 14,00 70,00 14,70 -15%" => supplier_price=14.00, discount=15, validare: 14.00 x 5 = 70.00 ✓
    - Exemplu corect WinMENTOR: rand "EFEKT BAIE 1L Buc 5,00 14,26 71,30 14,97 -15%" => supplier_price=14.26, discount=15, validare: 14.26 x 5 = 71.30 ✓
-   - VALIDARE: supplier_price x cantitate ≈ valoare_fara_TVA. Daca nu se potriveste, ai ales coloana gresita.
+   - FORMAT CELLMAR (facturi cu coloana "Pretul net al articolului"): coloanele per rand sunt in ordinea EXACTA: Pretul net al articolului (pret unitar fara TVA) | Cantitate facturata | UM | Cota TVA | Valoare neta (total = pret x cantitate).
+   - supplier_price = PRIMUL numar din rand = "Pretul net al articolului". NICIODATA "Valoare neta" (ultimul numar).
+   - Exemplu corect CELLMAR: rand "1,9820 | 5 | kg | 9% | 9,91" => supplier_price=1.9820, cantitate=5, validare: 1.9820 x 5 = 9.91 ✓ (NU 9.91 ca pret!)
+   - Exemplu gresit CELLMAR: supplier_price=9.91 => GRESIT, 9.91 x 5 = 49.55 ≠ 9.91 valoare neta.
+   - VALIDARE UNIVERSALA: supplier_price x cantitate ≈ valoare_fara_TVA. Daca nu se potriveste, ai ales coloana gresita — incearca alt numar din acel rand.
 
 2. SGR (Sistemul Garantie-Returnare) — CERINTA LEGALA, nu se ignora:
    - SGR = 0.50 lei fix per unitate de ambalaj returnabil. NU face parte din pretul produsului.
@@ -44,14 +48,14 @@ REGULI OBLIGATORII:
    - Creeaza UN SINGUR produs cu cantitatea totala (platita + gratuita) si pretul efectiv calculat.
    - Exemplu: 4608 buc x 4.22 RON + 2304 buc PROMO x 0 RON => supplier_price = 19445.76 / 6912 = 2.8133 RON.
 
-4. REGULA TVA: vat=11 pentru apa, alimente, bauturi nealcoolice, lemne, carti, cazare. vat=21 pentru bauturi alcoolice (bere, vin, spirtoase), cosmetice, electrice, textile, materiale.
+4. REGULA TVA: vat=11 pentru apa, alimente, bauturi nealcoolice, lemne, carti, cazare (chiar daca factura scrie 9%). vat=21 pentru bauturi alcoolice (bere, vin, spirtoase), cosmetice, electrice, textile, materiale (chiar daca factura scrie 19%). Foloseste DOAR valorile 11 sau 21 in JSON, indiferent ce scrie pe factura.
 
 5. discount — citeste in aceasta ordine de prioritate:
    a) Coloana per produs "% Disc", "Disc%", "Discount%", "Procent discount" => foloseste direct acea valoare pentru fiecare produs.
    b) Linie separata de discount per produs (ex: rand imediat sub produs cu "Discount 10%" sau "Remiza 5%") => aplica acel procent la produsul de deasupra.
    c) Linie de discount la finalul facturii cu procent (ex: "Discount comercial: 10%", "Remiza globala 15%") => aplica acel procent ca discount la TOATE produsele.
    d) Linie de discount la final cu valoare in lei (ex: "Discount: -67.17 lei") => calculeaza procentul: discount% = valoare_discount / total_fara_discount * 100, si aplica la toate produsele.
-   e) Linii cu denumire "SCONTURI ACORDATE X%", "SCONT X%", "REMIZA X%", "REDUCERE X%" cu cantitate negativa (-1) => NU sunt produse. Extrage procentul X din denumire si aplica-l ca discount la toate produsele cu aceeasi cota TVA (ex: linie "SCONTURI ACORDATE 5.00%" TVA 11% => discount=5 la toate produsele cu vat=11; linie "SCONTURI ACORDATE 5.00%" TVA 21% => discount=5 la toate produsele cu vat=21). Daca ambele linii au acelasi procent, aplica acelasi discount la toate produsele.
+   e) Linii cu denumire "SCONTURI ACORDATE X%", "SCONT X%", "REMIZA X%", "REDUCERE X%" (apar de obicei la sfarsitul tabelului, cu cantitate -1 sau valoare negativa) => NU sunt produse. Extrage procentul X din denumire si aplica-l ca discount la toate produsele cu aceeasi cota TVA (ex: linie "SCONTURI ACORDATE 5.00%" TVA 9% sau 11% => discount=5 la toate produsele cu vat=11; linie "SCONTURI ACORDATE 5.00%" TVA 19% sau 21% => discount=5 la toate produsele cu vat=21). Daca ambele linii au acelasi procent, aplica acelasi discount la toate produsele. IMPORTANT: aceste linii pot aparea si in imagini/poze — cauta-le activ in partea de jos a tabelului de produse.
    f) Daca nu exista niciun discount mentionat => discount=0 la toate.
    NU extrage discount din valori TVA, din sume sau din fragmente de numere izolate (ex: "6" izolat din "2136,96" nu este discount).
 
