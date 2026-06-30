@@ -40,7 +40,7 @@ function calcItem(item: Item, adaos: number, step: RoundStep, mode: RoundMode) {
   const sellExVat = netPrice * (1 + adaos / 100)
   const vatAmt = sellExVat * (item.vat / 100)
   const withVat = sellExVat + vatAmt
-  const final = applyRounding(withVat, step, mode) + sgr  // SGR adaugat dupa rotunjire
+  const final = applyRounding(withVat, step, mode)  // fara SGR — SGR se afiseaza separat
   return { sp, disc, sgr, netPrice, sellExVat, vatAmt, withVat, final }
 }
 
@@ -141,7 +141,7 @@ function exportPDFMagazin(items: Item[], adaos: number, step: RoundStep, mode: R
 
   doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 30, 30)
   items.forEach((item, idx) => {
-    const { final } = calcItem(item, adaos, step, mode)
+    const { final, sgr } = calcItem(item, adaos, step, mode)
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6.5, 'F') }
     doc.setFontSize(9)
     doc.text(noDiac(item.name), margin, y)
@@ -149,6 +149,12 @@ function exportPDFMagazin(items: Item[], adaos: number, step: RoundStep, mode: R
     doc.setFont('helvetica', 'bold')
     doc.text(fmt2(final) + ' RON', W - margin, y, { align: 'right' })
     doc.setFont('helvetica', 'normal')
+    if (sgr > 0) {
+      doc.setFontSize(7); doc.setTextColor(200, 100, 0)
+      doc.text(`+${fmt2(sgr)} SGR`, W - margin, y + 4, { align: 'right' })
+      doc.setFontSize(9); doc.setTextColor(30, 30, 30)
+      y += 4
+    }
     y += 7
     if (y > 270) { doc.addPage(); y = 20 }
   })
@@ -621,13 +627,13 @@ export default function PricingPage() {
                     <div className="flex justify-between"><span className="text-gray-400">Adaos ({adaos}%)</span><span className="font-medium">+{fmt2(c.sellExVat - c.netPrice)} lei</span></div>
                     <div className="flex justify-between"><span className="text-gray-400">Fara TVA</span><span className="font-medium">{fmt2(c.sellExVat)} lei</span></div>
                     <div className="flex justify-between"><span className="text-gray-400">TVA {item.vat}%</span><span className="font-medium">+{fmt2(c.vatAmt)} lei</span></div>
-                    {c.sgr > 0 && (
-                      <div className="col-span-2 flex justify-between"><span className="text-orange-500 font-medium">Garantie SGR</span><span className="font-medium text-orange-500">+{fmt2(c.sgr)} lei (returnabil)</span></div>
-                    )}
                     <div className="col-span-2 flex justify-between items-center pt-1 border-t border-gray-200 mt-1">
                       <span className="text-gray-600 font-semibold">Pret vanzare</span>
                       <span className="text-blue-600 font-bold text-base">{fmt2(c.final)} lei/{item.unit}</span>
                     </div>
+                    {c.sgr > 0 && (
+                      <div className="col-span-2 flex justify-between"><span className="text-orange-500 font-medium">+ Garantie SGR</span><span className="font-medium text-orange-500">+{fmt2(c.sgr)} lei (returnabil)</span></div>
+                    )}
                   </div>
                 )}
 
