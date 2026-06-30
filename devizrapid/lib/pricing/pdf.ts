@@ -3,8 +3,8 @@ import { Item, RoundStep, RoundMode, calcItem, fmt2 } from './calc'
 
 const noDiac = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[sS]/g, 's').replace(/[tT]/g, 't')
-    .replace(/[aAa]/g, 'a').replace(/[iI]/g, 'i')
+
+const upper = (s: string) => noDiac(s).toUpperCase()
 
 const fmtDate = () =>
   new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -66,14 +66,14 @@ export function exportPDFContabil(
     doc.setFontSize(8)
     const vals = hasSgr
       ? [
-          noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
+          upper(item.name), upper(item.unit), fmt2(c.sp),
           c.disc > 0 ? `${c.disc}%` : '-',
           fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
           fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt),
           fmt2(c.final), c.sgr > 0 ? fmt2(c.sgr) : '-',
         ]
       : [
-          noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
+          upper(item.name), upper(item.unit), fmt2(c.sp),
           c.disc > 0 ? `${c.disc}%` : '-',
           fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
           fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
@@ -112,8 +112,8 @@ export function exportPDFMagazin(
     const { final, sgr } = calcItem(item, adaos, step, mode)
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6.5, 'F') }
     doc.setFontSize(9)
-    doc.text(noDiac(item.name), margin, y)
-    doc.text(noDiac(item.unit), 130, y)
+    doc.text(upper(item.name), margin, y)
+    doc.text(upper(item.unit), 130, y)
     doc.setFont('helvetica', 'bold')
     doc.text(fmt2(final) + ' RON', W - margin, y, { align: 'right' })
     doc.setFont('helvetica', 'normal')
