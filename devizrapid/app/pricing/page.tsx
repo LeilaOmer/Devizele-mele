@@ -238,6 +238,7 @@ export default function PricingPage() {
         setScanError(
           res.status === 401 ? 'Trebuie sa fii autentificat pentru a scana facturi.' :
           res.status === 429 ? 'Ai atins limita de 50 scanari pe zi. Revino maine.' :
+          data.error === 'groq_rate_limit' ? 'Serverul AI este aglomerat. Asteapta 15 secunde si incearca din nou.' :
           data.error === 'vision_failed' ? 'Poza neclara sau unghi dificil. Incearca mai aproape, cu lumina mai buna, sau incarca PDF-ul direct.' :
           `Eroare: ${data.error || 'necunoscuta'}`)
         return

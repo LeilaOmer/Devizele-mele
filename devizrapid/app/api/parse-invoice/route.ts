@@ -91,6 +91,7 @@ async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
     body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: maxTokens }),
   })
   const data = await res.json()
+  if (res.status === 429) throw new Error('groq_rate_limit')
   if (!res.ok) throw new Error(data.error?.message || `Groq error ${res.status}`)
   return data.choices?.[0]?.message?.content || ''
 }
@@ -205,7 +206,7 @@ export async function POST(req: NextRequest) {
 
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: text.slice(0, 12000) },
+      { role: 'user', content: text.slice(0, 8000) },
     ]
     const raw = await callGroq('llama-3.3-70b-versatile', messages)
     const result = validateAndSanitize(parseJson(raw))
@@ -214,6 +215,7 @@ export async function POST(req: NextRequest) {
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown'
+    if (msg === 'groq_rate_limit') return NextResponse.json({ items: [], error: 'groq_rate_limit' }, { status: 503 })
     return NextResponse.json({ items: [], error: msg }, { status: 500 })
   }
 }
