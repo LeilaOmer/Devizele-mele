@@ -18,6 +18,7 @@ REGULI OBLIGATORII:
    - Daca denumirea produsului contine "SGR" (ex: "URSUS 0.33L SGR") => sgr=0.50 la acel produs.
    - Daca exista linie "AMBALAJ SGR STICLA" => potriveste cantitatea cu produsele BUC/ST si seteaza sgr=0.50.
    - Daca exista linie "AMBALAJ SGR DOZA" => seteaza sgr=0.50 la produsele tip doza (DZ/CAN) ale caror cantitati sumate egaleaza cantitatea din linia SGR.
+   - Daca exista o singura linie "GARANTIE PET", "GARANTIE AMBALAJ" sau similar la final si cantitatea ei = suma cantitatilor tuturor produselor => aplica sgr=0.50 la TOATE produsele din lista.
    - Produse cu "NAV ST", "NAVETA", "NAV" in denumire => sgr=0 (sticla returnata pe naveta, nu individual).
    - Daca nu exista nicio referinta la SGR => sgr=0 la toate.
 
