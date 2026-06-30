@@ -10,7 +10,7 @@ const fmtDate = () =>
   new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 export function exportPDFContabil(
-  items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string
+  items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string, vatPayer = true
 ) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
   const W = 297; const margin = 10; let y = 15
@@ -19,39 +19,68 @@ export function exportPDFContabil(
   doc.text('Calculator Pret Vanzare', margin, y); y += 6
   doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100)
   doc.text(
-    `Data: ${fmtDate()}  |  Furnizor: ${noDiac(supplier || '-')}  |  Adaos: ${adaos}%  |  Rotunjire: ${step === 'none' ? 'fara' : step + ' lei (' + (mode === 'nearest' ? 'corect' : 'in sus') + ')'}`,
+    `Data: ${fmtDate()}  |  Furnizor: ${noDiac(supplier || '-')}  |  Adaos: ${adaos}%  |  Rotunjire: ${step === 'none' ? 'fara' : step + ' lei (' + (mode === 'nearest' ? 'corect' : 'in sus') + ')'}${!vatPayer ? '  |  Non-platitor TVA' : ''}`,
     margin, y
   )
   y += 8
 
   const hasSgr = items.some(i => parseFloat(i.sgr) > 0)
-  const cols = hasSgr
-    ? [
-        { label: 'Denumire', x: margin, w: 62 },
-        { label: 'UM', x: 73, w: 10 },
-        { label: 'Pret furn.', x: 84, w: 20 },
-        { label: 'Disc%', x: 105, w: 12 },
-        { label: 'Pret net', x: 118, w: 20 },
-        { label: `Adaos ${adaos}%`, x: 139, w: 22 },
-        { label: 'F.TVA', x: 162, w: 18 },
-        { label: 'Cota', x: 181, w: 12 },
-        { label: 'TVA', x: 194, w: 18 },
-        { label: 'Vanzare', x: 213, w: 57 },
-        { label: '+SGR', x: 270, w: 17 },
-      ]
-    : [
-        { label: 'Denumire', x: margin, w: 70 },
-        { label: 'UM', x: 82, w: 12 },
-        { label: 'Pret furn.', x: 96, w: 22 },
-        { label: 'Disc%', x: 120, w: 14 },
-        { label: 'Pret net', x: 136, w: 22 },
-        { label: `Adaos ${adaos}%`, x: 160, w: 24 },
-        { label: 'F.TVA', x: 186, w: 20 },
-        { label: 'Cota', x: 208, w: 14 },
-        { label: 'TVA', x: 224, w: 20 },
-        { label: 'Pret final', x: 246, w: 24 },
-        { label: 'Rotunjit', x: 272, w: 22 },
-      ]
+
+  let cols: { label: string; x: number; w: number }[]
+  if (!vatPayer) {
+    cols = hasSgr
+      ? [
+          { label: 'Denumire', x: margin, w: 65 },
+          { label: 'UM', x: 77, w: 10 },
+          { label: 'Pret furn.', x: 88, w: 22 },
+          { label: 'Disc%', x: 111, w: 14 },
+          { label: 'Pret net', x: 126, w: 22 },
+          { label: `TVA furn.`, x: 149, w: 22 },
+          { label: 'Pret intrare', x: 172, w: 26 },
+          { label: `Adaos ${adaos}%`, x: 199, w: 26 },
+          { label: 'Pret vanzare', x: 226, w: 44 },
+          { label: '+SGR', x: 271, w: 16 },
+        ]
+      : [
+          { label: 'Denumire', x: margin, w: 70 },
+          { label: 'UM', x: 82, w: 10 },
+          { label: 'Pret furn.', x: 93, w: 24 },
+          { label: 'Disc%', x: 118, w: 16 },
+          { label: 'Pret net', x: 135, w: 24 },
+          { label: `TVA furn.`, x: 160, w: 24 },
+          { label: 'Pret intrare', x: 185, w: 28 },
+          { label: `Adaos ${adaos}%`, x: 214, w: 28 },
+          { label: 'Pret vanzare', x: 243, w: 44 },
+        ]
+  } else {
+    cols = hasSgr
+      ? [
+          { label: 'Denumire', x: margin, w: 62 },
+          { label: 'UM', x: 73, w: 10 },
+          { label: 'Pret furn.', x: 84, w: 20 },
+          { label: 'Disc%', x: 105, w: 12 },
+          { label: 'Pret net', x: 118, w: 20 },
+          { label: `Adaos ${adaos}%`, x: 139, w: 22 },
+          { label: 'F.TVA', x: 162, w: 18 },
+          { label: 'Cota', x: 181, w: 12 },
+          { label: 'TVA', x: 194, w: 18 },
+          { label: 'Vanzare', x: 213, w: 57 },
+          { label: '+SGR', x: 270, w: 17 },
+        ]
+      : [
+          { label: 'Denumire', x: margin, w: 70 },
+          { label: 'UM', x: 82, w: 12 },
+          { label: 'Pret furn.', x: 96, w: 22 },
+          { label: 'Disc%', x: 120, w: 14 },
+          { label: 'Pret net', x: 136, w: 22 },
+          { label: `Adaos ${adaos}%`, x: 160, w: 24 },
+          { label: 'F.TVA', x: 186, w: 20 },
+          { label: 'Cota', x: 208, w: 14 },
+          { label: 'TVA', x: 224, w: 20 },
+          { label: 'Pret final', x: 246, w: 24 },
+          { label: 'Rotunjit', x: 272, w: 22 },
+        ]
+  }
 
   doc.setFillColor(240, 240, 245)
   doc.rect(margin, y - 4, W - 2 * margin, 7, 'F')
@@ -61,23 +90,40 @@ export function exportPDFContabil(
 
   doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 30, 30)
   items.forEach((item, idx) => {
-    const c = calcItem(item, adaos, step, mode)
+    const c = calcItem(item, adaos, step, mode, vatPayer)
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6, 'F') }
     doc.setFontSize(8)
-    const vals = hasSgr
-      ? [
-          upper(item.name), upper(item.unit), fmt2(c.sp),
-          c.disc > 0 ? `${c.disc}%` : '-',
-          fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
-          fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt),
-          fmt2(c.final), c.sgr > 0 ? fmt2(c.sgr) : '-',
-        ]
-      : [
-          upper(item.name), upper(item.unit), fmt2(c.sp),
-          c.disc > 0 ? `${c.disc}%` : '-',
-          fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
-          fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
-        ]
+    let vals: string[]
+    if (!c.vatPayer) {
+      vals = hasSgr
+        ? [
+            upper(item.name), upper(item.unit), fmt2(c.sp),
+            c.disc > 0 ? `${c.disc}%` : '-',
+            fmt2(c.netPrice), fmt2(c.inVatAmt), fmt2(c.costWithVat), fmt2(c.adaosAmt),
+            fmt2(c.final), c.sgr > 0 ? fmt2(c.sgr) : '-',
+          ]
+        : [
+            upper(item.name), upper(item.unit), fmt2(c.sp),
+            c.disc > 0 ? `${c.disc}%` : '-',
+            fmt2(c.netPrice), fmt2(c.inVatAmt), fmt2(c.costWithVat), fmt2(c.adaosAmt),
+            fmt2(c.final),
+          ]
+    } else {
+      vals = hasSgr
+        ? [
+            upper(item.name), upper(item.unit), fmt2(c.sp),
+            c.disc > 0 ? `${c.disc}%` : '-',
+            fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
+            fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt),
+            fmt2(c.final), c.sgr > 0 ? fmt2(c.sgr) : '-',
+          ]
+        : [
+            upper(item.name), upper(item.unit), fmt2(c.sp),
+            c.disc > 0 ? `${c.disc}%` : '-',
+            fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
+            fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
+          ]
+    }
     cols.forEach((col, i) => doc.text(vals[i], col.x, y))
     y += 6
     if (y > 185) { doc.addPage(); y = 15 }
@@ -89,7 +135,7 @@ export function exportPDFContabil(
 }
 
 export function exportPDFMagazin(
-  items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string
+  items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string, vatPayer = true
 ) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const W = 210; const margin = 15; let y = 20
@@ -109,7 +155,7 @@ export function exportPDFMagazin(
 
   doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 30, 30)
   items.forEach((item, idx) => {
-    const { final, sgr } = calcItem(item, adaos, step, mode)
+    const { final, sgr } = calcItem(item, adaos, step, mode, vatPayer)
     if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6.5, 'F') }
     doc.setFontSize(9)
     doc.text(upper(item.name), margin, y)

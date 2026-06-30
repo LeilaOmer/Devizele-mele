@@ -8,6 +8,7 @@ export function usePricingDraft() {
   const [adaos, setAdaos] = useState('30')
   const [roundStep, setRoundStep] = useState<RoundStep>('0.50')
   const [roundMode, setRoundMode] = useState<RoundMode>('nearest')
+  const [vatPayer, setVatPayer] = useState(true)
   const [items, setItems] = useState<Item[]>([emptyItem(21)])
   const [draftId, setDraftId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -26,6 +27,7 @@ export function usePricingDraft() {
             setAdaos(String(data.adaos ?? 30))
             setRoundStep((data.round_step as RoundStep) || '0.50')
             setRoundMode((data.round_mode as RoundMode) || 'nearest')
+            if (typeof data.vat_payer === 'boolean') setVatPayer(data.vat_payer)
             setItems(data.items?.length ? data.items.map((i: Item) => ({ ...i, sgr: i.sgr ?? '0' })) : [emptyItem(21)])
           })
       })
@@ -36,6 +38,7 @@ export function usePricingDraft() {
           const s = JSON.parse(saved)
           if (s.roundStep) setRoundStep(s.roundStep)
           if (s.roundMode) setRoundMode(s.roundMode)
+          if (typeof s.vatPayer === 'boolean') setVatPayer(s.vatPayer)
         }
       } catch {}
     }
@@ -43,9 +46,9 @@ export function usePricingDraft() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('pricing_settings', JSON.stringify({ roundStep, roundMode }))
+      localStorage.setItem('pricing_settings', JSON.stringify({ roundStep, roundMode, vatPayer }))
     } catch {}
-  }, [roundStep, roundMode])
+  }, [roundStep, roundMode, vatPayer])
 
   async function saveDraft() {
     const { data: { session } } = await supabase.auth.getSession()
@@ -89,6 +92,7 @@ export function usePricingDraft() {
     adaos, setAdaos,
     roundStep, setRoundStep,
     roundMode, setRoundMode,
+    vatPayer, setVatPayer,
     items, setItems,
     saving, draftSaved,
     saveDraft, updateItem, removeItem,

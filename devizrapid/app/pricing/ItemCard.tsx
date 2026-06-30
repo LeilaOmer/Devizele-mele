@@ -6,12 +6,13 @@ type Props = {
   adaos: number
   roundStep: RoundStep
   roundMode: RoundMode
+  vatPayer: boolean
   onUpdate: (id: string, field: keyof Item, value: string) => void
   onRemove: (id: string) => void
 }
 
-export default function ItemCard({ item, adaos, roundStep, roundMode, onUpdate, onRemove }: Props) {
-  const c = item.supplierPrice ? calcItem(item, adaos, roundStep, roundMode) : null
+export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, onUpdate, onRemove }: Props) {
+  const c = item.supplierPrice ? calcItem(item, adaos, roundStep, roundMode, vatPayer) : null
 
   return (
     <div className="bg-white rounded-2xl shadow-sm p-3 space-y-2">
@@ -86,29 +87,52 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, onUpdate, 
       </div>
 
       {c && (
-        <div className="bg-gray-50 rounded-xl p-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-          <div className="flex justify-between">
-            <span className="text-gray-400">Pret net furnizor</span>
-            <span className="font-medium">{fmt2(c.netPrice)} lei</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Adaos ({adaos}%)</span>
-            <span className="font-medium">+{fmt2(c.sellExVat - c.netPrice)} lei</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Fara TVA</span>
-            <span className="font-medium">{fmt2(c.sellExVat)} lei</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">TVA {item.vat}%</span>
-            <span className="font-medium">+{fmt2(c.vatAmt)} lei</span>
-          </div>
-          <div className="col-span-2 flex justify-between items-center pt-1 border-t border-gray-200 mt-1">
+        <div className="bg-gray-50 rounded-xl p-3 space-y-1 text-xs">
+          {c.vatPayer ? (
+            <>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Pret net furnizor</span>
+                <span className="font-medium">{fmt2(c.netPrice)} lei</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Adaos ({adaos}%)</span>
+                <span className="font-medium">+{fmt2(c.sellExVat - c.netPrice)} lei</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Fara TVA</span>
+                <span className="font-medium">{fmt2(c.sellExVat)} lei</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">TVA {item.vat}%</span>
+                <span className="font-medium">+{fmt2(c.vatAmt)} lei</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Pret net furnizor</span>
+                <span className="font-medium">{fmt2(c.netPrice)} lei</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-orange-500">TVA furnizor {item.vat}% (cost)</span>
+                <span className="font-medium text-orange-500">+{fmt2(c.inVatAmt)} lei</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Pret de intrare</span>
+                <span className="font-medium">{fmt2(c.costWithVat)} lei</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Adaos ({adaos}%)</span>
+                <span className="font-medium">+{fmt2(c.adaosAmt)} lei</span>
+              </div>
+            </>
+          )}
+          <div className="flex justify-between items-center pt-1 border-t border-gray-200 mt-1">
             <span className="text-gray-600 font-semibold">Pret vanzare</span>
             <span className="text-blue-600 font-bold text-base">{fmt2(c.final)} lei/{item.unit}</span>
           </div>
           {c.sgr > 0 && (
-            <div className="col-span-2 flex justify-between">
+            <div className="flex justify-between">
               <span className="text-orange-500 font-medium">+ Garantie SGR</span>
               <span className="font-medium text-orange-500">+{fmt2(c.sgr)} lei (returnabil)</span>
             </div>

@@ -80,6 +80,7 @@ export default function PricingPage() {
           vat={vat} onVat={setVat}
           roundStep={draft.roundStep} onRoundStep={draft.setRoundStep}
           roundMode={draft.roundMode} onRoundMode={draft.setRoundMode}
+          vatPayer={draft.vatPayer} onVatPayer={draft.setVatPayer}
         />
 
         <button onClick={handleVoice}
@@ -99,6 +100,7 @@ export default function PricingPage() {
               adaos={adaosNum}
               roundStep={draft.roundStep}
               roundMode={draft.roundMode}
+              vatPayer={draft.vatPayer}
               onUpdate={draft.updateItem}
               onRemove={draft.removeItem}
             />
@@ -116,8 +118,8 @@ export default function PricingPage() {
         saving={draft.saving}
         draftSaved={draft.draftSaved}
         usageInfo={usageInfo}
-        onExportContabil={() => handleExport(() => exportPDFContabil(validItems, adaosNum, draft.roundStep, draft.roundMode, draft.supplier))}
-        onExportMagazin={() => handleExport(() => exportPDFMagazin(validItems, adaosNum, draft.roundStep, draft.roundMode, draft.supplier))}
+        onExportContabil={() => handleExport(() => exportPDFContabil(validItems, adaosNum, draft.roundStep, draft.roundMode, draft.supplier, draft.vatPayer))}
+        onExportMagazin={() => handleExport(() => exportPDFMagazin(validItems, adaosNum, draft.roundStep, draft.roundMode, draft.supplier, draft.vatPayer))}
       />
     </div>
   )
