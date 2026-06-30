@@ -12,7 +12,13 @@ REGULI OBLIGATORII:
 
 2. EXCLUDE din lista (NU crea produs pentru ele):
    - Linii cu denumire "AMBALAJ SGR", "GARANTIE PET", "GARANTIE AMBALAJ", "SGR STICLA", "SGR DOZA" sau similar (TVA 0%, pret 0.50) => sunt garantii returnabile, nu produse.
-   - Linii cu pret = 0 si valoare = 0 => produse promotionale/gratuite, nu le include.
+
+3. PROMO / GRATUIT (linii cu pret = 0 si denumire contine "PROMO", "GRATIS", "FREE", "BONUS" sau similar):
+   - NU ignora aceste linii! Ele reprezinta bucati GRATUITE primite impreuna cu un produs platit.
+   - Cauta produsul platit cu denumire similara (acelasi produs fara cuvantul PROMO).
+   - Calculeaza pretul efectiv real: supplier_price = (cantitate_platita x pret_platit) / (cantitate_platita + cantitate_promo).
+   - Creeaza UN SINGUR produs cu cantitatea totala (platita + gratuita) si pretul efectiv calculat.
+   - Exemplu: 4608 buc x 4.22 RON + 2304 buc PROMO x 0 RON => supplier_price = 19445.76 / 6912 = 2.8133 RON, cantitate totala 6912 buc.
 
 3. SGR (garantie returnabila 0.50 lei/unitate, fara TVA, fara adaos):
    - Daca denumirea produsului contine "SGR" (ex: "URSUS 0.33L SGR", "URSUS COOLER DZ SGR") => sgr=0.50 pentru acel produs.
