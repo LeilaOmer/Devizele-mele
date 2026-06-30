@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
       const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages)
       const result = validateAndSanitize(parseJson(raw))
       if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
-      return NextResponse.json(result ?? { items: [], error: 'vision_failed', raw: raw.slice(0, 200) })
+      return NextResponse.json({ ...(result ?? { items: [] }), _debug_raw: raw.slice(0, 1000) })
     }
 
     let text = ''
