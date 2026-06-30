@@ -4,12 +4,11 @@ import { RoundStep, RoundMode } from '@/lib/pricing/calc'
 type Props = {
   supplier: string; onSupplier: (v: string) => void
   adaos: string; onAdaos: (v: string) => void
-  vat: 11 | 21; onVat: (v: 11 | 21) => void
   roundStep: RoundStep; onRoundStep: (v: RoundStep) => void
   roundMode: RoundMode; onRoundMode: (v: RoundMode) => void
 }
 
-export default function SettingsPanel({ supplier, onSupplier, adaos, onAdaos, vat, onVat, roundStep, onRoundStep, roundMode, onRoundMode }: Props) {
+export default function SettingsPanel({ supplier, onSupplier, adaos, onAdaos, roundStep, onRoundStep, roundMode, onRoundMode }: Props) {
   return (
     <div className="bg-white rounded-2xl shadow-sm p-3 space-y-3">
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Setari calcul</p>
@@ -20,24 +19,11 @@ export default function SettingsPanel({ supplier, onSupplier, adaos, onAdaos, va
           placeholder="Ex: Metro, Selgros..." value={supplier} onChange={e => onSupplier(e.target.value)} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Adaos comercial %</label>
-          <input type="number" min="0" step="1"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-900"
-            value={adaos} onChange={e => onAdaos(e.target.value)} />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-gray-500 mb-1 block">Cota TVA</label>
-          <div className="flex rounded-xl overflow-hidden border border-gray-200">
-            {([21, 11] as const).map(r => (
-              <button key={r} onClick={() => onVat(r)}
-                className={`flex-1 py-2.5 text-sm font-bold transition-all ${vat === r ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}>
-                {r}%
-              </button>
-            ))}
-          </div>
-        </div>
+      <div>
+        <label className="text-xs font-medium text-gray-500 mb-1 block">Adaos comercial %</label>
+        <input type="number" min="0" step="1"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-900"
+          value={adaos} onChange={e => onAdaos(e.target.value)} />
       </div>
 
 

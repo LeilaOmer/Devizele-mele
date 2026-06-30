@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { trialInfo } from '@/lib/trial'
 import { getMonthlyCalcule, isPlanActive, logCalcul, FREE_CALCULE_LIMIT } from '@/lib/usage'
-import { Item, RoundStep, RoundMode, emptyItem } from '@/lib/pricing/calc'
+import { emptyItem } from '@/lib/pricing/calc'
 import { exportPDFContabil, exportPDFMagazin } from '@/lib/pricing/pdf'
 import { usePricingDraft } from './hooks/usePricingDraft'
 import { useInvoiceScan } from './hooks/useInvoiceScan'
@@ -16,7 +16,6 @@ import ExportBar from './ExportBar'
 
 export default function PricingPage() {
   const router = useRouter()
-  const [vat, setVat] = useState<11 | 21>(21)
   const [usageInfo, setUsageInfo] = useState<{ calcule: number; limit: number; show: boolean } | null>(null)
 
   const draft = usePricingDraft()
@@ -77,7 +76,6 @@ export default function PricingPage() {
         <SettingsPanel
           supplier={draft.supplier} onSupplier={draft.setSupplier}
           adaos={draft.adaos} onAdaos={draft.setAdaos}
-          vat={vat} onVat={setVat}
           roundStep={draft.roundStep} onRoundStep={draft.setRoundStep}
           roundMode={draft.roundMode} onRoundMode={draft.setRoundMode}
         />
@@ -106,7 +104,7 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <button onClick={() => draft.setItems(prev => [...prev, emptyItem(vat)])}
+        <button onClick={() => draft.setItems(prev => [...prev, emptyItem(draft.defaultVat)])}
           className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-sm font-semibold text-gray-500">
           + Adauga produs manual
         </button>

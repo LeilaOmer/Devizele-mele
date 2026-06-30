@@ -9,6 +9,7 @@ export function usePricingDraft() {
   const [roundStep, setRoundStep] = useState<RoundStep>('0.50')
   const [roundMode, setRoundMode] = useState<RoundMode>('nearest')
   const [vatPayer, setVatPayerState] = useState(true)
+  const [defaultVat, setDefaultVat] = useState<11 | 21>(21)
   const [items, setItems] = useState<Item[]>([emptyItem(21)])
   const [draftId, setDraftId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -51,10 +52,20 @@ export function usePricingDraft() {
       const companyId = isPro ? localStorage.getItem('activeCompanyId') : null
       if (companyId) {
         supabase.from('companies').select('vat_rate').eq('id', companyId).single()
-          .then(({ data }) => { if (data) setVatPayerState((data.vat_rate ?? 21) !== 0) })
+          .then(({ data }) => {
+            if (!data) return
+            const rate = data.vat_rate ?? 21
+            setVatPayerState(rate !== 0)
+            setDefaultVat(rate === 11 ? 11 : 21)
+          })
       } else {
         supabase.from('profiles').select('vat_rate').eq('id', session.user.id).single()
-          .then(({ data }) => { if (data) setVatPayerState((data.vat_rate ?? 21) !== 0) })
+          .then(({ data }) => {
+            if (!data) return
+            const rate = data.vat_rate ?? 21
+            setVatPayerState(rate !== 0)
+            setDefaultVat(rate === 11 ? 11 : 21)
+          })
       }
     })
   }, [])
@@ -131,6 +142,7 @@ export function usePricingDraft() {
     roundStep, setRoundStep,
     roundMode, setRoundMode,
     vatPayer, setVatPayer,
+    defaultVat,
     items, setItems,
     saving, draftSaved,
     saveDraft, updateItem, removeItem,
