@@ -46,7 +46,13 @@ REGULI OBLIGATORII:
 
 4. REGULA TVA: vat=11 pentru apa, alimente, bauturi nealcoolice, lemne, carti, cazare. vat=21 pentru bauturi alcoolice (bere, vin, spirtoase), cosmetice, electrice, textile, materiale.
 
-5. discount = valoarea EXCLUSIV din coloana "% Disc", "Disc%", "Discount%". Daca acea coloana arata 0,00 sau 0 => discount=0. NU extrage discount din alte coloane, din valori TVA, din sume sau din fragmente de numere izolate (ex: "6" izolat care face parte din "2136,96" nu este un discount).
+5. discount — citeste in aceasta ordine de prioritate:
+   a) Coloana per produs "% Disc", "Disc%", "Discount%", "Procent discount" => foloseste direct acea valoare pentru fiecare produs.
+   b) Linie separata de discount per produs (ex: rand imediat sub produs cu "Discount 10%" sau "Remiza 5%") => aplica acel procent la produsul de deasupra.
+   c) Linie de discount la finalul facturii cu procent (ex: "Discount comercial: 10%", "Remiza globala 15%") => aplica acel procent ca discount la TOATE produsele.
+   d) Linie de discount la final cu valoare in lei (ex: "Discount: -67.17 lei") => calculeaza procentul: discount% = valoare_discount / total_fara_discount * 100, si aplica la toate produsele.
+   e) Daca nu exista niciun discount mentionat => discount=0 la toate.
+   NU extrage discount din valori TVA, din sume sau din fragmente de numere izolate (ex: "6" izolat din "2136,96" nu este discount).
 
 6. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).`
 
@@ -68,6 +74,33 @@ function parseJson(raw: string) {
   const match = raw.match(/\{[\s\S]*\}/)
   if (!match) return null
   try { return JSON.parse(match[0]) } catch { return null }
+}
+
+function validateAndSanitize(data: unknown) {
+  if (!data || typeof data !== 'object') return null
+  const d = data as Record<string, unknown>
+  if (!Array.isArray(d.items)) return null
+  d.items = d.items
+    .filter((i: unknown) => {
+      if (!i || typeof i !== 'object') return false
+      const item = i as Record<string, unknown>
+      return typeof item.name === 'string' && item.name.trim() !== ''
+        && typeof item.supplier_price === 'number' && item.supplier_price > 0
+    })
+    .map((i: unknown) => {
+      const item = i as Record<string, unknown>
+      const vat = Number(item.vat)
+      const discount = Number(item.discount)
+      const sgr = Number(item.sgr)
+      return {
+        ...item,
+        supplier_price: Math.round(Number(item.supplier_price) * 10000) / 10000,
+        vat: (vat === 11 ? 11 : 21),
+        discount: (discount >= 0 && discount <= 100) ? discount : 0,
+        sgr: (sgr === 0.5 ? 0.5 : 0),
+      }
+    })
+  return d
 }
 
 export async function POST(req: NextRequest) {
@@ -105,7 +138,7 @@ export async function POST(req: NextRequest) {
         },
       ]
       const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages)
-      const result = parseJson(raw)
+      const result = validateAndSanitize(parseJson(raw))
       if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
       return NextResponse.json(result ?? { items: [], error: 'vision_failed', raw: raw.slice(0, 200) })
     }
@@ -133,7 +166,7 @@ export async function POST(req: NextRequest) {
       { role: 'user', content: text.slice(0, 12000) },
     ]
     const raw = await callGroq('llama-3.3-70b-versatile', messages)
-    const result = parseJson(raw)
+    const result = validateAndSanitize(parseJson(raw))
     if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
     return NextResponse.json(result ?? { items: [] })
 
