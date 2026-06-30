@@ -49,16 +49,28 @@ REGULI OBLIGATORII:
 
 4. REGULA TVA: vat=11 pentru apa, alimente, bauturi nealcoolice, lemne, carti, cazare. vat=21 pentru bauturi alcoolice (bere, vin, spirtoase), cosmetice, electrice, textile, materiale. Foloseste DOAR valorile 11 sau 21 in JSON.
 
-5. discount — citeste in aceasta ordine de prioritate:
+5. discount — CAUTA ACTIV in toata factura (inclusiv in imagini/poze), in aceasta ordine de prioritate:
    a) Coloana per produs "% Disc", "Disc%", "Discount%", "Procent discount" => foloseste direct acea valoare pentru fiecare produs.
    b) Linie separata de discount per produs (ex: rand imediat sub produs cu "Discount 10%" sau "Remiza 5%") => aplica acel procent la produsul de deasupra.
    c) Linie de discount la finalul facturii cu procent (ex: "Discount comercial: 10%", "Remiza globala 15%") => aplica acel procent ca discount la TOATE produsele.
    d) Linie de discount la final cu valoare in lei (ex: "Discount: -67.17 lei") => calculeaza procentul: discount% = valoare_discount / total_fara_discount * 100, si aplica la toate produsele.
-   e) Linii cu denumire "SCONTURI ACORDATE X%", "SCONT X%", "REMIZA X%", "REDUCERE X%" (apar de obicei la sfarsitul tabelului, cu cantitate -1 sau valoare negativa) => NU sunt produse. Extrage procentul X din denumire si aplica-l ca discount la toate produsele cu aceeasi cota TVA (ex: linie "SCONTURI ACORDATE 5.00%" TVA 9% sau 11% => discount=5 la toate produsele cu vat=11; linie "SCONTURI ACORDATE 5.00%" TVA 19% sau 21% => discount=5 la toate produsele cu vat=21). Daca ambele linii au acelasi procent, aplica acelasi discount la toate produsele. IMPORTANT: aceste linii pot aparea si in imagini/poze — cauta-le activ in partea de jos a tabelului de produse.
+   e) Linii "SCONTURI ACORDATE X%", "SCONT X%", "REMIZA X%", "REDUCERE X%" cu valoare negativa => NU sunt produse, sunt linii de discount global. Extrage procentul X din denumire. Aplica discount=X la toate produsele cu aceeasi cota TVA ca linia respectiva. Exemplu: "SCONTURI ACORDATE 5.00%" langa TVA 11% => discount=5 la toate produsele cu vat=11. Daca procentul e identic pe ambele linii TVA, aplica la toate produsele. ATENTIE: aceste linii apar in partea de jos a tabelului de produse, uneori cu font mic — cauta-le si in imagini/poze.
    f) Daca nu exista niciun discount mentionat => discount=0 la toate.
    NU extrage discount din valori TVA, din sume sau din fragmente de numere izolate (ex: "6" izolat din "2136,96" nu este discount).
 
-6. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).`
+6. UNITATI DE MASURA — traduce codurile tehnice in unitati lizibile:
+   h87, C62, PCE => buc
+   KGM => kg
+   GRM => g
+   LTR => l
+   MLT => ml
+   MTR => m
+   MTK => m2
+   MTQ => m3
+   TNE => t
+   Daca unitatea e deja lizibila (buc, kg, l, etc.) las-o asa.
+
+7. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).`
 
 async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
