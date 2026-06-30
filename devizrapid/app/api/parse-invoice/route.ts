@@ -15,7 +15,7 @@ REGULI OBLIGATORII:
 
 1. supplier_price = pretul per unitate FARA TVA si FARA SGR.
    - Coloane cu pret CU TVA: "Pret TTI", "Pret unit. TTI", "Pret cu TVA", "Valoare TTI" => imparte la (1 + cota_tva/100). Ex: 2.60 lei cu TVA 11% => 2.60/1.11 = 2.3423
-   - Coloane cu pret FARA TVA: "Pret RON", "Pret Ofr", "Pret net", "Pret fara TVA", "Pret unitar" => foloseste direct ca supplier_price.
+   - Coloane cu pret FARA TVA: "Pret RON", "Pret Ofr", "Pret net", "Pret fara TVA", "Pret unitar", "Pretul net al articolului" => foloseste direct ca supplier_price.
    - Rotunjeste la 4 zecimale.
    - FORMAT WINMENTOR (software roman, ex: Hygiene Puls Center, facturi cu "Discount cumulat"): coloanele per rand sunt in ordinea EXACTA: Cantitate | Pret unitar (lei, fara TVA) | Valoare (lei, fara TVA) | Valoare TVA (lei) | Procent discount.
    - supplier_price = valoarea din coloana "Pret unitar" — citeste DIRECT acel numar, nu calcula din altceva.
@@ -51,7 +51,8 @@ REGULI OBLIGATORII:
    b) Linie separata de discount per produs (ex: rand imediat sub produs cu "Discount 10%" sau "Remiza 5%") => aplica acel procent la produsul de deasupra.
    c) Linie de discount la finalul facturii cu procent (ex: "Discount comercial: 10%", "Remiza globala 15%") => aplica acel procent ca discount la TOATE produsele.
    d) Linie de discount la final cu valoare in lei (ex: "Discount: -67.17 lei") => calculeaza procentul: discount% = valoare_discount / total_fara_discount * 100, si aplica la toate produsele.
-   e) Daca nu exista niciun discount mentionat => discount=0 la toate.
+   e) Linii cu denumire "SCONTURI ACORDATE X%", "SCONT X%", "REMIZA X%", "REDUCERE X%" cu cantitate negativa (-1) => NU sunt produse. Extrage procentul X din denumire si aplica-l ca discount la toate produsele cu aceeasi cota TVA (ex: linie "SCONTURI ACORDATE 5.00%" TVA 11% => discount=5 la toate produsele cu vat=11; linie "SCONTURI ACORDATE 5.00%" TVA 21% => discount=5 la toate produsele cu vat=21). Daca ambele linii au acelasi procent, aplica acelasi discount la toate produsele.
+   f) Daca nu exista niciun discount mentionat => discount=0 la toate.
    NU extrage discount din valori TVA, din sume sau din fragmente de numere izolate (ex: "6" izolat din "2136,96" nu este discount).
 
 6. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).`
