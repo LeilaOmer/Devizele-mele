@@ -70,8 +70,8 @@ function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: 
         { label: 'F.TVA', x: 162, w: 18 },
         { label: 'Cota', x: 181, w: 12 },
         { label: 'TVA', x: 194, w: 18 },
-        { label: 'SGR', x: 213, w: 14 },
-        { label: 'Vanzare', x: 228, w: 59 },
+        { label: 'Vanzare', x: 213, w: 57 },
+        { label: '+SGR', x: 270, w: 17 },
       ]
     : [
         { label: 'Denumire', x: margin, w: 70 },
@@ -104,7 +104,7 @@ function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: 
           c.disc > 0 ? `${c.disc}%` : '-',
           fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
           fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt),
-          c.sgr > 0 ? fmt2(c.sgr) : '-', fmt2(c.final),
+          fmt2(c.final), c.sgr > 0 ? fmt2(c.sgr) : '-',
         ]
       : [
           noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
