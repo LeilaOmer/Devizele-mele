@@ -110,6 +110,7 @@ function validateAndSanitize(data: unknown) {
   const globalDiscounts: Record<number, number> = {}
   if (d.discounts && typeof d.discounts === 'object') {
     for (const [vatKey, disc] of Object.entries(d.discounts as Record<string, unknown>)) {
+      if (vatKey !== '11' && vatKey !== '21') continue
       const vatNum = vatKey === '11' ? 11 : 21
       const discNum = Number(disc)
       if (discNum > 0 && discNum <= 100) globalDiscounts[vatNum] = discNum
@@ -181,7 +182,7 @@ export async function POST(req: NextRequest) {
       const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages)
       const result = validateAndSanitize(parseJson(raw))
       if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
-      return NextResponse.json({ ...(result ?? { items: [] }), _debug_raw: raw.slice(-800) })
+      return NextResponse.json(result ?? { items: [], error: 'vision_failed' })
     }
 
     let text = ''
@@ -209,7 +210,7 @@ export async function POST(req: NextRequest) {
     const raw = await callGroq('llama-3.3-70b-versatile', messages)
     const result = validateAndSanitize(parseJson(raw))
     if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
-    return NextResponse.json({ ...(result ?? { items: [] }), _debug_raw: raw.slice(-800) })
+    return NextResponse.json(result ?? { items: [] })
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown'
