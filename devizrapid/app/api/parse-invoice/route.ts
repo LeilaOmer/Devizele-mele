@@ -7,8 +7,10 @@ REGULI OBLIGATORII:
 
 1. supplier_price = pretul per unitate FARA TVA si FARA SGR.
    - Coloane cu pret CU TVA: "Pret TTI", "Pret unit. TTI", "Pret cu TVA", "Valoare TTI" => imparte la (1 + cota_tva/100). Ex: 2.60 lei cu TVA 11% => 2.60/1.11 = 2.3423
-   - Coloane cu pret FARA TVA: "Pret RON", "Pret Ofr", "Pret net", "Pret fara TVA" => foloseste direct ca supplier_price.
+   - Coloane cu pret FARA TVA: "Pret RON", "Pret Ofr", "Pret net", "Pret fara TVA", "Pret unitar" => foloseste direct ca supplier_price.
    - Rotunjeste la 4 zecimale.
+   - VALIDARE OBLIGATORIE: supplier_price x cantitate trebuie sa fie aproximativ egal cu valoarea totala fara TVA din rand. Daca nu se potriveste, ai ales coloana gresita — reconsider care numar este pretul si care este cantitatea. Ex: daca ai ales 5.00 dar 5.00 x 5 = 25 nu egaleaza valoarea 71.30, atunci 5.00 este cantitatea, nu pretul; pretul este 14.26 (14.26 x 5 = 71.30 ✓).
+   - Formatul WinMENTOR are coloanele in ordinea: Cantitate | Pret unitar (fara TVA) | Valoare (fara TVA) | Valoare TVA | Procent discount. NU confunda cantitatea cu pretul.
 
 2. SGR (Sistemul Garantie-Returnare) — CERINTA LEGALA, nu se ignora:
    - SGR = 0.50 lei fix per unitate de ambalaj returnabil. NU face parte din pretul produsului.
