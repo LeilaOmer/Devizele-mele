@@ -9,9 +9,9 @@ function getSupabaseAdmin() {
 }
 
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura sau aviz) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
-Format: {"supplier":"Nume Furnizor SRL","items":[{"name":"denumire produs","unit":"buc","supplier_price":0,"discount":0,"vat":21,"sgr":0}]}
+Format: {"supplier":"Nume Furnizor SRL","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","supplier_price":0,"discount":0,"vat":21,"sgr":0}]}
 
-INAINTE DE ORICE — citeste intreaga factura de la cap la coadă si identifica liniile de tip scont/discount global (ex: "SCONTURI ACORDATE 5.00%", "SCONT 10%", "REMIZA 15%", "REDUCERE 5%" cu cantitate sau valoare negativa). Noteaza procentul si TVA-ul fiecarei astfel de linii. Aceste linii NU sunt produse — nu le include in JSON — dar procentul lor se aplica ca camp "discount" la TOATE produsele cu acelasi TVA. Daca nu gasesti nicio astfel de linie, discount=0.
+Campul "discounts" se completeaza PRIMUL, inainte de items. Contine procentul de discount global per cota TVA (ex: {"11":5,"21":5} daca exista "SCONTURI ACORDATE 5.00%" pentru ambele TVA-uri). Daca nu exista discount global, lasa {"11":0,"21":0}. Liniile "SCONTURI ACORDATE X%", "SCONT X%", "REMIZA X%", "REDUCERE X%" cu valoare negativa NU sunt produse — extrage din ele procentul X si TVA-ul si pune-le in "discounts".
 
 REGULI OBLIGATORII:
 
@@ -105,6 +105,18 @@ function validateAndSanitize(data: unknown) {
   if (!data || typeof data !== 'object') return null
   const d = data as Record<string, unknown>
   if (!Array.isArray(d.items)) return null
+
+  // Extract global discounts by VAT rate from the top-level "discounts" field
+  const globalDiscounts: Record<number, number> = {}
+  if (d.discounts && typeof d.discounts === 'object') {
+    for (const [vatKey, disc] of Object.entries(d.discounts as Record<string, unknown>)) {
+      const vatNum = vatKey === '11' ? 11 : 21
+      const discNum = Number(disc)
+      if (discNum > 0 && discNum <= 100) globalDiscounts[vatNum] = discNum
+    }
+  }
+  delete d.discounts
+
   d.items = d.items
     .filter((i: unknown) => {
       if (!i || typeof i !== 'object') return false
@@ -114,14 +126,17 @@ function validateAndSanitize(data: unknown) {
     })
     .map((i: unknown) => {
       const item = i as Record<string, unknown>
-      const vat = Number(item.vat)
-      const discount = Number(item.discount)
+      const vat = Number(item.vat) === 11 ? 11 : 21
+      const itemDiscount = Number(item.discount)
+      const discount = (itemDiscount > 0 && itemDiscount <= 100)
+        ? itemDiscount
+        : (globalDiscounts[vat] ?? 0)
       const sgr = Number(item.sgr)
       return {
         ...item,
         supplier_price: Math.round(Number(item.supplier_price) * 10000) / 10000,
-        vat: (vat === 11 ? 11 : 21),
-        discount: (discount >= 0 && discount <= 100) ? discount : 0,
+        vat,
+        discount,
         sgr: (sgr === 0.5 ? 0.5 : 0),
       }
     })
