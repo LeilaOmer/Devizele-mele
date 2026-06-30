@@ -30,7 +30,7 @@ REGULI OBLIGATORII:
 
 4. REGULA TVA: vat=11 pentru apa, alimente, bauturi nealcoolice, lemne, carti, cazare. vat=21 pentru bauturi alcoolice (bere, vin, spirtoase), cosmetice, electrice, textile, materiale.
 
-5. discount = valoarea din coloana "% Disc", "Disc%", "Discount%" (0 daca nu e mentionat sau e 0.00).
+5. discount = valoarea EXCLUSIV din coloana "% Disc", "Disc%", "Discount%". Daca acea coloana arata 0,00 sau 0 => discount=0. NU extrage discount din alte coloane, din valori TVA, din sume sau din fragmente de numere izolate (ex: "6" izolat care face parte din "2136,96" nu este un discount).
 
 6. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).`
 
