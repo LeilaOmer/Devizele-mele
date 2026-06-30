@@ -49,14 +49,21 @@ REGULI OBLIGATORII:
 
 4. REGULA TVA: vat=11 pentru apa, alimente, bauturi nealcoolice, lemne, carti, cazare. vat=21 pentru bauturi alcoolice (bere, vin, spirtoase), cosmetice, electrice, textile, materiale. Foloseste DOAR valorile 11 sau 21 in JSON.
 
-5. discount — CAUTA ACTIV in toata factura (inclusiv in imagini/poze), in aceasta ordine de prioritate:
-   a) Coloana per produs "% Disc", "Disc%", "Discount%", "Procent discount" => foloseste direct acea valoare pentru fiecare produs.
-   b) Linie separata de discount per produs (ex: rand imediat sub produs cu "Discount 10%" sau "Remiza 5%") => aplica acel procent la produsul de deasupra.
-   c) Linie de discount la finalul facturii cu procent (ex: "Discount comercial: 10%", "Remiza globala 15%") => aplica acel procent ca discount la TOATE produsele.
-   d) Linie de discount la final cu valoare in lei (ex: "Discount: -67.17 lei") => calculeaza procentul: discount% = valoare_discount / total_fara_discount * 100, si aplica la toate produsele.
-   e) Linii "SCONTURI ACORDATE X%", "SCONT X%", "REMIZA X%", "REDUCERE X%" cu valoare negativa => NU sunt produse, sunt linii de discount global. Extrage procentul X din denumire. Aplica discount=X la toate produsele cu aceeasi cota TVA ca linia respectiva. Exemplu: "SCONTURI ACORDATE 5.00%" langa TVA 11% => discount=5 la toate produsele cu vat=11. Daca procentul e identic pe ambele linii TVA, aplica la toate produsele. ATENTIE: aceste linii apar in partea de jos a tabelului de produse, uneori cu font mic — cauta-le si in imagini/poze.
-   f) Daca nu exista niciun discount mentionat => discount=0 la toate.
-   NU extrage discount din valori TVA, din sume sau din fragmente de numere izolate (ex: "6" izolat din "2136,96" nu este discount).
+5. discount — inainte de a construi JSON-ul, parcurge TOATE liniile facturii si cauta indicatori de discount:
+   PASUL 1 — Identifica tipul de discount din factura:
+   a) Coloana per produs "% Disc", "Disc%", "Discount%", "Procent discount" => fiecare produs are discount propriu in acea coloana.
+   b) Rand imediat sub produs cu "Discount X%" sau "Remiza X%" => aplica X la produsul de deasupra.
+   c) Linie la final cu procent (ex: "Discount comercial: 10%") => aplica la TOATE produsele.
+   d) Linie la final cu valoare negativa in lei (ex: "Discount: -67.17 lei") => calculeaza discount% = valoare / total * 100, aplica la toate.
+   e) Linie cu denumire "SCONTURI ACORDATE X%", "SCONT X%", "REMIZA X%", "REDUCERE X%" — acestea sunt linii de discount global, NU produse:
+      - Extrage procentul X din denumire (ex: "SCONTURI ACORDATE 5.00%" => X=5)
+      - Uita-te la TVA-ul acelei linii (ex: 11%)
+      - Seteaza discount=5 la TOATE produsele cu vat=11 din lista
+      - Daca exista doua astfel de linii (una TVA 11%, una TVA 21%) si procentul e acelasi => discount=X la toate produsele
+      - NU include aceste linii ca produse in JSON
+      - EXEMPLU: factura cu "SCONTURI ACORDATE 5.00%" x2 => fiecare produs din JSON va avea discount=5
+   PASUL 2 — Daca nu ai gasit niciun discount in PASUL 1 => discount=0 la toate.
+   NU extrage discount din valori TVA, sume totale sau fragmente de numere (ex: "6" din "2136,96" nu este discount).
 
 6. UNITATI DE MASURA — traduce codurile tehnice in unitati lizibile:
    h87, C62, PCE => buc
@@ -185,7 +192,7 @@ export async function POST(req: NextRequest) {
     const raw = await callGroq('llama-3.3-70b-versatile', messages)
     const result = validateAndSanitize(parseJson(raw))
     if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
-    return NextResponse.json(result ?? { items: [] })
+    return NextResponse.json({ ...(result ?? { items: [] }), _debug_raw: raw.slice(0, 1000) })
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown'
