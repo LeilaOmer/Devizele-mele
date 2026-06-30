@@ -1,168 +1,12 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import jsPDF from 'jspdf'
 import { supabase } from '@/lib/supabase'
 import { trialInfo } from '@/lib/trial'
 import { getMonthlyCalcule, isPlanActive, logCalcul, FREE_CALCULE_LIMIT } from '@/lib/usage'
-
-type RoundStep = 'none' | '0.10' | '0.50' | '1.00'
-type RoundMode = 'nearest' | 'up'
-
-type Item = {
-  id: string
-  name: string
-  unit: string
-  supplierPrice: string
-  discount: string
-  vat: 11 | 21
-  sgr: string  // garantie returnabila SGR (lei/unitate) — nu se aplica adaos sau TVA
-}
-
-const emptyItem = (defaultVat: 11 | 21 = 21): Item => ({
-  id: crypto.randomUUID(),
-  name: '', unit: 'buc', supplierPrice: '', discount: '0',
-  vat: defaultVat, sgr: '0',
-})
-
-function applyRounding(price: number, step: RoundStep, mode: RoundMode): number {
-  if (step === 'none') return Math.round(price * 100) / 100
-  const s = parseFloat(step)
-  if (mode === 'nearest') return Math.round(price / s) * s
-  return Math.ceil(price / s) * s
-}
-
-function calcItem(item: Item, adaos: number, step: RoundStep, mode: RoundMode) {
-  const sp = parseFloat(item.supplierPrice) || 0  // pret fara SGR
-  const sgr = parseFloat(item.sgr) || 0           // SGR trece la cost fix, fara adaos si fara TVA
-  const disc = parseFloat(item.discount) || 0
-  const netPrice = sp * (1 - disc / 100)
-  const sellExVat = netPrice * (1 + adaos / 100)
-  const vatAmt = sellExVat * (item.vat / 100)
-  const withVat = sellExVat + vatAmt
-  const final = applyRounding(withVat, step, mode)  // fara SGR — SGR se afiseaza separat
-  return { sp, disc, sgr, netPrice, sellExVat, vatAmt, withVat, final }
-}
-
-const fmt2 = (n: number) => n.toFixed(2)
-const fmtDate = () => new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
-const noDiac = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[sS]/g, 's').replace(/[tT]/g, 't').replace(/[aAa]/g, 'a').replace(/[iI]/g, 'i')
-
-function exportPDFContabil(items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string) {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
-  const W = 297; const margin = 10; let y = 15
-
-  doc.setFontSize(13); doc.setFont('helvetica', 'bold')
-  doc.text('Calculator Pret Vanzare', margin, y); y += 6
-  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100)
-  doc.text(`Data: ${fmtDate()}  |  Furnizor: ${noDiac(supplier || '-')}  |  Adaos: ${adaos}%  |  Rotunjire: ${step === 'none' ? 'fara' : step + ' lei (' + (mode === 'nearest' ? 'corect' : 'in sus') + ')'}`, margin, y)
-  y += 8
-
-  const hasSgr = items.some(i => parseFloat(i.sgr) > 0)
-  const cols = hasSgr
-    ? [
-        { label: 'Denumire', x: margin, w: 62 },
-        { label: 'UM', x: 73, w: 10 },
-        { label: 'Pret furn.', x: 84, w: 20 },
-        { label: 'Disc%', x: 105, w: 12 },
-        { label: 'Pret net', x: 118, w: 20 },
-        { label: `Adaos ${adaos}%`, x: 139, w: 22 },
-        { label: 'F.TVA', x: 162, w: 18 },
-        { label: 'Cota', x: 181, w: 12 },
-        { label: 'TVA', x: 194, w: 18 },
-        { label: 'Vanzare', x: 213, w: 57 },
-        { label: '+SGR', x: 270, w: 17 },
-      ]
-    : [
-        { label: 'Denumire', x: margin, w: 70 },
-        { label: 'UM', x: 82, w: 12 },
-        { label: 'Pret furn.', x: 96, w: 22 },
-        { label: 'Disc%', x: 120, w: 14 },
-        { label: 'Pret net', x: 136, w: 22 },
-        { label: `Adaos ${adaos}%`, x: 160, w: 24 },
-        { label: 'F.TVA', x: 186, w: 20 },
-        { label: 'Cota', x: 208, w: 14 },
-        { label: 'TVA', x: 224, w: 20 },
-        { label: 'Pret final', x: 246, w: 24 },
-        { label: 'Rotunjit', x: 272, w: 22 },
-      ]
-
-  doc.setFillColor(240, 240, 245)
-  doc.rect(margin, y - 4, W - 2 * margin, 7, 'F')
-  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60)
-  cols.forEach(c => doc.text(c.label, c.x, y))
-  y += 6
-
-  doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 30, 30)
-  items.forEach((item, idx) => {
-    const c = calcItem(item, adaos, step, mode)
-    if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6, 'F') }
-    doc.setFontSize(8)
-    const vals = hasSgr
-      ? [
-          noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
-          c.disc > 0 ? `${c.disc}%` : '-',
-          fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
-          fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt),
-          fmt2(c.final), c.sgr > 0 ? fmt2(c.sgr) : '-',
-        ]
-      : [
-          noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
-          c.disc > 0 ? `${c.disc}%` : '-',
-          fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
-          fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
-        ]
-    cols.forEach((col, i) => doc.text(vals[i], col.x, y))
-    y += 6
-    if (y > 185) { doc.addPage(); y = 15 }
-  })
-
-  doc.setFontSize(7); doc.setTextColor(160, 160, 160)
-  doc.text('Generat de Tarifator', W / 2, 200, { align: 'center' })
-  window.open(doc.output('bloburl'), '_blank')
-}
-
-function exportPDFMagazin(items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string) {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  const W = 210; const margin = 15; let y = 20
-
-  doc.setFontSize(14); doc.setFont('helvetica', 'bold')
-  doc.text('Lista Preturi Vanzare', margin, y); y += 7
-  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100)
-  doc.text(`${fmtDate()}${supplier ? '  |  ' + supplier : ''}`, margin, y); y += 10
-
-  doc.setFillColor(240, 240, 245)
-  doc.rect(margin, y - 4, W - 2 * margin, 7, 'F')
-  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60)
-  doc.text('Denumire produs', margin, y)
-  doc.text('UM', 130, y)
-  doc.text('Pret vanzare', W - margin, y, { align: 'right' })
-  y += 7
-
-  doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 30, 30)
-  items.forEach((item, idx) => {
-    const { final, sgr } = calcItem(item, adaos, step, mode)
-    if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6.5, 'F') }
-    doc.setFontSize(9)
-    doc.text(noDiac(item.name), margin, y)
-    doc.text(noDiac(item.unit), 130, y)
-    doc.setFont('helvetica', 'bold')
-    doc.text(fmt2(final) + ' RON', W - margin, y, { align: 'right' })
-    doc.setFont('helvetica', 'normal')
-    if (sgr > 0) {
-      doc.setFontSize(7); doc.setTextColor(200, 100, 0)
-      doc.text(`+${fmt2(sgr)} SGR`, W - margin, y + 4, { align: 'right' })
-      doc.setFontSize(9); doc.setTextColor(30, 30, 30)
-      y += 4
-    }
-    y += 7
-    if (y > 270) { doc.addPage(); y = 20 }
-  })
-
-  doc.setFontSize(7); doc.setTextColor(160, 160, 160)
-  doc.text('Generat de Tarifator', W / 2, 285, { align: 'center' })
-  window.open(doc.output('bloburl'), '_blank')
-}
+import { Item, RoundStep, RoundMode, emptyItem, fmt2 } from '@/lib/pricing/calc'
+import { exportPDFContabil, exportPDFMagazin } from '@/lib/pricing/pdf'
+import ItemCard from './ItemCard'
 
 export default function PricingPage() {
   const router = useRouter()
@@ -178,9 +22,10 @@ export default function PricingPage() {
   const [draftId, setDraftId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [draftSaved, setDraftSaved] = useState(false)
-
   const [scanningInvoice, setScanningInvoice] = useState(false)
   const [scanError, setScanError] = useState('')
+
+  // ── Invoice scan ──────────────────────────────────────────────────────────
 
   async function handleInvoiceScan(file: File) {
     setScanningInvoice(true)
@@ -196,7 +41,6 @@ export default function PricingPage() {
         reader.readAsDataURL(f)
       })
 
-      // redimensioneaza imaginile mari inainte de upload (max 1280px, JPEG 0.88)
       const resizeImage = (f: File): Promise<string> => new Promise((resolve, reject) => {
         const img = new Image()
         const url = URL.createObjectURL(f)
@@ -209,7 +53,7 @@ export default function PricingPage() {
           const canvas = document.createElement('canvas')
           canvas.width = w; canvas.height = h
           const ctx = canvas.getContext('2d')
-          if (!ctx) { URL.revokeObjectURL(url); reject(new Error('canvas unavailable')); return }
+          if (!ctx) { reject(new Error('canvas unavailable')); return }
           ctx.drawImage(img, 0, 0, w, h)
           resolve(canvas.toDataURL('image/jpeg', 0.88).split(',')[1])
         }
@@ -220,7 +64,6 @@ export default function PricingPage() {
       if (isImage) {
         body = { imageBase64: await resizeImage(file), mimeType: 'image/jpeg' }
       } else {
-        // PDF sau XML — trimis ca base64, textul e extras pe server
         body = { docBase64: await readBase64(file), mimeType: file.type || 'application/pdf', fileName: file.name }
       }
 
@@ -240,7 +83,8 @@ export default function PricingPage() {
           res.status === 429 ? 'Ai atins limita de 50 scanari pe zi. Revino maine.' :
           data.error === 'groq_rate_limit' ? 'Serverul AI este aglomerat. Asteapta 15 secunde si incearca din nou.' :
           data.error === 'vision_failed' ? 'Poza neclara sau unghi dificil. Incearca mai aproape, cu lumina mai buna, sau incarca PDF-ul direct.' :
-          `Eroare: ${data.error || 'necunoscuta'}`)
+          `Eroare: ${data.error || 'necunoscuta'}`
+        )
         return
       }
       if (data.supplier) setSupplier(data.supplier)
@@ -264,85 +108,13 @@ export default function PricingPage() {
     }
   }
 
+  // ── Voice input ───────────────────────────────────────────────────────────
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const audioCtxRef = useRef<AudioContext | null>(null)
   const silenceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [voiceMsg, setVoiceMsg] = useState('')
-
-  useEffect(() => {
-    const draftParam = new URLSearchParams(window.location.search).get('draft')
-    if (draftParam) {
-      async function loadDraft() {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) return
-        const { data } = await supabase.from('pricing_drafts').select('*').eq('id', draftParam).single()
-        if (!data) return
-        setDraftId(data.id)
-        setSupplier(data.supplier || '')
-        setAdaos(String(data.adaos ?? 30))
-        setRoundStep((data.round_step as RoundStep) || '0.50')
-        setRoundMode((data.round_mode as RoundMode) || 'nearest')
-        setItems(data.items?.length ? data.items.map((i: Item) => ({ ...i, sgr: i.sgr ?? '0' })) : [emptyItem(21)])
-      }
-      loadDraft()
-    } else {
-      // restaureaza doar setarile, NU produsele (produsele sunt per factura)
-      try {
-        const saved = localStorage.getItem('pricing_settings')
-        if (saved) {
-          const s = JSON.parse(saved)
-          if (s.roundStep) setRoundStep(s.roundStep)
-          if (s.roundMode) setRoundMode(s.roundMode)
-        }
-      } catch {}
-    }
-
-    // incarca contorul de calcule
-    async function loadUsage() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      const t = trialInfo(session.user.created_at)
-      if (t.isActive) return
-      const [active, calcule] = await Promise.all([isPlanActive(session.user.id), getMonthlyCalcule(session.user.id)])
-      if (!active) setUsageInfo({ calcule, limit: FREE_CALCULE_LIMIT, show: true })
-    }
-    loadUsage()
-  }, [])
-
-  async function saveDraft() {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
-    setSaving(true)
-    const title = supplier.trim() || ('Calcul ' + new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }))
-    const payload = {
-      user_id: session.user.id,
-      title,
-      supplier,
-      adaos: parseFloat(adaos) || 0,
-      round_step: roundStep,
-      round_mode: roundMode,
-      items,
-      updated_at: new Date().toISOString(),
-    }
-    if (draftId) {
-      await supabase.from('pricing_drafts').update(payload).eq('id', draftId)
-    } else {
-      const { data } = await supabase.from('pricing_drafts').insert(payload).select('id').single()
-      if (data) setDraftId(data.id)
-    }
-    setSaving(false)
-    setDraftSaved(true)
-    setTimeout(() => setDraftSaved(false), 2000)
-  }
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('pricing_settings', JSON.stringify({ roundStep, roundMode }))
-    } catch {}
-  }, [roundStep, roundMode])
-
-  const adaosNum = parseFloat(adaos) || 0
 
   function stopVoice() {
     if (silenceTimerRef.current) { clearInterval(silenceTimerRef.current); silenceTimerRef.current = null }
@@ -367,23 +139,26 @@ export default function PricingPage() {
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
       const form = new FormData()
       form.append('file', blob, 'audio.webm')
-      const tr = await fetch('/api/transcribe', { method: 'POST', body: form })
+      const { data: { session } } = await supabase.auth.getSession()
+      const authHeader: HeadersInit = session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}
+      const tr = await fetch('/api/transcribe', { method: 'POST', headers: authHeader, body: form })
       const { text } = await tr.json()
       if (!text) { setLoading(false); setVoiceMsg('Nu am prins nimic. Vorbeste mai tare sau mai aproape de microfon.'); return }
-      setVoiceMsg(`Am auzit: "${text}"`);
+      setVoiceMsg(`Am auzit: "${text}"`)
       const res = await fetch('/api/parse-pricing', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(authHeader as Record<string, string>) },
         body: JSON.stringify({ text }),
       })
       const data = await res.json()
-      const parsed: Item[] = (data.items || []).map((i: any) => ({
+      const parsed: Item[] = (data.items || []).map((i: { name: string; unit: string; supplier_price: number; discount: number; vat: number }) => ({
         id: crypto.randomUUID(),
         name: i.name || '',
         unit: i.unit || 'buc',
         supplierPrice: i.supplier_price != null && i.supplier_price !== 0 ? String(i.supplier_price) : '',
         discount: String(i.discount ?? 0),
         vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
+        sgr: '0',
       })).filter((i: Item) => i.name)
       if (parsed.length > 0) {
         setItems(prev => {
@@ -397,7 +172,6 @@ export default function PricingPage() {
       setLoading(false)
     }
 
-    // auto-stop dupa 2s de tacere
     const audioCtx = new AudioContext()
     audioCtxRef.current = audioCtx
     const analyser = audioCtx.createAnalyser()
@@ -421,6 +195,79 @@ export default function PricingPage() {
     mediaRecorder.start(); setListening(true)
   }
 
+  // ── Draft + settings persistence ─────────────────────────────────────────
+
+  useEffect(() => {
+    const draftParam = new URLSearchParams(window.location.search).get('draft')
+    if (draftParam) {
+      async function loadDraft() {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
+        const { data } = await supabase.from('pricing_drafts').select('*').eq('id', draftParam).single()
+        if (!data) return
+        setDraftId(data.id)
+        setSupplier(data.supplier || '')
+        setAdaos(String(data.adaos ?? 30))
+        setRoundStep((data.round_step as RoundStep) || '0.50')
+        setRoundMode((data.round_mode as RoundMode) || 'nearest')
+        setItems(data.items?.length ? data.items.map((i: Item) => ({ ...i, sgr: i.sgr ?? '0' })) : [emptyItem(21)])
+      }
+      loadDraft()
+    } else {
+      try {
+        const saved = localStorage.getItem('pricing_settings')
+        if (saved) {
+          const s = JSON.parse(saved)
+          if (s.roundStep) setRoundStep(s.roundStep)
+          if (s.roundMode) setRoundMode(s.roundMode)
+        }
+      } catch {}
+    }
+
+    async function loadUsage() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const t = trialInfo(session.user.created_at)
+      if (t.isActive) return
+      const [active, calcule] = await Promise.all([isPlanActive(session.user.id), getMonthlyCalcule(session.user.id)])
+      if (!active) setUsageInfo({ calcule, limit: FREE_CALCULE_LIMIT, show: true })
+    }
+    loadUsage()
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pricing_settings', JSON.stringify({ roundStep, roundMode }))
+    } catch {}
+  }, [roundStep, roundMode])
+
+  async function saveDraft() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    setSaving(true)
+    const title = supplier.trim() || ('Calcul ' + new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' }))
+    const payload = {
+      user_id: session.user.id,
+      title, supplier,
+      adaos: parseFloat(adaos) || 0,
+      round_step: roundStep,
+      round_mode: roundMode,
+      items,
+      updated_at: new Date().toISOString(),
+    }
+    if (draftId) {
+      await supabase.from('pricing_drafts').update(payload).eq('id', draftId)
+    } else {
+      const { data } = await supabase.from('pricing_drafts').insert(payload).select('id').single()
+      if (data) setDraftId(data.id)
+    }
+    setSaving(false)
+    setDraftSaved(true)
+    setTimeout(() => setDraftSaved(false), 2000)
+  }
+
+  // ── Item mutations ────────────────────────────────────────────────────────
+
   function updateItem(id: string, field: keyof Item, value: string) {
     setItems(prev => prev.map(i => {
       if (i.id !== id) return i
@@ -433,29 +280,26 @@ export default function PricingPage() {
     setItems(prev => prev.filter(i => i.id !== id))
   }
 
+  // ── Export ────────────────────────────────────────────────────────────────
+
+  const adaosNum = parseFloat(adaos) || 0
   const validItems = items.filter(i => i.name && parseFloat(i.supplierPrice) > 0)
 
   async function handleExport(exportFn: () => void) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { exportFn(); return }
-
     const t = trialInfo(session.user.created_at)
     if (!t.isActive) {
-      const [active, calcule] = await Promise.all([
-        isPlanActive(session.user.id),
-        getMonthlyCalcule(session.user.id),
-      ])
-      if (!active && calcule >= FREE_CALCULE_LIMIT) {
-        router.push('/upgrade?type=calcule')
-        return
-      }
+      const [active, calcule] = await Promise.all([isPlanActive(session.user.id), getMonthlyCalcule(session.user.id)])
+      if (!active && calcule >= FREE_CALCULE_LIMIT) { router.push('/upgrade?type=calcule'); return }
       await logCalcul(session.user.id)
       setUsageInfo(prev => prev ? { ...prev, calcule: prev.calcule + 1 } : prev)
     }
-
     await saveDraft()
     exportFn()
   }
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
@@ -567,81 +411,17 @@ export default function PricingPage() {
 
         {/* Produse */}
         <div className="space-y-3">
-          {items.map((item) => {
-            const c = item.supplierPrice ? calcItem(item, adaosNum, roundStep, roundMode) : null
-            return (
-              <div key={item.id} className="bg-white rounded-2xl shadow-sm p-3 space-y-2">
-                <div className="flex gap-2 items-center">
-                  <div className="flex-1 relative">
-                    <input className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
-                      placeholder="Denumire produs *" value={item.name}
-                      onChange={e => updateItem(item.id, 'name', e.target.value)} />
-                    {parseFloat(item.sgr) > 0 && (
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-100 text-orange-600 text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
-                        +SGR
-                      </span>
-                    )}
-                  </div>
-                  <input className="w-16 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 text-center"
-                    placeholder="UM" value={item.unit}
-                    onChange={e => updateItem(item.id, 'unit', e.target.value)} />
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className="text-xs text-gray-400 mb-0.5 block">Pret furnizor (fara SGR)</label>
-                    <input type="number" min="0" step="0.01"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
-                      placeholder="0.00" value={item.supplierPrice}
-                      onChange={e => updateItem(item.id, 'supplierPrice', e.target.value)} />
-                  </div>
-                  <div className="w-20">
-                    <label className="text-xs text-gray-400 mb-0.5 block">Disc %</label>
-                    <input type="number" min="0" max="100" step="0.5"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
-                      placeholder="0" value={item.discount}
-                      onChange={e => updateItem(item.id, 'discount', e.target.value)} />
-                  </div>
-                  <div className="w-20">
-                    <label className="text-xs text-gray-400 mb-0.5 block">SGR lei</label>
-                    <input type="number" min="0" step="0.50"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
-                      placeholder="0" value={item.sgr}
-                      onChange={e => updateItem(item.id, 'sgr', e.target.value)} />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-400">TVA:</label>
-                  <div className="flex rounded-lg overflow-hidden border border-gray-200">
-                    {([11, 21] as const).map(r => (
-                      <button key={r} onClick={() => updateItem(item.id, 'vat', String(r) as any)}
-                        className={`px-3 py-1 text-xs font-bold transition-all ${item.vat === r ? 'bg-blue-600 text-white' : 'bg-white text-gray-500'}`}>
-                        {r}%
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {c && (
-                  <div className="bg-gray-50 rounded-xl p-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                    <div className="flex justify-between"><span className="text-gray-400">Pret net furnizor</span><span className="font-medium">{fmt2(c.netPrice)} lei</span></div>
-                    <div className="flex justify-between"><span className="text-gray-400">Adaos ({adaos}%)</span><span className="font-medium">+{fmt2(c.sellExVat - c.netPrice)} lei</span></div>
-                    <div className="flex justify-between"><span className="text-gray-400">Fara TVA</span><span className="font-medium">{fmt2(c.sellExVat)} lei</span></div>
-                    <div className="flex justify-between"><span className="text-gray-400">TVA {item.vat}%</span><span className="font-medium">+{fmt2(c.vatAmt)} lei</span></div>
-                    <div className="col-span-2 flex justify-between items-center pt-1 border-t border-gray-200 mt-1">
-                      <span className="text-gray-600 font-semibold">Pret vanzare</span>
-                      <span className="text-blue-600 font-bold text-base">{fmt2(c.final)} lei/{item.unit}</span>
-                    </div>
-                    {c.sgr > 0 && (
-                      <div className="col-span-2 flex justify-between"><span className="text-orange-500 font-medium">+ Garantie SGR</span><span className="font-medium text-orange-500">+{fmt2(c.sgr)} lei (returnabil)</span></div>
-                    )}
-                  </div>
-                )}
-
-                <button onClick={() => removeItem(item.id)} className="text-xs text-red-400">Sterge</button>
-              </div>
-            )
-          })}
+          {items.map(item => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              adaos={adaosNum}
+              roundStep={roundStep}
+              roundMode={roundMode}
+              onUpdate={updateItem}
+              onRemove={removeItem}
+            />
+          ))}
         </div>
 
         <button onClick={() => setItems(prev => [...prev, emptyItem(vat)])}
@@ -663,6 +443,8 @@ export default function PricingPage() {
                 </p>
               )}
             </div>
+            {saving && <p className="text-xs text-center text-gray-400">Se salveaza...</p>}
+            {draftSaved && <p className="text-xs text-center text-green-600">Salvat!</p>}
             <div className="flex gap-3">
               <button onClick={() => handleExport(() => exportPDFContabil(validItems, adaosNum, roundStep, roundMode, supplier))}
                 className="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-xl text-sm">

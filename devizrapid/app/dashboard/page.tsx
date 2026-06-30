@@ -144,7 +144,12 @@ export default function Dashboard() {
       const blob = new Blob(chunks, { type: 'audio/webm' })
       const form = new FormData()
       form.append('file', blob, 'audio.webm')
-      const res = await fetch('/api/transcribe', { method: 'POST', body: form })
+      const { data: { session: fbSession } } = await supabase.auth.getSession()
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: fbSession?.access_token ? { 'Authorization': `Bearer ${fbSession.access_token}` } : {},
+        body: form,
+      })
       const { text } = await res.json()
       if (text) setFbText(prev => prev ? prev + ' ' + text : text)
       setFbRecording(false)

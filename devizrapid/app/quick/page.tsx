@@ -74,7 +74,12 @@ export default function QuickPage() {
       const form = new FormData()
       form.append('file', blob, 'audio.webm')
 
-      const res = await fetch('/api/transcribe', { method: 'POST', body: form })
+      const { data: { session: voiceSession } } = await supabase.auth.getSession()
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: voiceSession?.access_token ? { 'Authorization': `Bearer ${voiceSession.access_token}` } : {},
+        body: form,
+      })
       const { text } = await res.json()
 
       if (!text) { setLoading(false); return }

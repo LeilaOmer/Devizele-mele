@@ -1,0 +1,133 @@
+import jsPDF from 'jspdf'
+import { Item, RoundStep, RoundMode, calcItem, fmt2 } from './calc'
+
+const noDiac = (s: string) =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[sS]/g, 's').replace(/[tT]/g, 't')
+    .replace(/[aAa]/g, 'a').replace(/[iI]/g, 'i')
+
+const fmtDate = () =>
+  new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+export function exportPDFContabil(
+  items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string
+) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
+  const W = 297; const margin = 10; let y = 15
+
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold')
+  doc.text('Calculator Pret Vanzare', margin, y); y += 6
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100)
+  doc.text(
+    `Data: ${fmtDate()}  |  Furnizor: ${noDiac(supplier || '-')}  |  Adaos: ${adaos}%  |  Rotunjire: ${step === 'none' ? 'fara' : step + ' lei (' + (mode === 'nearest' ? 'corect' : 'in sus') + ')'}`,
+    margin, y
+  )
+  y += 8
+
+  const hasSgr = items.some(i => parseFloat(i.sgr) > 0)
+  const cols = hasSgr
+    ? [
+        { label: 'Denumire', x: margin, w: 62 },
+        { label: 'UM', x: 73, w: 10 },
+        { label: 'Pret furn.', x: 84, w: 20 },
+        { label: 'Disc%', x: 105, w: 12 },
+        { label: 'Pret net', x: 118, w: 20 },
+        { label: `Adaos ${adaos}%`, x: 139, w: 22 },
+        { label: 'F.TVA', x: 162, w: 18 },
+        { label: 'Cota', x: 181, w: 12 },
+        { label: 'TVA', x: 194, w: 18 },
+        { label: 'Vanzare', x: 213, w: 57 },
+        { label: '+SGR', x: 270, w: 17 },
+      ]
+    : [
+        { label: 'Denumire', x: margin, w: 70 },
+        { label: 'UM', x: 82, w: 12 },
+        { label: 'Pret furn.', x: 96, w: 22 },
+        { label: 'Disc%', x: 120, w: 14 },
+        { label: 'Pret net', x: 136, w: 22 },
+        { label: `Adaos ${adaos}%`, x: 160, w: 24 },
+        { label: 'F.TVA', x: 186, w: 20 },
+        { label: 'Cota', x: 208, w: 14 },
+        { label: 'TVA', x: 224, w: 20 },
+        { label: 'Pret final', x: 246, w: 24 },
+        { label: 'Rotunjit', x: 272, w: 22 },
+      ]
+
+  doc.setFillColor(240, 240, 245)
+  doc.rect(margin, y - 4, W - 2 * margin, 7, 'F')
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60)
+  cols.forEach(c => doc.text(c.label, c.x, y))
+  y += 6
+
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 30, 30)
+  items.forEach((item, idx) => {
+    const c = calcItem(item, adaos, step, mode)
+    if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6, 'F') }
+    doc.setFontSize(8)
+    const vals = hasSgr
+      ? [
+          noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
+          c.disc > 0 ? `${c.disc}%` : '-',
+          fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
+          fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt),
+          fmt2(c.final), c.sgr > 0 ? fmt2(c.sgr) : '-',
+        ]
+      : [
+          noDiac(item.name), noDiac(item.unit), fmt2(c.sp),
+          c.disc > 0 ? `${c.disc}%` : '-',
+          fmt2(c.netPrice), fmt2(c.sellExVat - c.netPrice),
+          fmt2(c.sellExVat), `${item.vat}%`, fmt2(c.vatAmt), fmt2(c.withVat), fmt2(c.final),
+        ]
+    cols.forEach((col, i) => doc.text(vals[i], col.x, y))
+    y += 6
+    if (y > 185) { doc.addPage(); y = 15 }
+  })
+
+  doc.setFontSize(7); doc.setTextColor(160, 160, 160)
+  doc.text('Generat de Tarifator', W / 2, 200, { align: 'center' })
+  window.open(doc.output('bloburl'), '_blank')
+}
+
+export function exportPDFMagazin(
+  items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string
+) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+  const W = 210; const margin = 15; let y = 20
+
+  doc.setFontSize(14); doc.setFont('helvetica', 'bold')
+  doc.text('Lista Preturi Vanzare', margin, y); y += 7
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100)
+  doc.text(`${fmtDate()}${supplier ? '  |  ' + supplier : ''}`, margin, y); y += 10
+
+  doc.setFillColor(240, 240, 245)
+  doc.rect(margin, y - 4, W - 2 * margin, 7, 'F')
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 60, 60)
+  doc.text('Denumire produs', margin, y)
+  doc.text('UM', 130, y)
+  doc.text('Pret vanzare', W - margin, y, { align: 'right' })
+  y += 7
+
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 30, 30)
+  items.forEach((item, idx) => {
+    const { final, sgr } = calcItem(item, adaos, step, mode)
+    if (idx % 2 === 0) { doc.setFillColor(252, 252, 252); doc.rect(margin, y - 3.5, W - 2 * margin, 6.5, 'F') }
+    doc.setFontSize(9)
+    doc.text(noDiac(item.name), margin, y)
+    doc.text(noDiac(item.unit), 130, y)
+    doc.setFont('helvetica', 'bold')
+    doc.text(fmt2(final) + ' RON', W - margin, y, { align: 'right' })
+    doc.setFont('helvetica', 'normal')
+    if (sgr > 0) {
+      doc.setFontSize(7); doc.setTextColor(200, 100, 0)
+      doc.text(`+${fmt2(sgr)} SGR`, W - margin, y + 4, { align: 'right' })
+      doc.setFontSize(9); doc.setTextColor(30, 30, 30)
+      y += 4
+    }
+    y += 7
+    if (y > 270) { doc.addPage(); y = 20 }
+  })
+
+  doc.setFontSize(7); doc.setTextColor(160, 160, 160)
+  doc.text('Generat de Tarifator', W / 2, 285, { align: 'center' })
+  window.open(doc.output('bloburl'), '_blank')
+}
