@@ -7,10 +7,9 @@ type Props = {
   vat: 11 | 21; onVat: (v: 11 | 21) => void
   roundStep: RoundStep; onRoundStep: (v: RoundStep) => void
   roundMode: RoundMode; onRoundMode: (v: RoundMode) => void
-  vatPayer: boolean; onVatPayer: (v: boolean) => void
 }
 
-export default function SettingsPanel({ supplier, onSupplier, adaos, onAdaos, vat, onVat, roundStep, onRoundStep, roundMode, onRoundMode, vatPayer, onVatPayer }: Props) {
+export default function SettingsPanel({ supplier, onSupplier, adaos, onAdaos, vat, onVat, roundStep, onRoundStep, roundMode, onRoundMode }: Props) {
   return (
     <div className="bg-white rounded-2xl shadow-sm p-3 space-y-3">
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Setari calcul</p>
@@ -41,22 +40,6 @@ export default function SettingsPanel({ supplier, onSupplier, adaos, onAdaos, va
         </div>
       </div>
 
-      <div>
-        <label className="text-xs font-medium text-gray-500 mb-1 block">Regim TVA firma ta</label>
-        <div className="flex rounded-xl overflow-hidden border border-gray-200">
-          <button onClick={() => onVatPayer(true)}
-            className={`flex-1 py-2.5 text-sm font-bold transition-all ${vatPayer ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}>
-            Platitor TVA
-          </button>
-          <button onClick={() => onVatPayer(false)}
-            className={`flex-1 py-2.5 text-sm font-bold transition-all ${!vatPayer ? 'bg-orange-500 text-white' : 'bg-white text-gray-600'}`}>
-            Non-platitor
-          </button>
-        </div>
-        {!vatPayer && (
-          <p className="text-[11px] text-orange-600 mt-1">TVA platit furnizorului devine cost; pretul de vanzare nu include TVA colectat.</p>
-        )}
-      </div>
 
       <div>
         <label className="text-xs font-medium text-gray-500 mb-1 block">Rotunjire pret final</label>

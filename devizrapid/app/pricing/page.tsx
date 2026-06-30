@@ -80,7 +80,6 @@ export default function PricingPage() {
           vat={vat} onVat={setVat}
           roundStep={draft.roundStep} onRoundStep={draft.setRoundStep}
           roundMode={draft.roundMode} onRoundMode={draft.setRoundMode}
-          vatPayer={draft.vatPayer} onVatPayer={draft.setVatPayer}
         />
 
         <button onClick={handleVoice}
