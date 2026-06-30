@@ -49,10 +49,10 @@ REGULI OBLIGATORII:
    - Creeaza UN SINGUR produs cu cantitatea totala (platita + gratuita) si pretul efectiv calculat.
    - Exemplu: 4608 buc x 4.22 RON + 2304 buc PROMO x 0 RON => supplier_price = 19445.76 / 6912 = 2.8133 RON.
 
-4. REGULA TVA — citeste din factura, nu deduce din categorie decat ca ultima varianta:
-   PASUL 1 — cauta cota TVA scrisa explicit per produs: coloana "Cota TVA", "%TVA", "Cota", "TVA%", sau valoarea procentuala de pe randul produsului (ex: "9%", "5%", "19%", "21%"). In XML e-Factura cauta <cbc:Percent> sau TaxPercent per linie.
-   PASUL 2 — mapeaza cota citita la 11 sau 21: 0%-15% => vat=11; 16%-25% => vat=21.
-   PASUL 3 — NUMAI daca cota TVA nu este vizibila in document (poza decupata, coloana lipsa, ambiguitate totala) => deduci din categorie: apa/alimente/bauturi nealcoolice/lemne/carti/cazare => vat=11; bauturi alcoolice/cosmetice/electrice/textile/materiale => vat=21.
+4. REGULA TVA — cotele actuale in Romania sunt 11% (redusa) si 21% (standard):
+   PASUL 1 — citeste cota TVA scrisa explicit per produs din factura: coloana "Cota TVA", "%TVA", "Cota", "TVA%", sau valoarea procentuala de pe randul produsului. In XML e-Factura cauta <cbc:Percent> sau TaxPercent per linie.
+   PASUL 2 — mapeaza la 11 sau 21: 11% => vat=11; 21% => vat=21. Facturi mai vechi (pre-2024): 9% => vat=11; 19% => vat=21.
+   PASUL 3 — NUMAI daca cota TVA nu este vizibila in document (poza decupata, coloana lipsa) => deduci din categorie: apa/alimente/bauturi nealcoolice/lemne/carti/cazare => vat=11; bauturi alcoolice/cosmetice/electrice/textile/materiale => vat=21.
    Foloseste DOAR valorile 11 sau 21 in campul JSON.
 
 5. discount — inainte de a construi JSON-ul, parcurge TOATE liniile facturii si cauta indicatori de discount:
