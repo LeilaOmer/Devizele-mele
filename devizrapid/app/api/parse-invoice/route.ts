@@ -9,8 +9,13 @@ REGULI OBLIGATORII:
    - Coloane cu pret CU TVA: "Pret TTI", "Pret unit. TTI", "Pret cu TVA", "Valoare TTI" => imparte la (1 + cota_tva/100). Ex: 2.60 lei cu TVA 11% => 2.60/1.11 = 2.3423
    - Coloane cu pret FARA TVA: "Pret RON", "Pret Ofr", "Pret net", "Pret fara TVA", "Pret unitar" => foloseste direct ca supplier_price.
    - Rotunjeste la 4 zecimale.
-   - VALIDARE OBLIGATORIE: supplier_price x cantitate trebuie sa fie aproximativ egal cu valoarea totala fara TVA din rand. Daca nu se potriveste, ai ales coloana gresita — reconsider care numar este pretul si care este cantitatea. Ex: daca ai ales 5.00 dar 5.00 x 5 = 25 nu egaleaza valoarea 71.30, atunci 5.00 este cantitatea, nu pretul; pretul este 14.26 (14.26 x 5 = 71.30 ✓).
-   - Formatul WinMENTOR are coloanele in ordinea: Cantitate | Pret unitar (fara TVA) | Valoare (fara TVA) | Valoare TVA | Procent discount. NU confunda cantitatea cu pretul.
+   - FORMAT WINMENTOR (software roman, ex: Hygiene Puls Center, facturi cu "Discount cumulat"): coloanele per rand sunt in ordinea EXACTA: Cantitate | Pret unitar (lei, fara TVA) | Valoare (lei, fara TVA) | Valoare TVA (lei) | Procent discount.
+   - supplier_price = valoarea din coloana "Pret unitar" — citeste DIRECT acel numar, nu calcula din altceva.
+   - NU aplica discount la supplier_price. Discount-ul se pune separat in campul "discount".
+   - Linia "Discount cumulat TVA XX%" de la sfarsit este un TOTAL al facturii — ignor-o complet, nu e un produs.
+   - Exemplu corect WinMENTOR: rand "KONGA HARD Buc 5,00 14,00 70,00 14,70 -15%" => supplier_price=14.00, discount=15, validare: 14.00 x 5 = 70.00 ✓
+   - Exemplu corect WinMENTOR: rand "EFEKT BAIE 1L Buc 5,00 14,26 71,30 14,97 -15%" => supplier_price=14.26, discount=15, validare: 14.26 x 5 = 71.30 ✓
+   - VALIDARE: supplier_price x cantitate ≈ valoare_fara_TVA. Daca nu se potriveste, ai ales coloana gresita.
 
 2. SGR (Sistemul Garantie-Returnare) — CERINTA LEGALA, nu se ignora:
    - SGR = 0.50 lei fix per unitate de ambalaj returnabil. NU face parte din pretul produsului.
