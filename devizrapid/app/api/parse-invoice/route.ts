@@ -145,11 +145,12 @@ export async function POST(req: NextRequest) {
   try {
     if (body.imageBase64) {
       const messages = [
+        { role: 'system', content: SYSTEM_PROMPT },
         {
           role: 'user',
           content: [
             { type: 'image_url', image_url: { url: `data:${body.mimeType || 'image/jpeg'};base64,${body.imageBase64}` } },
-            { type: 'text', text: SYSTEM_PROMPT },
+            { type: 'text', text: 'Extrage furnizorul si produsele din aceasta factura conform regulilor.' },
           ],
         },
       ]
