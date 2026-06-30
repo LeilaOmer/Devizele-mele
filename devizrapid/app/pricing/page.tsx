@@ -175,10 +175,12 @@ export default function PricingPage() {
 
   const [scanningInvoice, setScanningInvoice] = useState(false)
   const [scanError, setScanError] = useState('')
+  const [debugRaw, setDebugRaw] = useState('')
 
   async function handleInvoiceScan(file: File) {
     setScanningInvoice(true)
     setScanError('')
+    setDebugRaw('')
     try {
       const isImage = file.type.startsWith('image/')
       let body: Record<string, string>
@@ -234,6 +236,7 @@ export default function PricingPage() {
           `Eroare: ${data.error || 'necunoscuta'}`)
         return
       }
+      if (data._debug_raw) setDebugRaw(data._debug_raw)
       if (data.supplier) setSupplier(data.supplier)
       if (data.items?.length) {
         setItems(data.items.map((i: { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number }) => ({
@@ -492,6 +495,7 @@ export default function PricingPage() {
           </div>
         )}
         {scanError && <p className="text-xs text-red-500 text-center -mt-1">{scanError}</p>}
+        {debugRaw && <pre className="text-[10px] bg-gray-100 p-2 rounded-xl overflow-x-auto whitespace-pre-wrap break-all">{debugRaw}</pre>}
 
         {/* Setari */}
         <div className="bg-white rounded-2xl shadow-sm p-3 space-y-3">
