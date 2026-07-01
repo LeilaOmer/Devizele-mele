@@ -137,6 +137,15 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
         return
       }
 
+      // Daca prima incercare a esuat din lipsa de cota (rate limit sau buget de
+      // tokeni epuizat), NU mai trimitem inca 2 cereri (jumatatile) — ar esua
+      // garantat la fel si ar arde si mai mult din cota deja epuizata, in loc
+      // sa ajute cu ceva. Splitarea are sens doar cand poza n-a putut fi citita.
+      if (!first.ok && (first.data.error === 'groq_rate_limit' || first.data.error === 'groq_too_large')) {
+        setError(errorMessage(first.status, first.data))
+        return
+      }
+
       // Prima incercare a esuat sau nu a gasit nimic — factura e probabil
       // prea lunga/densa pentru o singura poza. Incercam impartita in 2.
       const [topImage, bottomImage] = await splitImageIntoHalves(file)
