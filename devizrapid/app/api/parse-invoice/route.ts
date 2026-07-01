@@ -340,7 +340,9 @@ export async function POST(req: NextRequest) {
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: text.slice(0, 8000) },
     ]
-    const raw = await callGroq('llama-3.3-70b-versatile', messages, 8192)
+    // max_tokens e rezervat integral din bugetul TPM de Groq inainte sa vada raspunsul real,
+    // deci trebuie tinut jos ca sa incapa alaturi de system prompt-ul, care a crescut cu regulile noi.
+    const raw = await callGroq('llama-3.3-70b-versatile', messages, 4096)
     const parsed = parseJson(raw)
     const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '')
     const result = validateAndSanitize(parsed, knownRatios)
