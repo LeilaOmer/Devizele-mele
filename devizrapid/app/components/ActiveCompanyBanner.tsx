@@ -19,7 +19,7 @@ useEffect(() => {
   check()
 }, [pathname])
 
-  const publicPages = ['/', '/termeni', '/confidentialitate', '/upgrade']
+  const publicPages = ['/', '/termeni', '/confidentialitate', '/upgrade', '/dashboard', '/pricing', '/calcule']
   if (!name || publicPages.includes(pathname)) return null
 
   return (
