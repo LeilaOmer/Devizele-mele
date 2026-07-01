@@ -68,7 +68,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-28">
+    <div className="min-h-screen bg-gray-50 pb-32">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between shadow-sm">
         <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
           <span className="text-2xl leading-none">‹</span>
@@ -96,9 +96,9 @@ export default function PricingPage() {
           className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${listening ? 'bg-red-500 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}>
           {listening ? '🔴 Opreste inregistrarea' : '🎤 Dicteaza produse de pe factura'}
         </button>
-        {loading && <p className="text-center text-sm text-gray-400">Procesez...</p>}
+        {loading && <p className="text-center text-base text-gray-500 font-medium">Procesez...</p>}
         {!loading && voiceMsg && (
-          <p className={`text-center text-sm ${voiceMsg.startsWith('Nu') ? 'text-red-400' : 'text-green-600'}`}>{voiceMsg}</p>
+          <p className={`text-center text-base font-medium ${voiceMsg.startsWith('Nu') ? 'text-red-500' : 'text-green-600'}`}>{voiceMsg}</p>
         )}
 
         <div className="space-y-3">
@@ -118,7 +118,7 @@ export default function PricingPage() {
         </div>
 
         <button onClick={() => draft.setItems(prev => [...prev, emptyItem(draft.defaultVat)])}
-          className="w-full py-3 border-2 border-dashed border-gray-200 rounded-2xl text-sm font-semibold text-gray-500">
+          className="w-full py-4 border-2 border-dashed border-gray-300 rounded-2xl text-base font-bold text-gray-600">
           + Adauga produs manual
         </button>
       </div>

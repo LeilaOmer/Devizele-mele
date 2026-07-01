@@ -57,23 +57,23 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-3 space-y-2">
+    <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
       <div className="flex gap-2 items-center">
         <div className="flex-1 relative">
           <input
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+            className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base text-gray-900 font-medium"
             placeholder="Denumire produs *"
             value={item.name}
             onChange={e => onUpdate(item.id, 'name', e.target.value)}
           />
           {parseFloat(item.sgr) > 0 && (
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-100 text-orange-600 text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-orange-100 text-orange-700 text-xs font-bold px-2 py-1 rounded-md leading-none">
               +SGR
             </span>
           )}
         </div>
         <input
-          className="w-16 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 text-center"
+          className="w-20 border-2 border-gray-200 rounded-xl px-2 py-3 text-base text-gray-900 text-center font-medium"
           placeholder="UM"
           value={item.unit}
           onChange={e => onUpdate(item.id, 'unit', e.target.value)}
@@ -82,30 +82,30 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
 
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="text-xs text-gray-400 mb-0.5 block">Pret furnizor (fara SGR)</label>
+          <label className="text-sm text-gray-600 font-medium mb-1 block">Pret furnizor (fara SGR)</label>
           <input
             type="number" min="0" step="0.01"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+            className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base text-gray-900 font-semibold"
             placeholder="0.00"
             value={item.supplierPrice}
             onChange={e => onUpdate(item.id, 'supplierPrice', e.target.value)}
           />
         </div>
-        <div className="w-20">
-          <label className="text-xs text-gray-400 mb-0.5 block">Disc %</label>
+        <div className="w-24">
+          <label className="text-sm text-gray-600 font-medium mb-1 block">Disc %</label>
           <input
             type="number" min="0" max="100" step="0.5"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+            className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base text-gray-900 font-semibold"
             placeholder="0"
             value={item.discount}
             onChange={e => onUpdate(item.id, 'discount', e.target.value)}
           />
         </div>
-        <div className="w-20">
-          <label className="text-xs text-gray-400 mb-0.5 block">SGR lei</label>
+        <div className="w-24">
+          <label className="text-sm text-gray-600 font-medium mb-1 block">SGR lei</label>
           <input
             type="number" min="0" step="0.50"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+            className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base text-gray-900 font-semibold"
             placeholder="0"
             value={item.sgr}
             onChange={e => onUpdate(item.id, 'sgr', e.target.value)}
@@ -113,14 +113,14 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-400">TVA:</label>
-        <div className="flex rounded-lg overflow-hidden border border-gray-200">
+      <div className="flex items-center gap-3">
+        <label className="text-sm text-gray-600 font-medium">TVA:</label>
+        <div className="flex rounded-xl overflow-hidden border-2 border-gray-200">
           {([11, 21] as const).map(r => (
             <button
               key={r}
               onClick={() => onUpdate(item.id, 'vat', String(r))}
-              className={`px-3 py-1 text-xs font-bold transition-all ${item.vat === r ? 'bg-blue-600 text-white' : 'bg-white text-gray-500'}`}
+              className={`px-4 py-2 text-base font-bold transition-all ${item.vat === r ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
             >
               {r}%
             </button>
@@ -129,93 +129,93 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
       </div>
 
       {c && (
-        <div className="bg-gray-50 rounded-xl p-3 space-y-1 text-xs">
+        <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-base">
           {c.vatPayer ? (
             <>
               <div className="flex justify-between">
-                <span className="text-gray-400">Pret net furnizor</span>
-                <span className="font-medium">{fmt2(c.netPrice)} lei</span>
+                <span className="text-gray-500">Pret net furnizor</span>
+                <span className="font-semibold text-gray-800">{fmt2(c.netPrice)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Adaos ({adaos}%)</span>
-                <span className="font-medium">+{fmt2(c.sellExVat - c.netPrice)} lei</span>
+                <span className="text-gray-500">Adaos ({adaos}%)</span>
+                <span className="font-semibold text-gray-800">+{fmt2(c.sellExVat - c.netPrice)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Fara TVA</span>
-                <span className="font-medium">{fmt2(c.sellExVat)} lei</span>
+                <span className="text-gray-500">Fara TVA</span>
+                <span className="font-semibold text-gray-800">{fmt2(c.sellExVat)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">TVA {item.vat}%</span>
-                <span className="font-medium">+{fmt2(c.vatAmt)} lei</span>
+                <span className="text-gray-500">TVA {item.vat}%</span>
+                <span className="font-semibold text-gray-800">+{fmt2(c.vatAmt)} lei</span>
               </div>
             </>
           ) : (
             <>
               <div className="flex justify-between">
-                <span className="text-gray-400">Pret net furnizor</span>
-                <span className="font-medium">{fmt2(c.netPrice)} lei</span>
+                <span className="text-gray-500">Pret net furnizor</span>
+                <span className="font-semibold text-gray-800">{fmt2(c.netPrice)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-orange-500">TVA furnizor {item.vat}% (cost)</span>
-                <span className="font-medium text-orange-500">+{fmt2(c.inVatAmt)} lei</span>
+                <span className="text-orange-600 font-medium">TVA furnizor {item.vat}% (cost)</span>
+                <span className="font-semibold text-orange-600">+{fmt2(c.inVatAmt)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Pret de intrare</span>
-                <span className="font-medium">{fmt2(c.costWithVat)} lei</span>
+                <span className="text-gray-500">Pret de intrare</span>
+                <span className="font-semibold text-gray-800">{fmt2(c.costWithVat)} lei</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Adaos ({adaos}%)</span>
-                <span className="font-medium">+{fmt2(c.adaosAmt)} lei</span>
+                <span className="text-gray-500">Adaos ({adaos}%)</span>
+                <span className="font-semibold text-gray-800">+{fmt2(c.adaosAmt)} lei</span>
               </div>
             </>
           )}
-          <div className="flex justify-between items-center pt-1 border-t border-gray-200 mt-1">
-            <span className="text-gray-600 font-semibold">Pret vanzare</span>
-            <span className="text-blue-600 font-bold text-base">{fmt2(c.final)} lei/{item.unit}</span>
+          <div className="flex justify-between items-center pt-2 border-t-2 border-gray-200 mt-2">
+            <span className="text-gray-700 font-bold">Pret vanzare</span>
+            <span className="text-blue-600 font-black text-2xl">{fmt2(c.final)} lei/{item.unit}</span>
           </div>
           {c.sgr > 0 && (
             <div className="flex justify-between">
-              <span className="text-orange-500 font-medium">+ Garantie SGR</span>
-              <span className="font-medium text-orange-500">+{fmt2(c.sgr)} lei (returnabil)</span>
+              <span className="text-orange-600 font-semibold">+ Garantie SGR</span>
+              <span className="font-semibold text-orange-600">+{fmt2(c.sgr)} lei (returnabil)</span>
             </div>
           )}
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <button onClick={() => onRemove(item.id)} className="text-xs text-red-400">
+      <div className="flex items-center justify-between pt-1">
+        <button onClick={() => onRemove(item.id)} className="text-sm text-red-500 font-semibold">
           Sterge
         </button>
-        <button onClick={() => setBoxFormOpen(v => !v)} className="text-xs text-purple-500 font-medium">
+        <button onClick={() => setBoxFormOpen(v => !v)} className="text-sm text-purple-600 font-semibold">
           {boxFormOpen ? 'Inchide' : '📦 Corecteaza cutie/bucata'}
         </button>
       </div>
 
       {boxFormOpen && (
-        <div className="bg-purple-50 rounded-xl p-3 space-y-2">
-          <p className="text-xs text-purple-700">
+        <div className="bg-purple-50 rounded-xl p-4 space-y-3">
+          <p className="text-sm text-purple-800">
             Daca pretul de mai sus e gresit pentru ca produsul vine in cutie/bax, completeaza aici pretul cutiei intregi (fara TVA) si cate bucati contine — corectam pretul acum si retinem raportul pentru viitoarele scanari de la acest furnizor.
           </p>
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="text-xs text-gray-500 mb-0.5 block">Pret cutie (fara TVA)</label>
+              <label className="text-sm text-gray-600 font-medium mb-1 block">Pret cutie (fara TVA)</label>
               <input type="number" min="0" step="0.01"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base text-gray-900 font-semibold"
                 placeholder="0.00" value={boxPrice} onChange={e => setBoxPrice(e.target.value)} />
             </div>
             <div className="w-28">
-              <label className="text-xs text-gray-500 mb-0.5 block">Bucati/cutie</label>
+              <label className="text-sm text-gray-600 font-medium mb-1 block">Bucati/cutie</label>
               <input type="number" min="2" step="1"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base text-gray-900 font-semibold"
                 placeholder="24" value={boxPieces} onChange={e => setBoxPieces(e.target.value)} />
             </div>
           </div>
           {!supplier.trim() && (
-            <p className="text-xs text-amber-600">Fara furnizor completat mai sus, pretul se corecteaza dar raportul nu se retine pentru viitor.</p>
+            <p className="text-sm text-amber-700">Fara furnizor completat mai sus, pretul se corecteaza dar raportul nu se retine pentru viitor.</p>
           )}
-          {boxError && <p className="text-xs text-red-500">{boxError}</p>}
+          {boxError && <p className="text-sm text-red-600">{boxError}</p>}
           <button onClick={saveBoxRatio} disabled={boxSaving}
-            className={`w-full py-2 rounded-xl text-sm font-semibold text-white disabled:bg-gray-300 ${boxSaved ? 'bg-green-500' : 'bg-purple-600'}`}>
+            className={`w-full py-3 rounded-xl text-base font-bold text-white disabled:bg-gray-300 ${boxSaved ? 'bg-green-500' : 'bg-purple-600'}`}>
             {boxSaved ? '✓ Salvat!' : boxSaving ? 'Se salveaza...' : 'Corecteaza si retine'}
           </button>
         </div>

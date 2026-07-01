@@ -9,7 +9,26 @@ const upper = (s: string) => noDiac(s).toUpperCase()
 const fmtDate = () =>
   new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-export function exportPDFContabil(
+// Deschide direct fisa de partajare nativa (WhatsApp, email, etc.) cu PDF-ul
+// atasat, in loc sa deschida un tab de browser din care trebuie ales manual
+// "deschide ca PDF" inainte sa poata fi trimis mai departe.
+async function shareOrOpenPdf(doc: import('jspdf').jsPDF, filename: string) {
+  const blob = doc.output('blob')
+  if (typeof navigator !== 'undefined' && 'share' in navigator && 'canShare' in navigator) {
+    const file = new File([blob], filename, { type: 'application/pdf' })
+    if (navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] })
+        return
+      } catch {
+        return // utilizatorul a anulat partajarea — nu mai deschidem alt tab peste asta
+      }
+    }
+  }
+  window.open(URL.createObjectURL(blob), '_blank')
+}
+
+export async function exportPDFContabil(
   items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string, vatPayer = true
 ) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
@@ -131,10 +150,10 @@ export function exportPDFContabil(
 
   doc.setFontSize(7); doc.setTextColor(160, 160, 160)
   doc.text('Generat de Tarifator', W / 2, 200, { align: 'center' })
-  window.open(doc.output('bloburl'), '_blank')
+  await shareOrOpenPdf(doc, `Calcul-Contabil-${fmtDate()}.pdf`)
 }
 
-export function exportPDFMagazin(
+export async function exportPDFMagazin(
   items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string, vatPayer = true
 ) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
@@ -175,5 +194,5 @@ export function exportPDFMagazin(
 
   doc.setFontSize(7); doc.setTextColor(160, 160, 160)
   doc.text('Generat de Tarifator', W / 2, 285, { align: 'center' })
-  window.open(doc.output('bloburl'), '_blank')
+  await shareOrOpenPdf(doc, `Lista-Preturi-${fmtDate()}.pdf`)
 }
