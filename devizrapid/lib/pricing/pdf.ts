@@ -9,11 +9,13 @@ const upper = (s: string) => noDiac(s).toUpperCase()
 const fmtDate = () =>
   new Date().toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-// Deschide direct fisa de partajare nativa (WhatsApp, email, etc.) cu PDF-ul
-// atasat, in loc sa deschida un tab de browser din care trebuie ales manual
-// "deschide ca PDF" inainte sa poata fi trimis mai departe.
-async function shareOrOpenPdf(doc: import('jspdf').jsPDF, filename: string) {
-  const blob = doc.output('blob')
+export type PdfResult = { blob: Blob; filename: string }
+
+// Deschide fisa de partajare nativa (WhatsApp, email, etc.) cu PDF-ul atasat,
+// in loc sa deschida un tab de browser din care trebuie ales manual "deschide
+// ca PDF" inainte sa poata fi trimis mai departe. Apelata din pagina, dupa ce
+// utilizatorul a vazut preview-ul si a apasat efectiv "Trimite".
+export async function sharePdfBlob({ blob, filename }: PdfResult) {
   if (typeof navigator !== 'undefined' && 'share' in navigator && 'canShare' in navigator) {
     const file = new File([blob], filename, { type: 'application/pdf' })
     if (navigator.canShare({ files: [file] })) {
@@ -30,7 +32,7 @@ async function shareOrOpenPdf(doc: import('jspdf').jsPDF, filename: string) {
 
 export async function exportPDFContabil(
   items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string, vatPayer = true
-) {
+): Promise<PdfResult> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' })
   const W = 297; const margin = 10; let y = 15
 
@@ -150,12 +152,12 @@ export async function exportPDFContabil(
 
   doc.setFontSize(7); doc.setTextColor(160, 160, 160)
   doc.text('Generat de Tarifator', W / 2, 200, { align: 'center' })
-  await shareOrOpenPdf(doc, `Calcul-Contabil-${fmtDate()}.pdf`)
+  return { blob: doc.output('blob'), filename: `Calcul-Contabil-${fmtDate()}.pdf` }
 }
 
 export async function exportPDFMagazin(
   items: Item[], adaos: number, step: RoundStep, mode: RoundMode, supplier: string, vatPayer = true
-) {
+): Promise<PdfResult> {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const W = 210; const margin = 15; let y = 20
 
@@ -194,5 +196,5 @@ export async function exportPDFMagazin(
 
   doc.setFontSize(7); doc.setTextColor(160, 160, 160)
   doc.text('Generat de Tarifator', W / 2, 285, { align: 'center' })
-  await shareOrOpenPdf(doc, `Lista-Preturi-${fmtDate()}.pdf`)
+  return { blob: doc.output('blob'), filename: `Lista-Preturi-${fmtDate()}.pdf` }
 }
