@@ -44,7 +44,7 @@ async function getKnownRatios(supplierName: string): Promise<Map<string, number>
   return map
 }
 
-const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura sau aviz) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
+const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura, aviz sau bon fiscal de la casa de marcat) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
 Format: {"supplier":"Nume Furnizor SRL","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","price_raw":0,"price_includes_vat":false,"already_per_piece":true,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0}]}
 
 IMPORTANT — rolul tau e sa CITESTI si sa CLASIFICI, NU sa calculezi. Orice impartire, conversie de TVA sau calcul de pret se face separat, automat, dupa ce raspunzi tu. Tu doar:
@@ -150,7 +150,22 @@ REGULI OBLIGATORII:
    PASUL 3 — DACA tot nu gasesti niciun raport (nici in denumire, nici la un produs asemanator din factura) — produsul e descris DOAR prin greutate/volum total al ambalajului (ex: "1.3 KG", "450 GR"), fara nicio bucata individuala mentionata nicaieri => pieces_per_box = 1 (produsul se vinde ca intreaga cutie/bax, unitate unica).
       Exemplu: "JUMBO 1.3 KG NAP DOINA" => pieces_per_box = 1.
 
-   IMPORTANT: NU imparti tu pretul la pieces_per_box, NU calcula pretul per bucata — doar raporteaza numarul gasit (sau 1 daca nu exista), impartirea se face automat dupa.`
+   IMPORTANT: NU imparti tu pretul la pieces_per_box, NU calcula pretul per bucata — doar raporteaza numarul gasit (sau 1 daca nu exista), impartirea se face automat dupa.
+
+9. BON FISCAL (bon de la casa de marcat, ex: Lidl, Kaufland, Auchan, Profi) — format DIFERIT de factura/aviz:
+   RECUNOASTERE: antet cu "S.C. ... S.R.L.", "Cod Fiscal C.I.F.", textul "BON FISCAL" undeva in document. Structura per produs e INVERSATA fata de o factura clasica: mai intai o linie cu "cantitate  UM x pret_unitar", APOI pe linia urmatoare denumirea produsului + valoarea totala a liniei + o litera de categorie TVA (A, B, C sau D) la capatul liniei.
+   Exemplu 2 linii pentru UN singur produs: "2,000  BUC x 14,75" urmata de "Selectie de nuci sort.        29,50 B" => produsul e "Selectie de nuci sort.", UM=buc, pret_unitar=14,75 (2 x 14,75 = 29,50 confirma linia), categorie TVA=B.
+
+   PRETUL DE PE BON E INTOTDEAUNA CU TVA INCLUS: price_includes_vat = true la TOATE produsele de pe un bon fiscal (spre deosebire de facturi, unde poate fi si fara TVA).
+   price_raw = pretul UNITAR (numarul de dupa "x" pe linia de cantitate), NU valoarea totala a liniei produsului.
+
+   already_per_piece = true si pieces_per_box = 1 la TOATE produsele de pe un bon fiscal, INDIFERENT de UM (chiar si la KG) — un bon fiscal de la casa de marcat nu vinde niciodata cutii/baxuri de impartit, fiecare linie e deja unitatea platita efectiv de client.
+
+   CATEGORII TVA (litera de la capatul liniei produsului, A/B/C/D) — NU presupune ce procent inseamna fiecare litera pe dinafara. Citeste-o DIN LEGENDA tiparita la finalul ACESTUI bon, unde apare explicit lista "TVA A XX,XX%", "TVA B XX,XX%", "TVA C XX,XX%", "TVA D XX,XX%" (mapajul poate diferi intre magazine/case de marcat). Construieste maparea litera->procent din acea legenda, aplica-o fiecarui produs dupa litera lui, apoi mapeaza procentul rezultat la 11 sau 21 conform Regulii 4 Pasul 2.
+
+   LINIE FARA DENUMIRE DE PRODUS (doar o valoare + o litera, ex: "0,50 D", aparuta imediat dupa linia unui produs, fara niciun text) => este GARANTIA SGR (ambalaj returnabil) a produsului de DEASUPRA ei, NU un produs separat si NU o cere ca linie noua in "items". Seteaza sgr=0.50 la produsul anterior in loc.
+
+   Randurile "Subtotal", "TOTAL", "TOTAL TVA", "CARD", "TRANZACTIE CARD", "DATA", "ORA", "Casa:", "Mg", "Tz", "BON FISCAL", mesaje de multumire => NU sunt produse, ignora-le complet.`
 
 async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -291,7 +306,7 @@ export async function POST(req: NextRequest) {
           role: 'user',
           content: [
             { type: 'image_url', image_url: { url: `data:${body.mimeType || 'image/jpeg'};base64,${body.imageBase64}` } },
-            { type: 'text', text: 'Extrage furnizorul si produsele din aceasta factura conform regulilor.' },
+            { type: 'text', text: 'Extrage furnizorul si produsele din acest document (factura, aviz sau bon fiscal) conform regulilor.' },
           ],
         },
       ]
