@@ -72,11 +72,15 @@ function mapItems(apiItems: ApiItem[]): Item[] {
   }))
 }
 
+// Cheia e doar denumirea (nu si pretul): cand combinam poza intreaga cu cele
+// doua jumatati, acelasi produs poate iesi cu preturi usor diferite intre surse
+// (una citita mai bine ca alta) — vrem UN singur exemplar, nu unul per varianta
+// de pret citita, altfel factura densa ar aparea cu produse duplicate.
 function dedupeItems(items: Item[]): Item[] {
   const seen = new Set<string>()
   const out: Item[] = []
   for (const item of items) {
-    const key = item.name.trim().toLowerCase().replace(/\s+/g, ' ') + '|' + (Math.round(parseFloat(item.supplierPrice || '0') * 100) / 100)
+    const key = item.name.trim().toLowerCase().replace(/\s+/g, ' ')
     if (seen.has(key)) continue
     seen.add(key)
     out.push(item)
@@ -132,22 +136,23 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
 
       const fullImage = await resizeImage(file)
       const first = await callApi({ imageBase64: fullImage, mimeType: 'image/jpeg' }, token)
-      if (first.ok && first.data.items?.length) {
-        onSuccess({ supplier: first.data.supplier || '', items: mapItems(first.data.items) })
-        return
-      }
 
       // Daca prima incercare a esuat din lipsa de cota (rate limit sau buget de
       // tokeni epuizat), NU mai trimitem inca 2 cereri (jumatatile) — ar esua
       // garantat la fel si ar arde si mai mult din cota deja epuizata, in loc
-      // sa ajute cu ceva. Splitarea are sens doar cand poza n-a putut fi citita.
+      // sa ajute cu ceva.
       if (!first.ok && (first.data.error === 'groq_rate_limit' || first.data.error === 'groq_too_large')) {
         setError(errorMessage(first.status, first.data))
         return
       }
 
-      // Prima incercare a esuat sau nu a gasit nimic — factura e probabil
-      // prea lunga/densa pentru o singura poza. Incercam impartita in 2.
+      // Rulam MEREU si varianta impartita in 2, chiar daca poza intreaga a
+      // "reusit" (a gasit niste produse) — o factura densa poate fi citita
+      // partial (unele randuri ratate din poza intreaga la rezolutie mai mica),
+      // iar jumatatile citite la rezolutie mai mare per rand prind adesea
+      // produse ratate de prima incercare. Costul in tokeni e mic (cativa
+      // centi), dar un rezultat incomplet la o singura scanare din putinele
+      // disponibile pe luna e mult mai rau.
       const [topImage, bottomImage] = await splitImageIntoHalves(file)
       const [topRes, bottomRes] = await Promise.all([
         callApi({ imageBase64: topImage, mimeType: 'image/jpeg' }, token),
@@ -155,17 +160,18 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       ])
 
       const combinedItems = [
+        ...(first.ok ? first.data.items || [] : []),
         ...(topRes.data.items || []),
         ...(bottomRes.data.items || []),
       ]
-      const supplier = topRes.data.supplier || bottomRes.data.supplier || ''
+      const supplier = first.data.supplier || topRes.data.supplier || bottomRes.data.supplier || ''
 
       if (combinedItems.length > 0) {
         onSuccess({ supplier, items: dedupeItems(mapItems(combinedItems)) })
         return
       }
 
-      // Nici impartit nu a mers — arata eroarea cea mai relevanta dintre cele 3 incercari.
+      // Nici una din cele 3 nu a mers — arata eroarea cea mai relevanta.
       const fallback = !first.ok ? first : (!topRes.ok ? topRes : bottomRes)
       setError(errorMessage(fallback.status, fallback.data))
     } catch {
