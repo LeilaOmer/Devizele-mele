@@ -19,6 +19,11 @@ export default function QuotesPage() {
   const [title, setTitle] = useState('')
   const [clientId, setClientId] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showClientModal, setShowClientModal] = useState(false)
+  const [clientForm, setClientForm] = useState({ name: '', cui: '', address: '', contact_person: '', phone: '', email: '' })
+  const [savingClient, setSavingClient] = useState(false)
+  const [lookingUp, setLookingUp] = useState(false)
+  const [anafError, setAnafError] = useState('')
   const router = useRouter()
 
   useEffect(() => {
@@ -78,6 +83,38 @@ async function fetchData() {
     router.push(`/quotes/${data.id}`)
   }
 
+  async function lookupAnaf(cui: string) {
+    const cuiNum = cui.replace(/[^0-9]/g, '')
+    if (!cuiNum) return
+    setLookingUp(true)
+    setAnafError('')
+    try {
+      const res = await fetch(`/api/anaf-lookup?cui=${cuiNum}`)
+      const data = await res.json()
+      if (!res.ok) { setAnafError(data.error || 'Eroare ANAF'); return }
+      setClientForm(f => ({ ...f, name: data.name || f.name, address: data.address || f.address }))
+    } catch {
+      setAnafError('Eroare conexiune')
+    } finally {
+      setLookingUp(false)
+    }
+  }
+
+  async function handleAddClient() {
+    if (!clientForm.name) return
+    setSavingClient(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { setSavingClient(false); return }
+    const { data, error } = await supabase.from('clients').insert({ ...clientForm, user_id: session.user.id }).select().single()
+    setSavingClient(false)
+    if (error || !data) { alert('Nu s-a adaugat beneficiarul: ' + (error?.message || 'eroare necunoscuta')); return }
+    setClients(prev => [...prev, { id: data.id, name: data.name }].sort((a, b) => a.name.localeCompare(b.name)))
+    setClientId(data.id)
+    setClientForm({ name: '', cui: '', address: '', contact_person: '', phone: '', email: '' })
+    setAnafError('')
+    setShowClientModal(false)
+  }
+
   async function handleDelete(id: string) {
     const { error } = await supabase.from('quotes').delete().eq('id', id)
     if (error) { alert('Nu s-a sters fisa: ' + error.message); return }
@@ -135,11 +172,17 @@ const filteredQuotes = filterCompanyId === 'all' || !filterCompanyId
           )}
           <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
             placeholder="Titlu fisa" value={title} onChange={e => setTitle(e.target.value)} />
-          <select className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
-            value={clientId} onChange={e => setClientId(e.target.value)}>
-            <option value="">Fara client</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <div className="flex gap-2">
+            <select className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              value={clientId} onChange={e => setClientId(e.target.value)}>
+              <option value="">Fara client</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <button onClick={() => setShowClientModal(true)}
+              className="px-4 py-3 bg-purple-100 text-purple-700 rounded-xl text-sm font-semibold shrink-0 whitespace-nowrap">
+              + Beneficiar nou
+            </button>
+          </div>
           <button onClick={handleCreate} disabled={loading || !title}
             className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
             {loading ? 'Se creeaza...' : '+ Creeaza fisa'}
@@ -176,6 +219,41 @@ const filteredQuotes = filterCompanyId === 'all' || !filterCompanyId
         </div>
 
       </div>
+
+      {showClientModal && (
+        <div className="fixed inset-0 bg-black/40 z-30 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-gray-800">Beneficiar nou</p>
+              <button onClick={() => { setShowClientModal(false); setAnafError('') }} className="text-gray-400 text-xl leading-none">×</button>
+            </div>
+            <div className="flex gap-2">
+              <input className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+                placeholder="CUI (optional)" value={clientForm.cui} onChange={e => { setClientForm({ ...clientForm, cui: e.target.value }); setAnafError('') }} />
+              <button onClick={() => lookupAnaf(clientForm.cui)}
+                disabled={lookingUp || !clientForm.cui}
+                className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold disabled:bg-gray-300 shrink-0 whitespace-nowrap">
+                {lookingUp ? '...' : 'Cauta ANAF'}
+              </button>
+            </div>
+            {anafError && <p className="text-xs text-red-500 -mt-1">{anafError}</p>}
+            <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="Nume / Denumire firma *" value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} />
+            <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="Adresa" value={clientForm.address} onChange={e => setClientForm({ ...clientForm, address: e.target.value })} />
+            <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="Persoana de contact" value={clientForm.contact_person} onChange={e => setClientForm({ ...clientForm, contact_person: e.target.value })} />
+            <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="Telefon" value={clientForm.phone} onChange={e => setClientForm({ ...clientForm, phone: e.target.value })} />
+            <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="Email" value={clientForm.email} onChange={e => setClientForm({ ...clientForm, email: e.target.value })} />
+            <button onClick={handleAddClient} disabled={savingClient || !clientForm.name}
+              className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
+              {savingClient ? 'Se adauga...' : '+ Adauga beneficiar'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

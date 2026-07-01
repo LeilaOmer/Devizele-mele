@@ -214,6 +214,11 @@ export default function QuoteDetailPage() {
   const [discountType, setDiscountType] = useState<"pct" | "val">("pct");
   const [savedDiscount, setSavedDiscount] = useState<string>("0");
   const [savedDiscountType, setSavedDiscountType] = useState<"pct" | "val">("pct");
+  const [showClientModal, setShowClientModal] = useState(false);
+  const [clientForm, setClientForm] = useState({ name: "", cui: "", address: "", contact_person: "", phone: "", email: "" });
+  const [savingClient, setSavingClient] = useState(false);
+  const [lookingUpAnaf, setLookingUpAnaf] = useState(false);
+  const [anafError, setAnafError] = useState("");
 
   const loadQuote = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -256,6 +261,39 @@ export default function QuoteDetailPage() {
   }, [id]);
 
   useEffect(() => { loadQuote(); }, [loadQuote]);
+
+  async function lookupAnaf(cui: string) {
+    const cuiNum = cui.replace(/[^0-9]/g, "");
+    if (!cuiNum) return;
+    setLookingUpAnaf(true);
+    setAnafError("");
+    try {
+      const res = await fetch(`/api/anaf-lookup?cui=${cuiNum}`);
+      const data = await res.json();
+      if (!res.ok) { setAnafError(data.error || "Eroare ANAF"); return; }
+      setClientForm(f => ({ ...f, name: data.name || f.name, address: data.address || f.address }));
+    } catch {
+      setAnafError("Eroare conexiune");
+    } finally {
+      setLookingUpAnaf(false);
+    }
+  }
+
+  async function handleAddClient() {
+    if (!clientForm.name || !quote) return;
+    setSavingClient(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSavingClient(false); return; }
+    const { data: newClient, error: clientErr } = await supabase.from("clients").insert({ ...clientForm, user_id: user.id }).select().single();
+    if (clientErr || !newClient) { setSavingClient(false); alert("Nu s-a adaugat beneficiarul: " + (clientErr?.message || "eroare necunoscuta")); return; }
+    const { error: linkErr } = await supabase.from("quotes").update({ client_id: newClient.id }).eq("id", id);
+    setSavingClient(false);
+    if (linkErr) { alert("Beneficiarul s-a creat, dar nu s-a putut atasa la fisa: " + linkErr.message); return; }
+    setClientForm({ name: "", cui: "", address: "", contact_person: "", phone: "", email: "" });
+    setAnafError("");
+    setShowClientModal(false);
+    await loadQuote();
+  }
 
   // Emitent: daca fisa are company_id → firma aceea, indiferent de account_type
   function getEmitent(): Emitent {
@@ -474,7 +512,15 @@ export default function QuoteDetailPage() {
       {c.phone && <p className="text-sm text-gray-500">Tel: {c.phone}</p>}
     </>
   ) : (
-    <p className="text-sm text-gray-400">Fara beneficiar</p>
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-sm text-gray-400">Fara beneficiar</p>
+      {!isFinalized && (
+        <button onClick={() => setShowClientModal(true)}
+          className="px-3 py-2 bg-purple-100 text-purple-700 rounded-xl text-xs font-semibold shrink-0 whitespace-nowrap">
+          + Adauga beneficiar
+        </button>
+      )}
+    </div>
   )}
 </div>
 
@@ -634,6 +680,41 @@ export default function QuoteDetailPage() {
           )}
         </div>
       </div>
+
+      {showClientModal && (
+        <div className="fixed inset-0 bg-black/40 z-30 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-gray-800">Beneficiar nou</p>
+              <button onClick={() => { setShowClientModal(false); setAnafError(""); }} className="text-gray-400 text-xl leading-none">×</button>
+            </div>
+            <div className="flex gap-2">
+              <input className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+                placeholder="CUI (optional)" value={clientForm.cui} onChange={e => { setClientForm({ ...clientForm, cui: e.target.value }); setAnafError(""); }} />
+              <button onClick={() => lookupAnaf(clientForm.cui)}
+                disabled={lookingUpAnaf || !clientForm.cui}
+                className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold disabled:bg-gray-300 shrink-0 whitespace-nowrap">
+                {lookingUpAnaf ? "..." : "Cauta ANAF"}
+              </button>
+            </div>
+            {anafError && <p className="text-xs text-red-500 -mt-1">{anafError}</p>}
+            <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="Nume / Denumire firma *" value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} />
+            <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="Adresa" value={clientForm.address} onChange={e => setClientForm({ ...clientForm, address: e.target.value })} />
+            <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="Persoana de contact" value={clientForm.contact_person} onChange={e => setClientForm({ ...clientForm, contact_person: e.target.value })} />
+            <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="Telefon" value={clientForm.phone} onChange={e => setClientForm({ ...clientForm, phone: e.target.value })} />
+            <input className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900"
+              placeholder="Email" value={clientForm.email} onChange={e => setClientForm({ ...clientForm, email: e.target.value })} />
+            <button onClick={handleAddClient} disabled={savingClient || !clientForm.name}
+              className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
+              {savingClient ? "Se adauga..." : "+ Adauga beneficiar"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
