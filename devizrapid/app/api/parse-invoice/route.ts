@@ -194,7 +194,15 @@ async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
     body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: maxTokens }),
   })
   const data = await res.json()
-  if (res.status === 429) throw new Error('groq_rate_limit')
+  if (res.status === 429) {
+    // Groq da 429 si pentru limita reala de rate (tranzitorie, reincercarea ajuta),
+    // si pentru "cerere prea mare pentru bugetul de tokeni/minut" (permanenta pentru
+    // ACEEASI factura — reincercarea NU ajuta niciodata, marimea cererii nu se schimba).
+    // Le distingem dupa textul erorii, ca sa nu mai spunem gresit userului sa mai astepte.
+    const msg = String(data.error?.message || '')
+    if (/tokens per minute|request too large|TPM/i.test(msg)) throw new Error('groq_too_large')
+    throw new Error('groq_rate_limit')
+  }
   if (!res.ok) throw new Error(data.error?.message || `Groq error ${res.status}`)
   return data.choices?.[0]?.message?.content || ''
 }
@@ -410,6 +418,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown'
     if (msg === 'groq_rate_limit') return NextResponse.json({ items: [], error: 'groq_rate_limit' }, { status: 503 })
+    if (msg === 'groq_too_large') return NextResponse.json({ items: [], error: 'groq_too_large' }, { status: 413 })
     return NextResponse.json({ items: [], error: msg }, { status: 500 })
   }
 }

@@ -105,6 +105,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
     return status === 401 ? 'Trebuie sa fii autentificat pentru a scana facturi.' :
       status === 429 ? 'Ai atins limita de 50 scanari pe zi. Revino maine.' :
       data.error === 'groq_rate_limit' ? 'Serverul AI este aglomerat. Asteapta 15 secunde si incearca din nou.' :
+      data.error === 'groq_too_large' ? 'Factura e prea lunga/complexa pentru a fi citita dintr-o singura cerere. Incearca sa o imparti (scaneaza doar o parte din pagina sau doar o pagina din PDF).' :
       data.error === 'vision_failed' ? 'Poza neclara sau unghi dificil, chiar si dupa incercarea in 2 jumatati. Incearca o poza mai apropiata, cu lumina mai buna, sau incarca PDF-ul daca il ai.' :
       `Eroare: ${data.error || 'necunoscuta'}`
   }
