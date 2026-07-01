@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const today = new Date().toISOString().split('T')[0]
 
   try {
-    const anafRes = await fetch('https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva', {
+    const anafRes = await fetch('https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
