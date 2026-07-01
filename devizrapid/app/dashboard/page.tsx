@@ -51,7 +51,7 @@ export default function Dashboard() {
       }
 
       const dbAccountType: 'artizan' | 'pro' = prof.account_type === 'pro' ? 'pro' : 'artizan'
-      const { trial: t, subscribed, effectivePlan } = await getAccountStatus(session, dbAccountType, { forceTrialInactive: !!wasDeleted })
+      const { trial: t, subscribed } = await getAccountStatus(session, { forceTrialInactive: !!wasDeleted })
       setTrial(t)
       setSubscribed(subscribed)
       if (!t.isActive) {
@@ -62,7 +62,10 @@ export default function Dashboard() {
         setUsage({ fise, calcule })
       }
 
-      const userPlan: 'artizan' | 'pro' = effectivePlan
+      // Comutarea Artizan/Pro ramane libera pentru toata lumea — singura
+      // restrictie reala e limita de 3 fise + 3 calcule/luna (lib/usage.ts),
+      // identica in ambele moduri.
+      const userPlan: 'artizan' | 'pro' = 'pro'
       setPlan(userPlan)
 
       const savedMode = localStorage.getItem('dashboardMode') as 'artizan' | 'pro' | null
@@ -451,16 +454,11 @@ export default function Dashboard() {
               {feedbackWidget}
             </div>
 
-            {plan === 'pro' ? (
+            {plan === 'pro' && (
               <button onClick={() => switchMode('pro')}
                 className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
                 Treci la modul Pro (TVA, firme multiple)
               </button>
-            ) : !trial?.isActive && (
-              <a href="/upgrade"
-                className="w-full block text-center py-3 rounded-2xl border border-purple-200 bg-purple-50 text-sm font-semibold text-purple-600 hover:bg-purple-100 transition-all">
-                ⚡ Deblocheaza Pro (TVA, firme multiple) →
-              </a>
             )}
           </>
         )}
