@@ -217,50 +217,56 @@ export default function QuickPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 pb-10">
       <style>{`.fixed.bottom-24 { display: none; }`}</style>
-      <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Fisa Servicii Voce</h1>
-          <a href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700">← Dashboard</a>
-        </div>
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
+        <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+          <span className="text-2xl leading-none">‹</span>
+        </button>
+        <h1 className="text-base font-bold text-gray-800">Fisa Servicii Voce</h1>
+        <div className="w-8" />
+      </div>
 
-        <div className="bg-white p-6 rounded shadow mb-4 space-y-4">
-          <button onClick={handleVoice} className={'w-full p-4 rounded text-white text-lg font-medium ' + (listening ? 'bg-red-500' : 'bg-purple-600 hover:bg-purple-700')}>
+      <div className="max-w-2xl mx-auto px-4 pt-5 space-y-4">
+        <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
+          <button onClick={handleVoice}
+            className={`w-full py-4 rounded-2xl font-bold text-base text-white transition-all ${listening ? 'bg-red-500' : 'bg-purple-600 hover:bg-purple-700'}`}>
             {listening ? '🔴 Ascult...' : preview ? '✏️ Modifica prin voce' : '🎤 Dicteaza'}
           </button>
           {transcript && (
-            <div className="border rounded p-3 text-gray-700 text-sm">{transcript}</div>
+            <div className="border border-gray-200 rounded-xl p-3 text-gray-700 text-sm">{transcript}</div>
           )}
           {loading && (
             <p className="text-center text-sm text-gray-400">Procesez...</p>
           )}
           <button onClick={() => { setPreview(null); setTranscript(''); committedRef.current = '' }}
-            className="w-full bg-gray-100 text-gray-600 p-3 rounded font-medium">
+            className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold text-sm">
             Fisa noua
           </button>
         </div>
 
         {preview && (
-          <div className="bg-white p-6 rounded shadow space-y-4">
-            <h2 className="font-bold text-lg">Preview</h2>
+          <div className="bg-white rounded-2xl shadow-sm p-4 space-y-4">
+            <h2 className="font-bold text-base text-gray-800">Preview</h2>
             <div className="flex items-center gap-2">
-              <span className="text-gray-600 text-sm">Client:</span>
-              <input className="border p-1 rounded text-sm text-gray-900 flex-1" value={preview.client_name} onChange={e => setPreview({ ...preview, client_name: e.target.value })} />
+              <span className="text-gray-500 text-sm">Client:</span>
+              <input className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 flex-1"
+                value={preview.client_name} onChange={e => setPreview({ ...preview, client_name: e.target.value })} />
             </div>
-            <div className="divide-y border rounded">
+            <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden">
               {preview.items.map((item, i) => (
                 <div key={i} className="flex justify-between items-center p-3 text-sm">
-                  <span className="font-medium">{item.name}</span>
-                  <span className="text-gray-500">x{item.quantity} × {item.unit_price} lei = <strong>{item.total} lei</strong></span>
+                  <span className="font-medium text-gray-900">{item.name}</span>
+                  <span className="text-gray-500">x{item.quantity} × {item.unit_price} lei = <strong className="text-gray-800">{item.total} lei</strong></span>
                 </div>
               ))}
             </div>
-            <div className="flex justify-between font-bold text-lg border-t pt-3">
-              <span>Total</span>
+            <div className="flex justify-between font-bold text-lg border-t border-gray-100 pt-3">
+              <span className="text-gray-800">Total</span>
               <span className="text-blue-600">{preview.items.reduce((s, i) => s + i.total, 0)} lei</span>
             </div>
-            <button onClick={handleConfirm} disabled={loading} className="w-full bg-green-600 text-white p-3 rounded font-medium disabled:bg-gray-300">
+            <button onClick={handleConfirm} disabled={loading}
+              className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-sm disabled:bg-gray-300">
               {loading ? 'Salvez...' : 'Confirma si salveaza'}
             </button>
           </div>

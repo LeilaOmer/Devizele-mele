@@ -76,6 +76,16 @@ export function usePricingDraft() {
     } catch {}
   }, [roundStep, roundMode])
 
+  // Auto-salveaza calculul cat timp are cel putin un produs valid, ca sa nu se piarda
+  // lucrul daca utilizatorul pleaca din pagina fara sa exporte un PDF.
+  useEffect(() => {
+    const hasContent = items.some(i => i.name.trim() && parseFloat(i.supplierPrice) > 0)
+    if (!hasContent) return
+    const timer = setTimeout(() => { saveDraft() }, 2500)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, adaos, supplier, roundStep, roundMode])
+
   async function setVatPayer(v: boolean) {
     const previous = vatPayer
     setVatPayerState(v)

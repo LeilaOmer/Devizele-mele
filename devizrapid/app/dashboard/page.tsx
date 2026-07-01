@@ -361,7 +361,9 @@ export default function Dashboard() {
                 <span className="text-xl">📋</span>
                 <div>
                   <p className="font-semibold text-sm text-gray-900">Fise Servicii</p>
-                  <p className="text-gray-400 text-xs">Firma curenta</p>
+                  <p className="text-gray-400 text-xs truncate">
+                    {activeCompanyId ? (companies.find(c => c.id === activeCompanyId)?.name || 'Firma curenta') : 'Toate fisele'}
+                  </p>
                 </div>
               </a>
               <a href="/calcule"
