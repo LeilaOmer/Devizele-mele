@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 function getSupabaseAdmin() {
+  // Service role — necesar pentru citirea/scrierea din product_box_ratios
+  // (tabel partajat intre toti userii, cu RLS ce cere auth.role()='authenticated';
+  // cheia anonima fara sesiune ataseaza rol 'anon' si era blocata silentios).
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 }
 

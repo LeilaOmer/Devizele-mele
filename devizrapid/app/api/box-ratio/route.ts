@@ -26,7 +26,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Date invalide: furnizor, produs si numar de bucati (peste 1) sunt obligatorii.' }, { status: 400 })
   }
 
-  const { error } = await userClient.from('product_box_ratios').insert({
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceKey) return NextResponse.json({ error: 'Server config missing' }, { status: 500 })
+  const admin = createClient(base, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+
+  // Identitatea userului e deja verificata mai sus (userClient.auth.getUser);
+  // scrierea foloseste service role ca sa nu mai depinda de politici RLS
+  // separate pe tabelul acesta partajat intre toti userii.
+  const { error } = await admin.from('product_box_ratios').insert({
     supplier_name: supplierName,
     product_name: productName,
     pieces_per_box: piecesPerBox,
