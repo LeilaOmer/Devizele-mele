@@ -160,7 +160,7 @@ REGULI OBLIGATORII:
    IMPORTANT: NU imparti tu pretul la pieces_per_box, NU calcula pretul per bucata — doar raporteaza numarul gasit (sau 1 daca nu exista), impartirea se face automat dupa.
 
 9. BON FISCAL (bon de la casa de marcat, ex: Lidl, Kaufland, Auchan, Profi) — format DIFERIT de factura/aviz, cu campuri proprii, NU price_raw/already_per_piece/pieces_per_box:
-   RECUNOASTERE: antet cu "S.C. ... S.R.L.", "Cod Fiscal C.I.F.", textul "BON FISCAL" undeva in document => seteaza "doc_type":"receipt".
+   RECUNOASTERE — NU clasifica dupa antet cu "S.C. ... S.R.L." sau "Cod Fiscal C.I.F." (astea apar si pe orice factura normala, nu sunt semn de bon fiscal!). Seteaza "doc_type":"receipt" NUMAI cand documentul e clar un bon de casa de marcat: NU are nicaieri titlul "FACTURA" sau "AVIZ DE INSOTIRE A MARFII", produsele sunt insirate simplu unul dupa altul (nu intr-un tabel cu coloane aliniate), SI apare fie textul "BON FISCAL", fie o legenda finala cu litere de TVA (A/B/C/D + procente, gen "TVA A 21,00%" sau "B=21,00%"). Daca ai vreo indoiala => "doc_type":"invoice" (varianta implicita, sigura).
 
    Doua formate de layout, ambele posibile pe bon fiscal (citeste-le exact cum sunt tiparite, nu presupune):
    a) LIDL: mai intai linia "cantitate  UM x pret_unitar", APOI pe linia urmatoare denumirea produsului + valoarea totala a liniei + litera TVA. Exemplu: "2,000  BUC x 14,75" urmata de "Selectie de nuci sort.        29,50 B".
@@ -378,8 +378,9 @@ export async function POST(req: NextRequest) {
       { role: 'user', content: text.slice(0, 5000) },
     ]
     // max_tokens e rezervat integral din bugetul TPM de Groq inainte sa vada raspunsul real,
-    // deci trebuie tinut jos ca sa incapa alaturi de system prompt-ul, care a crescut cu regulile noi.
-    const raw = await callGroq('llama-3.3-70b-versatile', messages, 4096)
+    // deci trebuie tinut jos ca sa incapa alaturi de system prompt-ul, care tot creste cu regulile noi.
+    // Marja e voit generoasa (nu doar strict cat incape acum) ca sa reziste la urmatoarele reguli adaugate.
+    const raw = await callGroq('llama-3.3-70b-versatile', messages, 3500)
     const parsed = parseJson(raw)
     const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '')
     const result = validateAndSanitize(parsed, knownRatios)
