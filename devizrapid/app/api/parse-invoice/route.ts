@@ -95,14 +95,24 @@ REGULI OBLIGATORII:
 
 7. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).
 
-8. CUTII / BAX-URI / SET-URI cu produse individuale ambalate colectiv — cand UM este Cutie, Cut, Bax, Bx, Set (ambalaj colectiv, nu bucata vanduta individual pe factura):
+8. CUTII / BAX-URI / SET-URI cu produse individuale ambalate colectiv:
+   PASUL 0 — verifica INTAI coloana UM efectiva a randului (nu textul din denumire): daca UM e deja Buc, ST, DZ sau alta unitate individuala => pieces_per_box = 1 INTOTDEAUNA, oricat de mult ar semana denumirea cu un tipar de raport (ex: "104 GR FR PAD 18 BUC/CUT" cu UM=Buc pe factura => pieces_per_box = 1, produsul e deja vandut pe bucata, "18 BUC/CUT" e doar o informatie despre ambalarea de la producator, NU un raport de aplicat). NU confunda un numar din DENUMIRE cu decizia despre UM — decizia despre UM vine STRICT din coloana UM a facturii, niciodata din text.
+   Restul Pasului 1-2 se aplica DOAR cand UM efectiv al randului e Cutie, Cut, Bax, Bx sau Set.
+
    PASUL 1 — cauta in DENUMIREA produsului un raport explicit bucati-per-ambalaj: tipare ca "NNBUC/CUT", "NN B/CUT", "NNbuc/cut", "(NN buc/cut)", "NNB/CUT X ...", sau pur si simplu "NN BUC" langa denumire. Exemple: "35GR BANOFFEE 24BUC/CUT" => 24; "30G 30B/CUT" => 30; "40 G/24B" => 24; "(18 buc/cut)" => 18; "35 GR 24 BUC" => 24; "24B/CUT X 28G" => 24.
-   PASUL 2a — DACA gasesti acest raport: pieces_per_box = numarul gasit (doar cifra din text, un intreg — NU calcula nimic cu el, nu imparti pretul singur). unit ramane cel de pe factura.
-      - Exemplu: "MAGURA MACARON 35GR BANOFFEE 24BUC/CUT" => pieces_per_box = 24.
-   PASUL 2b — DACA NU gasesti niciun raport bucati/cutie in denumire (produsul e descris DOAR prin greutate/volum total al ambalajului, ex: "1.3 KG", "450 GR", fara sa spuna cate bucati individuale contine): pieces_per_box = 1 (produsul se vinde ca intreaga cutie/bax, unitate unica).
-      - Exemplu: "JUMBO 1.3 KG NAP DOINA" => pieces_per_box = 1 (nu exista niciun numar de bucati in denumire).
-   IMPORTANT: NU incerca sa ghicesti, estimezi sau deduci un numar de bucati care nu apare explicit scris in denumirea produsului — in acel caz pieces_per_box = 1. NU imparti tu pretul la pieces_per_box, NU calcula pretul per bucata — doar raporteaza numarul gasit in text, impartirea se face automat dupa.
-   Produsele care au deja UM = Buc pe factura (chiar daca denumirea contine "NN BUC/CUT" ca informatie despre ambalarea de la producator) raman neschimbate, pieces_per_box = 1 — Regula 8 se aplica DOAR cand UM-ul de pe factura e Cutie/Bax/Cut/Set, nu Buc.`
+   Daca denumirea e trunchiata si se termina brusc cu o paranteza deschisa urmata de un numar (ex: "...GLZ (18"), acel numar E raportul cautat — descrierea a fost taiata de spatiu pe factura, dar numarul e vizibil si valid. Foloseste-l.
+
+   PASUL 2 — DACA nu gasesti niciun raport in denumirea PROPRIE a produsului, cauta in TOATA lista de produse a facturii (nu doar randul de deasupra sau de dedesubt) un alt produs care:
+      a) are ACELASI pret de cutie fara TVA (identic sau aproape identic) SI
+      b) are un nume din aceeasi familie (aceleasi primele 2-3 cuvinte din denumire, difera doar aroma/varianta/culoarea) SI
+      c) ACELA are un raport bucati/cutie gasit la Pasul 1.
+      Daca gasesti o asemenea potrivire => foloseste acelasi raport. Nu conteaza daca produsul-sursa e inainte sau dupa in lista.
+      Exemplu: "MAGURA MACARON 35GR CAPPUCCINO" nu are raport in nume, dar "MAGURA MACARON 35GR BANOFFEE 24BUC/CUT" de pe alt rand are acelasi pret de cutie si e din aceeasi familie de produs => foloseste pieces_per_box = 24 si pentru Cappuccino.
+
+   PASUL 3 — DACA tot nu gasesti niciun raport (nici in denumire, nici la un produs asemanator din factura) — produsul e descris DOAR prin greutate/volum total al ambalajului (ex: "1.3 KG", "450 GR"), fara nicio bucata individuala mentionata nicaieri => pieces_per_box = 1 (produsul se vinde ca intreaga cutie/bax, unitate unica).
+      Exemplu: "JUMBO 1.3 KG NAP DOINA" => pieces_per_box = 1.
+
+   IMPORTANT: NU imparti tu pretul la pieces_per_box, NU calcula pretul per bucata — doar raporteaza numarul gasit (sau 1 daca nu exista), impartirea se face automat dupa.`
 
 async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
