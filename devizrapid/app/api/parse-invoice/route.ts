@@ -45,13 +45,15 @@ async function getKnownRatios(supplierName: string): Promise<Map<string, number>
 }
 
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura sau aviz) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
-Format: {"supplier":"Nume Furnizor SRL","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","price_raw":0,"price_includes_vat":false,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0}]}
+Format: {"supplier":"Nume Furnizor SRL","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","price_raw":0,"price_includes_vat":false,"already_per_piece":true,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0}]}
 
 IMPORTANT — rolul tau e sa CITESTI si sa CLASIFICI, NU sa calculezi. Orice impartire, conversie de TVA sau calcul de pret se face separat, automat, dupa ce raspunzi tu. Tu doar:
 - copiezi EXACT numarul tiparit pe factura in "price_raw" (fara sa-l modifici cu nimic)
 - marchezi cu true/false daca acel numar contine sau nu TVA ("price_includes_vat")
-- extragi numarul de bucati per ambalaj in "pieces_per_box" (doar daca apare explicit scris)
+- marchezi cu true/false daca UM-ul EFECTIV al randului (coloana UM de pe factura, nu textul din denumire) e deja o unitate individuala precum Buc/ST/DZ ("already_per_piece")
+- extragi numarul de bucati per ambalaj in "pieces_per_box" (doar daca apare explicit scris, si doar cand already_per_piece=false)
 NU face niciodata singur impartirea/conversia — modelele AI gresesc des la aritmetica din cap si strica preturile. Daca faci calculul tu insuti in loc sa raportezi numerele brute, rezultatul e considerat gresit.
+ATENTIE — cea mai frecventa greseala: cand already_per_piece=true (UM chiar e Buc pe factura), NICIODATA sa nu completezi pieces_per_box cu un numar mai mare ca 1, chiar daca denumirea produsului contine un text de genul "18 BUC/CUT" (aia e doar informatie despre ambalarea de la producator, nu inseamna ca acest rand trebuie impartit).
 
 Daca in imagine sunt vizibile mai multe documente/foi suprapuse (ex: o factura pusa peste alta, colturi de pagini din spate care se vad partial, o alta factura vizibila in fundal) => citeste STRICT documentul din prim-plan, cel mai clar si mai apropiat de camera. Ignora complet orice text din paginile suprapuse/din fundal, chiar daca e partial vizibil — nu il amesteca cu datele documentului principal.
 
@@ -132,7 +134,7 @@ REGULI OBLIGATORII:
 7. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).
 
 8. CUTII / BAX-URI / SET-URI cu produse individuale ambalate colectiv:
-   PASUL 0 — verifica INTAI coloana UM efectiva a randului (nu textul din denumire): daca UM e deja Buc, ST, DZ sau alta unitate individuala => pieces_per_box = 1 INTOTDEAUNA, oricat de mult ar semana denumirea cu un tipar de raport (ex: "104 GR FR PAD 18 BUC/CUT" cu UM=Buc pe factura => pieces_per_box = 1, produsul e deja vandut pe bucata, "18 BUC/CUT" e doar o informatie despre ambalarea de la producator, NU un raport de aplicat). NU confunda un numar din DENUMIRE cu decizia despre UM — decizia despre UM vine STRICT din coloana UM a facturii, niciodata din text.
+   PASUL 0 — verifica INTAI coloana UM efectiva a randului (nu textul din denumire) si seteaza "already_per_piece": daca UM e deja Buc, ST, DZ sau alta unitate individuala => already_per_piece=true si pieces_per_box = 1 INTOTDEAUNA, oricat de mult ar semana denumirea cu un tipar de raport (ex: "104 GR FR PAD 18 BUC/CUT" cu UM=Buc pe factura => already_per_piece=true, pieces_per_box = 1, produsul e deja vandut pe bucata, "18 BUC/CUT" e doar o informatie despre ambalarea de la producator, NU un raport de aplicat). NU confunda un numar din DENUMIRE cu decizia despre UM — decizia despre UM vine STRICT din coloana UM a facturii, niciodata din text.
    Restul Pasului 1-2 se aplica DOAR cand UM efectiv al randului e Cutie, Cut, Bax, Bx sau Set.
 
    PASUL 1 — cauta in DENUMIREA produsului un raport explicit bucati-per-ambalaj: tipare ca "NNBUC/CUT", "NN B/CUT", "NNbuc/cut", "(NN buc/cut)", "NNB/CUT X ...", sau pur si simplu "NN BUC" langa denumire. Exemple: "35GR BANOFFEE 24BUC/CUT" => 24; "30G 30B/CUT" => 30; "40 G/24B" => 24; "(18 buc/cut)" => 18; "35 GR 24 BUC" => 24; "24B/CUT X 28G" => 24.
@@ -231,11 +233,18 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
       // (price_raw, price_includes_vat, pieces_per_box), calculul lui de cap era nesigur.
       const priceRaw = Number(item.price_raw)
       const priceExVat = item.price_includes_vat === true ? priceRaw / (1 + vat / 100) : priceRaw
+      // Siguranta determinista, in cod, nu doar in prompt: daca modelul insusi
+      // a raportat ca UM-ul de pe factura pentru randul asta era deja Buc/ST/DZ
+      // (already_per_piece), NU impartim niciodata, indiferent ce pieces_per_box
+      // a ghicit sau ce raport e cunoscut pentru acel nume de produs de la alte
+      // facturi — modelul repeta uneori aceasta greseala desi Regula 8 Pasul 0
+      // ii spune explicit sa nu o faca.
+      const alreadyPerPiece = item.already_per_piece === true
       const knownPieces = knownRatios.get(normalizeName(String(item.name)))
       const piecesPerBoxRaw = Math.round(Number(item.pieces_per_box))
       const aiPieces = Number.isFinite(piecesPerBoxRaw) && piecesPerBoxRaw > 1 ? piecesPerBoxRaw : 1
       // Un raport confirmat manual anterior (aceeasi factura/furnizor) e mai de incredere decat ghiceala AI-ului din text.
-      const piecesPerBox = (knownPieces && knownPieces > 1) ? knownPieces : aiPieces
+      const piecesPerBox = alreadyPerPiece ? 1 : ((knownPieces && knownPieces > 1) ? knownPieces : aiPieces)
       const supplierPrice = Math.round((priceExVat / piecesPerBox) * 10000) / 10000
       const unit = piecesPerBox > 1 ? 'buc' : (typeof item.unit === 'string' && item.unit.trim() ? item.unit : 'buc')
 
