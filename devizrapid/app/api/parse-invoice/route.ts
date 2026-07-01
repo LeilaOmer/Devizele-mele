@@ -373,7 +373,12 @@ export async function POST(req: NextRequest) {
           ],
         },
       ]
-      const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages, 8192)
+      // max_tokens nu a mai fost ajustat aici de cand a fost setat, desi system
+      // prompt-ul s-a triplat de atunci (creste cu fiecare regula noua) — pe o
+      // factura densa (poza cu multe randuri), prompt+imagine+8192 rezervat
+      // poate depasi bugetul de tokeni/minut al modelului de vedere, la fel cum
+      // se intampla si la modelul de text daca nu era redus.
+      const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages, 4000)
       const parsed = parseJson(raw)
       const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '')
       const result = validateAndSanitize(parsed, knownRatios)
