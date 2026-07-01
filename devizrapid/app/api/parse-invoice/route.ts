@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 function getSupabaseAdmin() {
-  // Service role — necesar pentru citirea/scrierea din product_box_ratios
-  // (tabel partajat intre toti userii, cu RLS ce cere auth.role()='authenticated';
-  // cheia anonima fara sesiune ataseaza rol 'anon' si era blocata silentios).
+  // Cheia anonima — foloseste pentru auth.getUser(token) si invoice_scan_logs.
+  // NU schimba la service role aici: auth.getUser(token) valideaza gresit
+  // (401 pentru toata lumea) daca clientul e creat cu cheia de service role.
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+}
+
+function getServiceRoleClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -21,11 +28,11 @@ function normalizeName(s: string): string {
 
 // Raporturi bucati/cutie invatate anterior (de orice user, pentru acelasi furnizor) —
 // au prioritate fata de ce ghiceste AI-ul din text, pentru ca sunt confirmate manual.
-async function getKnownRatios(supabase: ReturnType<typeof getSupabaseAdmin>, supplierName: string): Promise<Map<string, number>> {
+async function getKnownRatios(supplierName: string): Promise<Map<string, number>> {
   const map = new Map<string, number>()
   const name = supplierName?.trim()
   if (!name) return map
-  const { data } = await supabase
+  const { data } = await getServiceRoleClient()
     .from('product_box_ratios')
     .select('product_name, pieces_per_box')
     .ilike('supplier_name', name)
@@ -281,7 +288,7 @@ export async function POST(req: NextRequest) {
       ]
       const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages, 8192)
       const parsed = parseJson(raw)
-      const knownRatios = await getKnownRatios(supabase, typeof parsed?.supplier === 'string' ? parsed.supplier : '')
+      const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '')
       const result = validateAndSanitize(parsed, knownRatios)
       if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
       return NextResponse.json(result ?? { items: [], error: 'vision_failed' })
@@ -311,7 +318,7 @@ export async function POST(req: NextRequest) {
     ]
     const raw = await callGroq('llama-3.3-70b-versatile', messages, 8192)
     const parsed = parseJson(raw)
-    const knownRatios = await getKnownRatios(supabase, typeof parsed?.supplier === 'string' ? parsed.supplier : '')
+    const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '')
     const result = validateAndSanitize(parsed, knownRatios)
     if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
     return NextResponse.json(result ?? { items: [] })
