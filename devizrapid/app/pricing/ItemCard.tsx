@@ -57,11 +57,11 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-3 space-y-2">
+    <div className="bg-white rounded-2xl shadow-sm p-2.5 space-y-1.5">
       <div className="flex gap-2 items-center">
         <div className="flex-1 relative">
           <input
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+            className="w-full border border-gray-200 rounded-xl px-2.5 py-1.5 text-sm text-gray-900"
             placeholder="Denumire produs *"
             value={item.name}
             onChange={e => onUpdate(item.id, 'name', e.target.value)}
@@ -73,7 +73,7 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
           )}
         </div>
         <input
-          className="w-16 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 text-center"
+          className="w-16 border border-gray-200 rounded-xl px-2 py-1.5 text-sm text-gray-900 text-center"
           placeholder="UM"
           value={item.unit}
           onChange={e => onUpdate(item.id, 'unit', e.target.value)}
@@ -85,7 +85,7 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
           <label className="text-xs text-gray-400 mb-0.5 block">Pret furnizor (fara SGR)</label>
           <input
             type="number" min="0" step="0.01"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+            className="w-full border border-gray-200 rounded-xl px-2.5 py-1.5 text-sm text-gray-900"
             placeholder="0.00"
             value={item.supplierPrice}
             onChange={e => onUpdate(item.id, 'supplierPrice', e.target.value)}
@@ -95,7 +95,7 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
           <label className="text-xs text-gray-400 mb-0.5 block">Disc %</label>
           <input
             type="number" min="0" max="100" step="0.5"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+            className="w-full border border-gray-200 rounded-xl px-2.5 py-1.5 text-sm text-gray-900"
             placeholder="0"
             value={item.discount}
             onChange={e => onUpdate(item.id, 'discount', e.target.value)}
@@ -105,7 +105,7 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
           <label className="text-xs text-gray-400 mb-0.5 block">SGR lei</label>
           <input
             type="number" min="0" step="0.50"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+            className="w-full border border-gray-200 rounded-xl px-2.5 py-1.5 text-sm text-gray-900"
             placeholder="0"
             value={item.sgr}
             onChange={e => onUpdate(item.id, 'sgr', e.target.value)}
@@ -129,7 +129,7 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
       </div>
 
       {c && (
-        <div className="bg-gray-50 rounded-xl p-3 space-y-1 text-xs">
+        <div className="bg-gray-50 rounded-xl p-2.5 space-y-1 text-xs">
           {c.vatPayer ? (
             <>
               <div className="flex justify-between">
@@ -192,7 +192,7 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
       </div>
 
       {boxFormOpen && (
-        <div className="bg-purple-50 rounded-xl p-3 space-y-2">
+        <div className="bg-purple-50 rounded-xl p-2.5 space-y-1.5">
           <p className="text-xs text-purple-700">
             Daca pretul de mai sus e gresit pentru ca produsul vine in cutie/bax, completeaza aici pretul cutiei intregi (fara TVA) si cate bucati contine — corectam pretul acum si retinem raportul pentru viitoarele scanari de la acest furnizor.
           </p>
@@ -200,13 +200,13 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
             <div className="flex-1">
               <label className="text-xs text-gray-500 mb-0.5 block">Pret cutie (fara TVA)</label>
               <input type="number" min="0" step="0.01"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+                className="w-full border border-gray-200 rounded-xl px-2.5 py-1.5 text-sm text-gray-900"
                 placeholder="0.00" value={boxPrice} onChange={e => setBoxPrice(e.target.value)} />
             </div>
             <div className="w-28">
               <label className="text-xs text-gray-500 mb-0.5 block">Bucati/cutie</label>
               <input type="number" min="2" step="1"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+                className="w-full border border-gray-200 rounded-xl px-2.5 py-1.5 text-sm text-gray-900"
                 placeholder="24" value={boxPieces} onChange={e => setBoxPieces(e.target.value)} />
             </div>
           </div>
