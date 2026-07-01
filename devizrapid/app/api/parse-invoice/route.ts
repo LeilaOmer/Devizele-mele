@@ -83,7 +83,21 @@ REGULI OBLIGATORII:
    TNE => t
    Daca unitatea e deja lizibila (buc, kg, l, etc.) las-o asa.
 
-7. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).`
+7. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).
+
+8. CUTII / BAX-URI / SET-URI cu produse individuale ambalate colectiv — cand UM este Cutie, Cut, Bax, Bx, Set (ambalaj colectiv, nu bucata vanduta individual pe factura):
+   PASUL 1 — cauta in DENUMIREA produsului un raport explicit bucati-per-ambalaj: tipare ca "NNBUC/CUT", "NN B/CUT", "NNbuc/cut", "(NN buc/cut)", "NNB/CUT X ...", sau pur si simplu "NN BUC" langa denumire. Exemple: "35GR BANOFFEE 24BUC/CUT" => 24; "30G 30B/CUT" => 30; "40 G/24B" => 24; "(18 buc/cut)" => 18; "35 GR 24 BUC" => 24; "24B/CUT X 28G" => 24.
+   PASUL 2a — DACA gasesti acest raport, produsul se vinde pe bucata individuala (asa se comercializeaza mai departe), NU pe cutia intreaga:
+      - unit = "buc"
+      - supplier_price = pretul cutiei (citit conform Regulii 1, fara TVA) IMPARTIT la numarul de bucati gasit. Rotunjeste la 4 zecimale.
+      - VALIDARE: supplier_price x numar_bucati_gasit ≈ pretul cutiei citit din factura (in limita rotunjirii).
+      - Exemplu: "MAGURA MACARON 35GR BANOFFEE 24BUC/CUT", pret cutie 40.42 lei fara TVA => supplier_price = 40.42 / 24 = 1.6842, unit = "buc".
+   PASUL 2b — DACA NU gasesti niciun raport bucati/cutie in denumire (produsul e descris DOAR prin greutate/volum total al ambalajului, ex: "1.3 KG", "450 GR", fara sa spuna cate bucati individuale contine): produsul se vinde ca intreaga cutie/bax, ca unitate unica, la fel ca un produs normal la bucata:
+      - unit = numele unitatii asa cum apare pe factura (ex: "cutie", "bax", "set")
+      - supplier_price = pretul cutiei intregi (fara TVA), FARA nicio impartire.
+      - Exemplu: "JUMBO 1.3 KG NAP DOINA", cutie/bax cu pret 47.20 lei fara TVA => supplier_price = 47.20, unit = "cutie" (NU se imparte — nu exista niciun numar de bucati in denumire).
+   IMPORTANT: NU incerca sa ghicesti, estimezi sau deduci un numar de bucati care nu apare explicit scris in denumirea produsului. Daca lipseste raportul bucati/cutie, aplica intotdeauna PASUL 2b (nu se sparge).
+   Produsele care au deja UM = Buc pe factura (chiar daca denumirea contine "NN BUC/CUT" ca informatie despre ambalarea de la producator) raman neschimbate — Regula 8 se aplica DOAR cand UM-ul de pe factura e Cutie/Bax/Cut/Set, nu Buc.`
 
 async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
