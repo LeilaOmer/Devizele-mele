@@ -69,7 +69,8 @@ export default function SettingsPage() {
   async function saveProfile() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
-    await supabase.from('profiles').upsert({ id: session.user.id, ...profileForm })
+    const { error } = await supabase.from('profiles').upsert({ id: session.user.id, ...profileForm })
+    if (error) { alert('Nu s-a salvat: ' + error.message); return }
     setProfileSaved(true)
     setProfileEditing(false)
     setTimeout(() => setProfileSaved(false), 2000)
