@@ -45,13 +45,16 @@ async function getKnownRatios(supplierName: string): Promise<Map<string, number>
 }
 
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura, aviz sau bon fiscal de la casa de marcat) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
-Format: {"supplier":"Nume Furnizor SRL","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","price_raw":0,"price_includes_vat":false,"already_per_piece":true,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0}]}
+Format: {"supplier":"Nume Furnizor SRL","doc_type":"invoice","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","price_raw":0,"price_includes_vat":false,"already_per_piece":true,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0,"line_total":0,"quantity":1,"card_discount":0}]}
 
-IMPORTANT — rolul tau e sa CITESTI si sa CLASIFICI, NU sa calculezi. Orice impartire, conversie de TVA sau calcul de pret se face separat, automat, dupa ce raspunzi tu. Tu doar:
+"doc_type" e "invoice" pentru factura/aviz (implicit), sau "receipt" pentru bon fiscal de la casa de marcat (vezi Regula 9) — completeaza-l intotdeauna.
+
+IMPORTANT — rolul tau e sa CITESTI si sa CLASIFICI, NU sa calculezi. Orice impartire, conversie de TVA sau calcul de pret se face separat, automat, dupa ce raspunzi tu. La factura/aviz ("doc_type":"invoice") tu doar:
 - copiezi EXACT numarul tiparit pe factura in "price_raw" (fara sa-l modifici cu nimic)
 - marchezi cu true/false daca acel numar contine sau nu TVA ("price_includes_vat")
 - marchezi cu true/false daca UM-ul EFECTIV al randului (coloana UM de pe factura, nu textul din denumire) e deja o unitate individuala precum Buc/ST/DZ ("already_per_piece")
 - extragi numarul de bucati per ambalaj in "pieces_per_box" (doar daca apare explicit scris, si doar cand already_per_piece=false)
+La bon fiscal ("doc_type":"receipt") completezi in schimb "line_total"/"quantity"/"card_discount" — vezi Regula 9, campurile de mai sus (price_raw, already_per_piece, pieces_per_box) nu se folosesc acolo.
 NU face niciodata singur impartirea/conversia — modelele AI gresesc des la aritmetica din cap si strica preturile. Daca faci calculul tu insuti in loc sa raportezi numerele brute, rezultatul e considerat gresit.
 ATENTIE — cea mai frecventa greseala: cand already_per_piece=true (UM chiar e Buc pe factura), NICIODATA sa nu completezi pieces_per_box cu un numar mai mare ca 1, chiar daca denumirea produsului contine un text de genul "18 BUC/CUT" (aia e doar informatie despre ambalarea de la producator, nu inseamna ca acest rand trebuie impartit).
 
@@ -152,20 +155,30 @@ REGULI OBLIGATORII:
 
    IMPORTANT: NU imparti tu pretul la pieces_per_box, NU calcula pretul per bucata — doar raporteaza numarul gasit (sau 1 daca nu exista), impartirea se face automat dupa.
 
-9. BON FISCAL (bon de la casa de marcat, ex: Lidl, Kaufland, Auchan, Profi) — format DIFERIT de factura/aviz:
-   RECUNOASTERE: antet cu "S.C. ... S.R.L.", "Cod Fiscal C.I.F.", textul "BON FISCAL" undeva in document. Structura per produs e INVERSATA fata de o factura clasica: mai intai o linie cu "cantitate  UM x pret_unitar", APOI pe linia urmatoare denumirea produsului + valoarea totala a liniei + o litera de categorie TVA (A, B, C sau D) la capatul liniei.
-   Exemplu 2 linii pentru UN singur produs: "2,000  BUC x 14,75" urmata de "Selectie de nuci sort.        29,50 B" => produsul e "Selectie de nuci sort.", UM=buc, pret_unitar=14,75 (2 x 14,75 = 29,50 confirma linia), categorie TVA=B.
+9. BON FISCAL (bon de la casa de marcat, ex: Lidl, Kaufland, Auchan, Profi) — format DIFERIT de factura/aviz, cu campuri proprii, NU price_raw/already_per_piece/pieces_per_box:
+   RECUNOASTERE: antet cu "S.C. ... S.R.L.", "Cod Fiscal C.I.F.", textul "BON FISCAL" undeva in document => seteaza "doc_type":"receipt".
 
-   PRETUL DE PE BON E INTOTDEAUNA CU TVA INCLUS: price_includes_vat = true la TOATE produsele de pe un bon fiscal (spre deosebire de facturi, unde poate fi si fara TVA).
-   price_raw = pretul UNITAR (numarul de dupa "x" pe linia de cantitate), NU valoarea totala a liniei produsului.
+   Doua formate de layout, ambele posibile pe bon fiscal (citeste-le exact cum sunt tiparite, nu presupune):
+   a) LIDL: mai intai linia "cantitate  UM x pret_unitar", APOI pe linia urmatoare denumirea produsului + valoarea totala a liniei + litera TVA. Exemplu: "2,000  BUC x 14,75" urmata de "Selectie de nuci sort.        29,50 B".
+   b) KAUFLAND: mai intai denumirea produsului (uneori pe linie separata, uneori nu), APOI o linie cu valoarea totala + litera TVA, care poate fi precedata de cantitate in 3 variante:
+      - "N * pret_unitar" (ex: "2 * 7,99") urmata de total (15,98) — produs cumparat de N ori
+      - "cantitate UM" FARA inmultire (ex: "1,402 KG") urmata de total (11,20) — produs cantarit, fara pret unitar tiparit separat
+      - nicio linie de cantitate (un singur exemplar): "NUME  pret  litera" direct (ex: "CONOPIDA   3,25 C")
 
-   already_per_piece = true si pieces_per_box = 1 la TOATE produsele de pe un bon fiscal, INDIFERENT de UM (chiar si la KG) — un bon fiscal de la casa de marcat nu vinde niciodata cutii/baxuri de impartit, fiecare linie e deja unitatea platita efectiv de client.
+   Pentru FIECARE produs de pe bon fiscal, NU calcula tu pretul unitar — raporteaza 3 numere brute, citite exact cum apar, iar impartirea se face automat in cod dupa:
+   - "line_total": valoarea totala TIPARITA pe randul produsului (ultimul numar inainte de litera TVA). Mereu cu TVA inclus.
+   - "quantity": cantitatea, citita direct: N din "N * pret" => N; numarul din "cantitate UM" fara inmultire (ex: 1,402) => acel numar; daca nu exista nicio linie de cantitate => 1.
+   - "card_discount": daca IMEDIAT sub randul produsului apare o linie cu o reducere instant de card de fidelitate (ex: "Kaufland Card XTRA   -7,00", sau orice linie cu valoare NEGATIVA si FARA litera TVA la capat, aparuta chiar dupa acel produs) => card_discount = valoarea absoluta (7.00). Aceasta linie NU e produs, nu o adauga separat in "items". Daca nu exista => card_discount = 0.
 
-   CATEGORII TVA (litera de la capatul liniei produsului, A/B/C/D) — NU presupune ce procent inseamna fiecare litera pe dinafara. Citeste-o DIN LEGENDA tiparita la finalul ACESTUI bon, unde apare explicit lista "TVA A XX,XX%", "TVA B XX,XX%", "TVA C XX,XX%", "TVA D XX,XX%" (mapajul poate diferi intre magazine/case de marcat). Construieste maparea litera->procent din acea legenda, aplica-o fiecarui produs dupa litera lui, apoi mapeaza procentul rezultat la 11 sau 21 conform Regulii 4 Pasul 2.
+   IMPORTANT (produs cantarit, ex. pepene/vinete cumparate la KG): "quantity" e greutatea TOTALA cumparata in acel moment (ex: 1,402 kg dintr-un pepene, sau 10,5 kg de vinete), NU inseamna ca produsul se vinde mai departe ca "un pachet intreg" — "unit" ramane "kg" (sau UM tiparita), pentru ca produsul continua sa se vanda cu bucata din kg, la fel ca oricare alt produs cantarit. NU pune unit="buc" doar pentru ca a fost cumparat un singur exemplar dintr-un produs cantarit.
 
-   LINIE FARA DENUMIRE DE PRODUS (doar o valoare + o litera, ex: "0,50 D", aparuta imediat dupa linia unui produs, fara niciun text) => este GARANTIA SGR (ambalaj returnabil) a produsului de DEASUPRA ei, NU un produs separat si NU o cere ca linie noua in "items". Seteaza sgr=0.50 la produsul anterior in loc.
+   Pretul de pe bon e mereu cu TVA inclus — nu mai completa separat "price_includes_vat" pentru produsele de pe bon fiscal, e implicit prin doc_type="receipt".
 
-   Randurile "Subtotal", "TOTAL", "TOTAL TVA", "CARD", "TRANZACTIE CARD", "DATA", "ORA", "Casa:", "Mg", "Tz", "BON FISCAL", mesaje de multumire => NU sunt produse, ignora-le complet.`
+   CATEGORII TVA (litera de la capatul liniei produsului, A/B/C/D) — NU presupune ce procent inseamna fiecare litera pe dinafara si NU presupune ca e la fel ca la alt bon (ex: la un Lidl B=11%, dar la un Kaufland din alta zi B poate fi 21% si C=11% — e INVERSAT). Citeste-o DIN LEGENDA tiparita la finalul ACESTUI bon (ex: "TVA A 21,00%", "TVA B 11,00%", sau "B=21,00%", "C=11,00%"), construieste maparea litera->procent DOAR din acea legenda a bonului curent, aplica-o fiecarui produs dupa litera lui, apoi mapeaza procentul rezultat la 11 sau 21 conform Regulii 4 Pasul 2.
+
+   LINIE FARA DENUMIRE DE PRODUS CU VALOARE POZITIVA + LITERA (ex: "0,50 D", aparuta imediat dupa linia unui produs, fara niciun text) => este GARANTIA SGR (ambalaj returnabil) a produsului de DEASUPRA ei, NU un produs separat si NU o cere ca linie noua in "items". Seteaza sgr=0.50 la produsul anterior in loc.
+
+   Randurile "Subtotal", "TOTAL", "Plata card", "Rest", "TVA %", "CARD", "TRANZACTIE CARD", "DATA", "ORA", "Casa:", "Mg", "Tz", "TERMINAL", "TID", "PAN", "AID", "APN", "Suma:", "TRX", "NR. CHITANTA", "NR. APROB", "RRN", "REC", "Aprobat", "BON FISCAL", denumirile de sectiuni de raion fara pret propriu (ex: "Alimente", "Congelate", "Dulciuri", "Fructe / Legume / Plante", "Mopro/Branza/Oua", "Drogerie/Gospodarie/Hrana animale/Tabac", "Vitrina asistata"), mesaje de multumire => NU sunt produse, ignora-le complet.`
 
 async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -214,6 +227,8 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
   const d = data as Record<string, unknown>
   if (!Array.isArray(d.items)) return null
 
+  const isReceipt = d.doc_type === 'receipt'
+
   // Extract global discounts by VAT rate from the top-level "discounts" field
   const globalDiscounts: Record<number, number> = {}
   if (d.discounts && typeof d.discounts === 'object') {
@@ -225,23 +240,41 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     }
   }
   delete d.discounts
+  delete d.doc_type
 
   d.items = d.items
     .filter((i: unknown) => {
       if (!i || typeof i !== 'object') return false
       const item = i as Record<string, unknown>
-      return typeof item.name === 'string' && item.name.trim() !== ''
-        && typeof item.price_raw === 'number' && item.price_raw > 0
+      if (typeof item.name !== 'string' || item.name.trim() === '') return false
+      if (isReceipt) return typeof item.line_total === 'number' && item.line_total > 0
+      return typeof item.price_raw === 'number' && item.price_raw > 0
     })
     .map((i: unknown) => {
       const item = i as Record<string, unknown>
       const vatNum = Number(item.vat)
       const vat = (vatNum > 0 && vatNum <= 15) ? 11 : 21
+      const sgr = Number(item.sgr) === 0.5 ? 0.5 : 0
+
+      if (isReceipt) {
+        // Bon fiscal: pretul e mereu cu TVA inclus, iar impartirea la cantitate
+        // (buc sau kg cantarite) si scaderea reducerii de card de fidelitate se
+        // fac aici, deterministic — modelul doar citeste line_total/quantity/
+        // card_discount exact cum apar tiparite, fara sa le combine el insusi.
+        const lineTotal = Number(item.line_total) || 0
+        const quantity = Number(item.quantity) > 0 ? Number(item.quantity) : 1
+        const cardDiscount = Number(item.card_discount) > 0 ? Number(item.card_discount) : 0
+        const netTotal = Math.max(lineTotal - cardDiscount, 0)
+        const grossUnitPrice = netTotal / quantity
+        const supplierPrice = Math.round((grossUnitPrice / (1 + vat / 100)) * 10000) / 10000
+        const unit = typeof item.unit === 'string' && item.unit.trim() ? item.unit : 'buc'
+        return { name: item.name, unit, supplier_price: supplierPrice, vat, discount: 0, sgr }
+      }
+
       const itemDiscount = Number(item.discount)
       const discount = (itemDiscount > 0 && itemDiscount <= 100)
         ? itemDiscount
         : (globalDiscounts[vat] ?? 0)
-      const sgr = Number(item.sgr)
 
       // Toata aritmetica (scoatere TVA + impartire cutie/bax pe bucata) se face
       // aici, deterministic in cod — modelul AI doar citeste si clasifica
@@ -269,7 +302,7 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
         supplier_price: supplierPrice,
         vat,
         discount,
-        sgr: (sgr === 0.5 ? 0.5 : 0),
+        sgr,
       }
     })
   return d
@@ -338,7 +371,7 @@ export async function POST(req: NextRequest) {
 
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: text.slice(0, 8000) },
+      { role: 'user', content: text.slice(0, 6000) },
     ]
     // max_tokens e rezervat integral din bugetul TPM de Groq inainte sa vada raspunsul real,
     // deci trebuie tinut jos ca sa incapa alaturi de system prompt-ul, care a crescut cu regulile noi.
