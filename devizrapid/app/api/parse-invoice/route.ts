@@ -84,16 +84,17 @@ REGULI OBLIGATORII:
    - Coloanele acestui format sunt: Cod Produs | Denumire | Cant. cda | TVA % | Pret unit. TTI | Valoare TTI. price_raw = valoarea din "Pret unit. TTI", price_includes_vat = true, vat = din coloana "TVA %".
    - Sub denumirea fiecarui produs apar linii de genul "Disponibil pe DD/MM/YYYY" si "Emporte immediat pe DD/MM/YYYY" — sunt doar informatii logistice (disponibilitate stoc/livrare), NU produse si nu contin date de pret. IGNORA-le complet, nu le include si nu incerca sa extragi nimic din ele.
    - Linia "GARANTIE PET" de la finalul listei (cu propria cantitate/TVA/pret/valoare) se trateaza dupa Regula 2: daca cantitatea ei egaleaza suma cantitatilor produselor de bautura de deasupra => sgr=0.50 la toate acelea, iar "GARANTIE PET" NU intra ca produs separat in "items".
+   - FORMAT e-FACTURA OBLIO/ANAF (coloane "Nr | Denumire produs/serviciu | U.M. | Cant. | Pret unitar (RON fara TVA) | Valoare (RON) | TVA (RON)", cu procentul de TVA scris pe randul de dedesubt, ex: "11% - Redusa" sau "0% - Scutita"): la extragerea din PDF, cifrele de pe acelasi rand apar adesea LIPITE fara spatii intre ele (ex: "buc23042.79276434.59707.78"). NU ghici o singura despartire — foloseste VALIDAREA UNIVERSALA de mai sus: cauta acea combinatie Cantitate + Pret_unitar + Valoare + TVA din cifrele lipite pentru care Cantitate x Pret_unitar ≈ Valoare SI TVA / Valoare ≈ procentul scris dedesubt. Exemplu: "buc23042.79276434.59707.78" cu "11% - Redusa" dedesubt => Cant=2304, Pret unitar=2.7927, Valoare=6434.59, TVA=707.78 (2304 x 2.7927 ≈ 6434.59, 707.78/6434.59 ≈ 11%, ambele confirma taietura). price_raw=2.7927, price_includes_vat=false. O linie cu "0% - Scutita" dedesubt (ex: GARANTIE PET) NU e un produs normal cu vat=0 — e mereu o linie SGR, trateaz-o conform Regulii 2.
 
 2. SGR (Sistemul Garantie-Returnare) — CERINTA LEGALA, nu se ignora:
    - SGR = 0.50 lei fix per unitate de ambalaj returnabil. NU face parte din pretul produsului.
    - supplier_price se calculeaza FARA SGR. SGR nu intra in baza de calcul a adaosului sau TVA.
    - In JSON, campul "sgr" reprezinta valoarea per unitate (0 sau 0.50). Niciodata nu combina SGR cu supplier_price.
-   - Linii de tip "SGR", "AMBALAJ SGR", "GARANTIE PET", "GARANTIE AMBALAJ", "SGR STICLA", "SGR DOZA", "Garantie-Returnare", "Doza SGR" => EXCLUDE din lista de produse (sunt pozitii SGR, nu produse).
+   - Linii de tip "SGR", "AMBALAJ SGR", "GARANTIE PET", "GARANTIE AMBALAJ", "GARANTIE STICLA", "GARANTIE DOZA", "SGR STICLA", "SGR DOZA", "Garantie-Returnare", "Doza SGR" => EXCLUDE din lista de produse (sunt pozitii SGR, nu produse) — INDIFERENT de ordinea cuvintelor ("GARANTIE DOZA" = "DOZA SGR" = "SGR DOZA", toate inseamna acelasi lucru: garantie ambalaj tip doza).
    - Daca denumirea produsului contine "SGR" (ex: "URSUS 0.33L SGR") => sgr=0.50 la acel produs.
-   - Daca exista linie "AMBALAJ SGR STICLA" => potriveste cantitatea cu produsele BUC/ST si seteaza sgr=0.50.
-   - Daca exista linie "AMBALAJ SGR DOZA" => seteaza sgr=0.50 la produsele tip doza (DZ/CAN) ale caror cantitati sumate egaleaza cantitatea din linia SGR.
-   - Daca exista o singura linie "GARANTIE PET", "GARANTIE AMBALAJ" sau similar la final si cantitatea ei = suma cantitatilor tuturor produselor => aplica sgr=0.50 la TOATE produsele din lista.
+   - Daca exista linie "AMBALAJ SGR STICLA" sau "GARANTIE STICLA" => potriveste cantitatea cu produsele imbuteliate in sticla (BUC/ST) si seteaza sgr=0.50 la acelea.
+   - Daca exista linie "AMBALAJ SGR DOZA" sau "GARANTIE DOZA" => seteaza sgr=0.50 la produsele tip doza/can (DZ/CAN) ale caror cantitati sumate egaleaza cantitatea din linia de garantie.
+   - Daca exista o singura linie "GARANTIE PET", "GARANTIE STICLA", "GARANTIE DOZA", "GARANTIE AMBALAJ" sau similar la final si cantitatea ei = suma cantitatilor tuturor produselor (sau a produsului unic de deasupra, daca e un singur produs pe factura) => aplica sgr=0.50 la produsele respective. Aceasta e valabil chiar si pe facturi/e-Facturi normale cu coloane complete (Cant/Pret/Valoare/TVA), unde linia de garantie apare ca un rand normal cu TVA 0% ("0% - Scutita") — tot NU e produs, se exclude la fel.
    - Produse cu "NAV ST", "NAVETA", "NAV" in denumire => sgr=0 (sticla returnata pe naveta, nu individual).
    - Daca nu exista nicio referinta la SGR => sgr=0 la toate.
 
@@ -380,7 +381,9 @@ export async function POST(req: NextRequest) {
     // max_tokens e rezervat integral din bugetul TPM de Groq inainte sa vada raspunsul real,
     // deci trebuie tinut jos ca sa incapa alaturi de system prompt-ul, care tot creste cu regulile noi.
     // Marja e voit generoasa (nu doar strict cat incape acum) ca sa reziste la urmatoarele reguli adaugate.
-    const raw = await callGroq('llama-3.3-70b-versatile', messages, 3500)
+    // Preferat sa scadem max_tokens (recuperarea din parseJson salveaza oricum ce apuca sa genereze)
+    // decat slice-ul de text de mai sus, ca sa nu taiem input-ul (ex: legenda TVA de la finalul unui bon).
+    const raw = await callGroq('llama-3.3-70b-versatile', messages, 3000)
     const parsed = parseJson(raw)
     const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '')
     const result = validateAndSanitize(parsed, knownRatios)
