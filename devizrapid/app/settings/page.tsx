@@ -36,7 +36,7 @@ export default function SettingsPage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
-  const [profileForm, setProfileForm] = useState({ company_name: '', phone: '', email: '', address: '', vat_rate: 21 })
+  const [profileForm, setProfileForm] = useState({ company_name: '', phone: '', address: '', vat_rate: 21 })
   const [profileEditing, setProfileEditing] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
 
@@ -54,7 +54,6 @@ export default function SettingsPage() {
       setProfileForm({
         company_name: prof.company_name || '',
         phone: prof.phone || '',
-        email: prof.email || user.email || '',
         address: prof.address || '',
         vat_rate: typeof prof.vat_rate === 'number' ? prof.vat_rate : 21,
       })
@@ -252,7 +251,6 @@ export default function SettingsPage() {
               {[
                 { label: 'Nume / Brand', value: profileForm.company_name },
                 { label: 'Telefon', value: profileForm.phone },
-                { label: 'Email contact', value: profileForm.email },
                 { label: 'Adresa', value: profileForm.address },
               ].map(({ label, value }) => (
                 <div key={label} className="px-5 py-3">
@@ -273,7 +271,6 @@ export default function SettingsPage() {
               {[
                 { key: 'company_name', label: 'Nume / Brand', placeholder: 'Ex: Ion Instalatii', type: 'text', inputMode: 'text' },
                 { key: 'phone', label: 'Telefon', placeholder: '07xx xxx xxx', type: 'tel', inputMode: 'tel' },
-                { key: 'email', label: 'Email contact', placeholder: 'contact@mail.ro', type: 'email', inputMode: 'email' },
                 { key: 'address', label: 'Adresa', placeholder: 'Str. Exemplu nr. 1', type: 'text', inputMode: 'text' },
               ].map(f => (
                 <div key={f.key}>

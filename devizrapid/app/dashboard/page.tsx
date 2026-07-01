@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
+  const [artizanName, setArtizanName] = useState('')
   const [trial, setTrial] = useState<{ daysLeft: number; isActive: boolean; urgency: 'ok' | 'warning' | 'critical' } | null>(null)
   const [usage, setUsage] = useState<{ fise: number; calcule: number } | null>(null)
   const [subscribed, setSubscribed] = useState(false)
@@ -69,7 +70,7 @@ export default function Dashboard() {
       const activeMode: 'artizan' | 'pro' = userPlan === 'pro' && (savedMode === 'pro' || (savedMode === null && dbMode === 'pro')) ? 'pro' : 'artizan'
       setMode(activeMode)
 
-      setDisplayName(prof.email || session.user.email || '')
+      setArtizanName(prof.company_name || '')
 
       if (userPlan === 'pro') {
         let { data: cos } = await supabase.from('companies').select('id, name, cui').order('name')
@@ -81,7 +82,7 @@ export default function Dashboard() {
             cui: prof.cui || null,
             address: prof.address || null,
             phone: prof.phone || null,
-            email: prof.email || null,
+            email: session.user.email || null,
             bank: prof.bank || null,
             iban: prof.iban || null,
             vat_rate: prof.vat_rate || 0,
@@ -110,9 +111,7 @@ export default function Dashboard() {
     if (plan !== 'pro') return
     setMode(newMode)
     localStorage.setItem('dashboardMode', newMode)
-    if (newMode === 'artizan') {
-      setDisplayName('')
-    } else {
+    if (newMode === 'pro') {
       const active = companies.find(c => c.id === activeCompanyId) || companies[0]
       if (active) setDisplayName(active.name)
     }
@@ -266,8 +265,10 @@ export default function Dashboard() {
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+              ) : artizanName ? (
+                <p className="text-base font-bold text-gray-700 truncate max-w-[220px] mt-0.5">{artizanName}</p>
               ) : (
-                <p className="text-xs font-medium text-gray-400 mt-0.5">Mod Artizan</p>
+                <a href="/settings" className="text-xs font-semibold text-blue-500 mt-0.5 inline-block">+ Adauga numele tau →</a>
               )}
             </div>
           </div>
@@ -310,19 +311,21 @@ export default function Dashboard() {
 
         {/* Onboarding — prima vizita */}
         {showWelcome && (
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">👋</span>
-              <div>
-                <p className="text-sm font-bold text-blue-900">Primul pas: adauga-ti serviciile</p>
-                <p className="text-xs text-blue-500">Fara ele, nici fisele nici calculatorul nu functioneaza.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <a href="/services" onClick={() => localStorage.setItem('welcomed', '1')}
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 whitespace-nowrap">Adauga →</a>
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5 space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-bold text-blue-900 flex items-center gap-1.5">
+                <span className="text-lg">👋</span> Bine ai venit la Tarifator!
+              </p>
               <button onClick={() => { localStorage.setItem('welcomed', '1'); setShowWelcome(false) }}
-                className="text-blue-300 hover:text-blue-500 text-xl leading-none">×</button>
+                className="text-blue-300 hover:text-blue-500 text-xl leading-none shrink-0">×</button>
+            </div>
+            <p className="text-xs text-blue-700 leading-relaxed">
+              Raspundem instant la „Cat costa?" — genereaza fise de servicii prin dictare vocala si calculeaza preturi de vanzare cu adaos si TVA, in cateva secunde.
+            </p>
+            <div className="flex items-center justify-between gap-3 pt-0.5">
+              <p className="text-xs text-blue-500">Primul pas: adauga-ti serviciile.</p>
+              <a href="/services" onClick={() => localStorage.setItem('welcomed', '1')}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 whitespace-nowrap shrink-0">Adauga servicii →</a>
             </div>
           </div>
         )}
@@ -398,21 +401,21 @@ export default function Dashboard() {
             {/* ARTIZAN — Primary tools */}
             <div className="grid grid-cols-2 gap-3">
               <a href="/quick"
-                className="bg-blue-100 p-5 rounded-2xl shadow hover:bg-blue-200 active:scale-95 transition-all flex flex-col min-h-[160px]">
-                <svg className="w-8 h-8 mb-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                className="bg-blue-100 p-5 rounded-2xl shadow-sm hover:bg-blue-200 active:scale-95 transition-all flex flex-col min-h-[140px]">
+                <svg className="w-7 h-7 mb-2.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
                 </svg>
-                <h2 className="font-bold text-xl leading-tight text-gray-900">Fisa Servicii Voce</h2>
-                <p className="text-blue-700 text-sm mt-1.5">Dicteaza si genereaza instant</p>
+                <h2 className="font-bold text-lg leading-tight text-gray-900">Fisa Servicii Voce</h2>
+                <p className="text-blue-700 text-xs mt-1">Dicteaza si genereaza instant</p>
               </a>
               <a href="/pricing"
-                className="bg-amber-100 p-5 rounded-2xl shadow hover:bg-amber-200 active:scale-95 transition-all flex flex-col min-h-[160px]">
-                <svg className="w-8 h-8 mb-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                className="bg-amber-100 p-5 rounded-2xl shadow-sm hover:bg-amber-200 active:scale-95 transition-all flex flex-col min-h-[140px]">
+                <svg className="w-7 h-7 mb-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
                 </svg>
-                <h2 className="font-bold text-xl leading-tight text-gray-900">Calculator Pret Vanzare</h2>
-                <p className="text-amber-700 text-sm mt-1.5">Adaos · TVA · PDF</p>
+                <h2 className="font-bold text-lg leading-tight text-gray-900">Calculator Pret Vanzare</h2>
+                <p className="text-amber-700 text-xs mt-1">Adaos · TVA · PDF</p>
               </a>
             </div>
 
