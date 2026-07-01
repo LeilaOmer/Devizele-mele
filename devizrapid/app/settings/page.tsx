@@ -427,7 +427,7 @@ function CompanyForm({ form, setForm, onSave, onCancel, saved }: {
     setAnafError('')
     try {
       const cui = form.cui.replace(/[^0-9]/g, '')
-      const res = await fetch(`https://anaf-proxy.contact-tarifator.workers.dev/?cui=${cui}`)
+      const res = await fetch(`/api/anaf-lookup?cui=${cui}`)
       const data = await res.json()
       if (!res.ok) { setAnafError(data.error || 'Eroare ANAF'); return }
       setForm({

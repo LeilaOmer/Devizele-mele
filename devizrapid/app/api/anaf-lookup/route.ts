@@ -32,7 +32,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Raspuns invalid ANAF', detail: raw.slice(0, 300) }, { status: 502 })
     }
 
-    const found = (data?.found as Array<{ date_generale?: Record<string, string> }>)?.[0]?.date_generale
+    const entry = (data?.found as Array<{
+      date_generale?: Record<string, string>
+      inregistrare_scop_Tva?: { scpTVA?: boolean }
+    }>)?.[0]
+    const found = entry?.date_generale
     if (!found) {
       return NextResponse.json({ error: 'CUI negasit', detail: JSON.stringify(data).slice(0, 300) }, { status: 404 })
     }
@@ -41,6 +45,7 @@ export async function GET(req: NextRequest) {
       name: found.denumire || '',
       address: found.adresa || '',
       reg_com: found.nrRegCom || '',
+      scpTva: typeof entry?.inregistrare_scop_Tva?.scpTVA === 'boolean' ? entry.inregistrare_scop_Tva.scpTVA : null,
     })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
