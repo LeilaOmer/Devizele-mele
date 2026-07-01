@@ -36,9 +36,11 @@ export default function SettingsPage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
-  const [profileForm, setProfileForm] = useState({ company_name: '', phone: '', address: '', vat_rate: 21 })
+  const [profileForm, setProfileForm] = useState({ company_name: '', cui: '', phone: '', address: '', vat_rate: 21 })
   const [profileEditing, setProfileEditing] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
+  const [profileAnafLoading, setProfileAnafLoading] = useState(false)
+  const [profileAnafError, setProfileAnafError] = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -53,6 +55,7 @@ export default function SettingsPage() {
       setPlanActiveUntil(prof.plan_active_until || null)
       setProfileForm({
         company_name: prof.company_name || '',
+        cui: prof.cui || '',
         phone: prof.phone || '',
         address: prof.address || '',
         vat_rate: typeof prof.vat_rate === 'number' ? prof.vat_rate : 21,
@@ -70,6 +73,28 @@ export default function SettingsPage() {
     setProfileSaved(true)
     setProfileEditing(false)
     setTimeout(() => setProfileSaved(false), 2000)
+  }
+
+  async function lookupAnafProfile() {
+    if (!profileForm.cui) return
+    setProfileAnafLoading(true)
+    setProfileAnafError('')
+    try {
+      const cui = profileForm.cui.replace(/[^0-9]/g, '')
+      const res = await fetch(`/api/anaf-lookup?cui=${cui}`)
+      const data = await res.json()
+      if (!res.ok) { setProfileAnafError(data.error || 'Eroare ANAF'); return }
+      setProfileForm(f => ({
+        ...f,
+        company_name: data.name || f.company_name,
+        address: data.address || f.address,
+        vat_rate: typeof data.scpTva === 'boolean' ? (data.scpTva ? (f.vat_rate || 21) : 0) : f.vat_rate,
+      }))
+    } catch {
+      setProfileAnafError('Eroare conexiune')
+    } finally {
+      setProfileAnafLoading(false)
+    }
   }
 
   async function saveAccountType(type: 'artizan' | 'pro') {
@@ -250,6 +275,7 @@ export default function SettingsPage() {
             <div className="divide-y divide-gray-50">
               {[
                 { label: 'Nume / Brand', value: profileForm.company_name },
+                { label: 'CUI / CIF', value: profileForm.cui },
                 { label: 'Telefon', value: profileForm.phone },
                 { label: 'Adresa', value: profileForm.address },
               ].map(({ label, value }) => (
@@ -268,6 +294,22 @@ export default function SettingsPage() {
             </div>
           ) : (
             <div className="px-5 py-4 space-y-3 bg-gray-50">
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">CUI / CIF</label>
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white"
+                    placeholder="RO12345678"
+                    value={profileForm.cui}
+                    onChange={e => { setProfileForm({ ...profileForm, cui: e.target.value }); setProfileAnafError('') }}
+                  />
+                  <button onClick={lookupAnafProfile} disabled={profileAnafLoading || !profileForm.cui}
+                    className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold disabled:bg-gray-300 shrink-0 whitespace-nowrap">
+                    {profileAnafLoading ? '...' : 'Cauta ANAF'}
+                  </button>
+                </div>
+                {profileAnafError && <p className="text-xs text-red-500 mt-1">{profileAnafError}</p>}
+              </div>
               {[
                 { key: 'company_name', label: 'Nume / Brand', placeholder: 'Ex: Ion Instalatii', type: 'text', inputMode: 'text' },
                 { key: 'phone', label: 'Telefon', placeholder: '07xx xxx xxx', type: 'tel', inputMode: 'tel' },
@@ -282,7 +324,7 @@ export default function SettingsPage() {
                     inputMode={f.inputMode as React.HTMLAttributes<HTMLInputElement>['inputMode']}
                     autoCapitalize={f.type === 'email' || f.type === 'tel' ? 'none' : 'sentences'}
                     autoCorrect="off"
-                    value={profileForm[f.key as keyof Omit<typeof profileForm, 'vat_rate'>] as string}
+                    value={profileForm[f.key as keyof Omit<typeof profileForm, 'vat_rate' | 'cui'>] as string}
                     onChange={e => setProfileForm({ ...profileForm, [f.key]: e.target.value })}
                   />
                 </div>

@@ -20,7 +20,7 @@ export default function ClientsPage() {
     setLookingUp(true)
     setAnafError('')
     try {
-      const res = await fetch(`https://anaf-proxy.contact-tarifator.workers.dev/?cui=${cuiNum}`)
+      const res = await fetch(`/api/anaf-lookup?cui=${cuiNum}`)
       const data = await res.json()
       if (!res.ok) { setAnafError(data.error || 'Eroare ANAF'); return }
       onResult(data.name || '', data.address || '')
