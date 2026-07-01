@@ -9,7 +9,13 @@ function getSupabaseAdmin() {
 }
 
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura sau aviz) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
-Format: {"supplier":"Nume Furnizor SRL","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","supplier_price":0,"discount":0,"vat":21,"sgr":0}]}
+Format: {"supplier":"Nume Furnizor SRL","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","price_raw":0,"price_includes_vat":false,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0}]}
+
+IMPORTANT — rolul tau e sa CITESTI si sa CLASIFICI, NU sa calculezi. Orice impartire, conversie de TVA sau calcul de pret se face separat, automat, dupa ce raspunzi tu. Tu doar:
+- copiezi EXACT numarul tiparit pe factura in "price_raw" (fara sa-l modifici cu nimic)
+- marchezi cu true/false daca acel numar contine sau nu TVA ("price_includes_vat")
+- extragi numarul de bucati per ambalaj in "pieces_per_box" (doar daca apare explicit scris)
+NU face niciodata singur impartirea/conversia — modelele AI gresesc des la aritmetica din cap si strica preturile. Daca faci calculul tu insuti in loc sa raportezi numerele brute, rezultatul e considerat gresit.
 
 Daca in imagine sunt vizibile mai multe documente/foi suprapuse (ex: o factura pusa peste alta, colturi de pagini din spate care se vad partial, o alta factura vizibila in fundal) => citeste STRICT documentul din prim-plan, cel mai clar si mai apropiat de camera. Ignora complet orice text din paginile suprapuse/din fundal, chiar daca e partial vizibil — nu il amesteca cu datele documentului principal.
 
@@ -19,20 +25,20 @@ Campul "discounts" se completeaza PRIMUL, inainte de items. Contine procentul de
 
 REGULI OBLIGATORII:
 
-1. supplier_price = pretul per unitate FARA TVA si FARA SGR.
-   - Coloane cu pret CU TVA: "Pret TTI", "Pret unit. TTI", "Pret cu TVA", "Valoare TTI" => imparte la (1 + cota_tva/100). Ex: 2.60 lei cu TVA 11% => 2.60/1.11 = 2.3423
-   - Coloane cu pret FARA TVA: "Pret RON", "Pret Ofr", "Pret net", "Pret fara TVA", "Pret unitar", "Pretul net al articolului" => foloseste direct ca supplier_price.
-   - Rotunjeste la 4 zecimale.
+1. price_raw + price_includes_vat — identifica UNDE e pretul, nu-l calcula:
+   - Coloane cu pret CU TVA: "Pret TTI", "Pret unit. TTI", "Pret cu TVA", "Valoare TTI" => price_raw = acel numar tiparit, price_includes_vat = true.
+   - Coloane cu pret FARA TVA: "Pret RON", "Pret Ofr", "Pret net", "Pret fara TVA", "Pret unitar", "Pretul net al articolului" => price_raw = acel numar tiparit, price_includes_vat = false.
    - FORMAT WINMENTOR (software roman, ex: Hygiene Puls Center, facturi cu "Discount cumulat"): coloanele per rand sunt in ordinea EXACTA: Cantitate | Pret unitar (lei, fara TVA) | Valoare (lei, fara TVA) | Valoare TVA (lei) | Procent discount.
-   - supplier_price = valoarea din coloana "Pret unitar" — citeste DIRECT acel numar, nu calcula din altceva.
-   - NU aplica discount la supplier_price. Discount-ul se pune separat in campul "discount".
+   - price_raw = valoarea din coloana "Pret unitar", price_includes_vat = false — citeste DIRECT acel numar, nu calcula din altceva.
+   - NU aplica discount la price_raw. Discount-ul se pune separat in campul "discount".
    - Linia "Discount cumulat TVA XX%" de la sfarsit este un TOTAL al facturii — ignor-o complet, nu e un produs.
-   - Exemplu corect WinMENTOR: rand "KONGA HARD Buc 5,00 14,00 70,00 14,70 -15%" => supplier_price=14.00, discount=15, validare: 14.00 x 5 = 70.00 ✓
-   - Exemplu corect WinMENTOR: rand "EFEKT BAIE 1L Buc 5,00 14,26 71,30 14,97 -15%" => supplier_price=14.26, discount=15, validare: 14.26 x 5 = 71.30 ✓
+   - Exemplu corect WinMENTOR: rand "KONGA HARD Buc 5,00 14,00 70,00 14,70 -15%" => price_raw=14.00, price_includes_vat=false, discount=15, validare: 14.00 x 5 = 70.00 ✓
+   - Exemplu corect WinMENTOR: rand "EFEKT BAIE 1L Buc 5,00 14,26 71,30 14,97 -15%" => price_raw=14.26, price_includes_vat=false, discount=15, validare: 14.26 x 5 = 71.30 ✓
    - FORMAT cu "Pretul net al articolului" / "Valoare neta" (orice furnizor cu aceste coloane): ordinea EXACTA per rand este: Pretul net al articolului (pret unitar fara TVA) | Cantitate | UM | Cota TVA | Valoare neta (total = pret x cantitate).
-   - supplier_price = valoarea din coloana "Pretul net al articolului" (primul numar din rand). NICIODATA "Valoare neta" (ultimul numar, totalul).
-   - Exemplu corect: rand "1,9820 | 5 | kg | 11% | 9,91" => supplier_price=1.9820, validare: 1.9820 x 5 = 9.91 ✓ (NU 9.91 ca pret!)
-   - VALIDARE UNIVERSALA (se aplica oricarui format): supplier_price x cantitate ≈ valoare_fara_TVA. Daca nu se potriveste, ai ales coloana gresita — incearca alt numar din acel rand.
+   - price_raw = valoarea din coloana "Pretul net al articolului" (primul numar din rand), price_includes_vat = false. NICIODATA "Valoare neta" (ultimul numar, totalul).
+   - Exemplu corect: rand "1,9820 | 5 | kg | 11% | 9,91" => price_raw=1.9820, price_includes_vat=false, validare: 1.9820 x 5 = 9.91 ✓ (NU 9.91 ca pret!)
+   - VALIDARE UNIVERSALA (se aplica oricarui format): price_raw x cantitate ≈ valoarea corespunzatoare de pe factura (fara TVA daca price_includes_vat=false, cu TVA daca true). Daca nu se potriveste, ai ales coloana gresita — incearca alt numar din acel rand.
+   - NU imparti singur la (1+cota_tva/100) si NU calcula tu pretul fara TVA — doar raporteaza price_raw + price_includes_vat corect, impartirea se face automat dupa.
 
 2. SGR (Sistemul Garantie-Returnare) — CERINTA LEGALA, nu se ignora:
    - SGR = 0.50 lei fix per unitate de ambalaj returnabil. NU face parte din pretul produsului.
@@ -91,17 +97,12 @@ REGULI OBLIGATORII:
 
 8. CUTII / BAX-URI / SET-URI cu produse individuale ambalate colectiv — cand UM este Cutie, Cut, Bax, Bx, Set (ambalaj colectiv, nu bucata vanduta individual pe factura):
    PASUL 1 — cauta in DENUMIREA produsului un raport explicit bucati-per-ambalaj: tipare ca "NNBUC/CUT", "NN B/CUT", "NNbuc/cut", "(NN buc/cut)", "NNB/CUT X ...", sau pur si simplu "NN BUC" langa denumire. Exemple: "35GR BANOFFEE 24BUC/CUT" => 24; "30G 30B/CUT" => 30; "40 G/24B" => 24; "(18 buc/cut)" => 18; "35 GR 24 BUC" => 24; "24B/CUT X 28G" => 24.
-   PASUL 2a — DACA gasesti acest raport, produsul se vinde pe bucata individuala (asa se comercializeaza mai departe), NU pe cutia intreaga:
-      - unit = "buc"
-      - supplier_price = pretul cutiei (citit conform Regulii 1, fara TVA) IMPARTIT la numarul de bucati gasit. Rotunjeste la 4 zecimale.
-      - VALIDARE: supplier_price x numar_bucati_gasit ≈ pretul cutiei citit din factura (in limita rotunjirii).
-      - Exemplu: "MAGURA MACARON 35GR BANOFFEE 24BUC/CUT", pret cutie 40.42 lei fara TVA => supplier_price = 40.42 / 24 = 1.6842, unit = "buc".
-   PASUL 2b — DACA NU gasesti niciun raport bucati/cutie in denumire (produsul e descris DOAR prin greutate/volum total al ambalajului, ex: "1.3 KG", "450 GR", fara sa spuna cate bucati individuale contine): produsul se vinde ca intreaga cutie/bax, ca unitate unica, la fel ca un produs normal la bucata:
-      - unit = numele unitatii asa cum apare pe factura (ex: "cutie", "bax", "set")
-      - supplier_price = pretul cutiei intregi (fara TVA), FARA nicio impartire.
-      - Exemplu: "JUMBO 1.3 KG NAP DOINA", cutie/bax cu pret 47.20 lei fara TVA => supplier_price = 47.20, unit = "cutie" (NU se imparte — nu exista niciun numar de bucati in denumire).
-   IMPORTANT: NU incerca sa ghicesti, estimezi sau deduci un numar de bucati care nu apare explicit scris in denumirea produsului. Daca lipseste raportul bucati/cutie, aplica intotdeauna PASUL 2b (nu se sparge).
-   Produsele care au deja UM = Buc pe factura (chiar daca denumirea contine "NN BUC/CUT" ca informatie despre ambalarea de la producator) raman neschimbate — Regula 8 se aplica DOAR cand UM-ul de pe factura e Cutie/Bax/Cut/Set, nu Buc.`
+   PASUL 2a — DACA gasesti acest raport: pieces_per_box = numarul gasit (doar cifra din text, un intreg — NU calcula nimic cu el, nu imparti pretul singur). unit ramane cel de pe factura.
+      - Exemplu: "MAGURA MACARON 35GR BANOFFEE 24BUC/CUT" => pieces_per_box = 24.
+   PASUL 2b — DACA NU gasesti niciun raport bucati/cutie in denumire (produsul e descris DOAR prin greutate/volum total al ambalajului, ex: "1.3 KG", "450 GR", fara sa spuna cate bucati individuale contine): pieces_per_box = 1 (produsul se vinde ca intreaga cutie/bax, unitate unica).
+      - Exemplu: "JUMBO 1.3 KG NAP DOINA" => pieces_per_box = 1 (nu exista niciun numar de bucati in denumire).
+   IMPORTANT: NU incerca sa ghicesti, estimezi sau deduci un numar de bucati care nu apare explicit scris in denumirea produsului — in acel caz pieces_per_box = 1. NU imparti tu pretul la pieces_per_box, NU calcula pretul per bucata — doar raporteaza numarul gasit in text, impartirea se face automat dupa.
+   Produsele care au deja UM = Buc pe factura (chiar daca denumirea contine "NN BUC/CUT" ca informatie despre ambalarea de la producator) raman neschimbate, pieces_per_box = 1 — Regula 8 se aplica DOAR cand UM-ul de pe factura e Cutie/Bax/Cut/Set, nu Buc.`
 
 async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -146,7 +147,7 @@ function validateAndSanitize(data: unknown) {
       if (!i || typeof i !== 'object') return false
       const item = i as Record<string, unknown>
       return typeof item.name === 'string' && item.name.trim() !== ''
-        && typeof item.supplier_price === 'number' && item.supplier_price > 0
+        && typeof item.price_raw === 'number' && item.price_raw > 0
     })
     .map((i: unknown) => {
       const item = i as Record<string, unknown>
@@ -157,9 +158,21 @@ function validateAndSanitize(data: unknown) {
         ? itemDiscount
         : (globalDiscounts[vat] ?? 0)
       const sgr = Number(item.sgr)
+
+      // Toata aritmetica (scoatere TVA + impartire cutie/bax pe bucata) se face
+      // aici, deterministic in cod — modelul AI doar citeste si clasifica
+      // (price_raw, price_includes_vat, pieces_per_box), calculul lui de cap era nesigur.
+      const priceRaw = Number(item.price_raw)
+      const priceExVat = item.price_includes_vat === true ? priceRaw / (1 + vat / 100) : priceRaw
+      const piecesPerBoxRaw = Math.round(Number(item.pieces_per_box))
+      const piecesPerBox = Number.isFinite(piecesPerBoxRaw) && piecesPerBoxRaw > 1 ? piecesPerBoxRaw : 1
+      const supplierPrice = Math.round((priceExVat / piecesPerBox) * 10000) / 10000
+      const unit = piecesPerBox > 1 ? 'buc' : (typeof item.unit === 'string' && item.unit.trim() ? item.unit : 'buc')
+
       return {
-        ...item,
-        supplier_price: Math.round(Number(item.supplier_price) * 10000) / 10000,
+        name: item.name,
+        unit,
+        supplier_price: supplierPrice,
         vat,
         discount,
         sgr: (sgr === 0.5 ? 0.5 : 0),
