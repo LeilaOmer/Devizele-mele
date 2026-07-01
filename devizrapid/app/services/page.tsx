@@ -63,14 +63,16 @@ export default function ServicesPage() {
     if (isPro && activeCompanyId) {
       payload.company_id = activeCompanyId
     }
-    await supabase.from('services').insert(payload)
+    const { error } = await supabase.from('services').insert(payload)
+    setLoading(false)
+    if (error) { alert('Nu s-a adaugat serviciul: ' + error.message); return }
     setName(''); setUnit(''); setPrice('')
     await fetchServices(isPro ? activeCompanyId : null)
-    setLoading(false)
   }
 
   async function handleDelete(id: string) {
-    await supabase.from('services').delete().eq('id', id)
+    const { error } = await supabase.from('services').delete().eq('id', id)
+    if (error) { alert('Nu s-a sters serviciul: ' + error.message); return }
     await fetchServices(isPro ? activeCompanyId : null)
   }
 

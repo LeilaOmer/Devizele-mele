@@ -30,7 +30,10 @@ export async function POST(req: Request) {
   // Salveaza hash email inainte de stergere (anti-abuz re-inregistrare)
   if (user.email) {
     const emailHash = createHash('md5').update(user.email.toLowerCase().trim()).digest('hex')
-    await admin.from('deleted_accounts').upsert({ email_hash: emailHash })
+    const { data: existing } = await admin.from('deleted_accounts').select('email_hash').eq('email_hash', emailHash).maybeSingle()
+    if (!existing) {
+      await admin.from('deleted_accounts').insert({ email_hash: emailHash })
+    }
   }
 
   // Delete user data in order (children first)

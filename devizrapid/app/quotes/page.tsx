@@ -69,18 +69,20 @@ async function fetchData() {
     const month = String(now.getMonth() + 1).padStart(2, '0')
     const { data: counter } = await supabase.rpc('increment_counter', { counter_key: 'quote_number' })
     const quote_number = 'DR-' + year + month + '-' + String(counter).padStart(3, '0')
-    const { data } = await supabase.from('quotes').insert({
+    const { data, error } = await supabase.from('quotes').insert({
       title, user_id: user.id, status: 'draft', total: 0,
       client_id: clientId || null, quote_number,
       company_id: activeCompanyId || null
     }).select().single()
-    setTitle(''); setClientId('')
     setLoading(false)
-    if (data) router.push(`/quotes/${data.id}`)
+    if (error || !data) { alert('Nu s-a creat fisa: ' + (error?.message || 'eroare necunoscuta')); return }
+    setTitle(''); setClientId('')
+    router.push(`/quotes/${data.id}`)
   }
 
   async function handleDelete(id: string) {
-    await supabase.from('quotes').delete().eq('id', id)
+    const { error } = await supabase.from('quotes').delete().eq('id', id)
+    if (error) { alert('Nu s-a sters fisa: ' + error.message); return }
     await fetchData()
   }
 

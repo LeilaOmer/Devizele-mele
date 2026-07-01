@@ -42,26 +42,29 @@ export default function ClientsPage() {
     if (!form.name) return
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('clients').insert({ ...form, user_id: user?.id })
+    const { error } = await supabase.from('clients').insert({ ...form, user_id: user?.id })
+    setLoading(false)
+    if (error) { alert('Nu s-a adaugat clientul: ' + error.message); return }
     setForm({ name: '', phone: '', email: '', cui: '', address: '', contact_person: '' })
     await fetchClients()
-    setLoading(false)
   }
 
   async function handleSaveEdit() {
     if (!editing) return
     setLoading(true)
-    await supabase.from('clients').update({
+    const { error } = await supabase.from('clients').update({
       name: editing.name, phone: editing.phone, email: editing.email,
       cui: editing.cui, address: editing.address, contact_person: editing.contact_person
     }).eq('id', editing.id)
+    setLoading(false)
+    if (error) { alert('Nu s-a salvat clientul: ' + error.message); return }
     setEditing(null)
     await fetchClients()
-    setLoading(false)
   }
 
   async function handleDelete(id: string) {
-    await supabase.from('clients').delete().eq('id', id)
+    const { error } = await supabase.from('clients').delete().eq('id', id)
+    if (error) { alert('Nu s-a sters clientul: ' + error.message); return }
     await fetchClients()
   }
 

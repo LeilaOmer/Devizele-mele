@@ -57,7 +57,8 @@ export default function Dashboard() {
       let { data: prof } = await supabase
         .from('profiles').select('account_type, company_name, email, cui, address, phone, bank, iban, vat_rate').eq('id', session.user.id).single()
       if (!prof) {
-        await supabase.from('profiles').insert({ id: session.user.id, account_type: 'artizan' })
+        const { error: profInsertErr } = await supabase.from('profiles').insert({ id: session.user.id, account_type: 'artizan' })
+        if (profInsertErr) console.error('Nu s-a putut crea profilul:', profInsertErr.message)
         router.push('/settings')
         return
       }
@@ -76,7 +77,7 @@ export default function Dashboard() {
         let { data: cos } = await supabase.from('companies').select('id, name, cui').order('name')
 
         if ((!cos || cos.length === 0) && prof?.company_name) {
-          const { data: newCo } = await supabase.from('companies').insert({
+          const { data: newCo, error: newCoErr } = await supabase.from('companies').insert({
             user_id: session.user.id,
             name: prof.company_name,
             cui: prof.cui || null,
@@ -87,6 +88,7 @@ export default function Dashboard() {
             iban: prof.iban || null,
             vat_rate: prof.vat_rate || 0,
           }).select('id, name, cui').single()
+          if (newCoErr) console.error('Nu s-a putut crea firma din profil:', newCoErr.message)
           if (newCo) cos = [newCo]
         }
 
@@ -160,7 +162,8 @@ export default function Dashboard() {
     setFbSending(true)
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
-      await supabase.from('feedback').insert({ user_id: session.user.id, message: fbText.trim() })
+      const { error } = await supabase.from('feedback').insert({ user_id: session.user.id, message: fbText.trim() })
+      if (error) { setFbSending(false); alert('Nu s-a trimis mesajul: ' + error.message); return }
     }
     setFbText('')
     setFbDone(true)

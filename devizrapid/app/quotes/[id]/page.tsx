@@ -307,13 +307,14 @@ export default function QuoteDetailPage() {
     for (const row of validRows) {
       const qty = parseFloat(row.quantity);
       const price = parseFloat(row.unit_price);
-      await supabase.from("quote_items").insert({
+      const { error: itemErr } = await supabase.from("quote_items").insert({
         quote_id: quote.id,
         service_id: row.service_id || null,
         description: row.description.trim(),
         quantity: qty,
         unit_price: price,
       });
+      if (itemErr) { setSaving(false); alert("Nu s-a salvat o linie: " + itemErr.message); return; }
     }
 
     const { data: allItems } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote.id);
@@ -325,7 +326,7 @@ export default function QuoteDetailPage() {
     const vatRate = isPro ? emitent.vat_rate : 0;
     const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
 
-    await supabase.from("quotes").update({
+    const { error: totalErr } = await supabase.from("quotes").update({
       total: subtotalNet,
       vat_rate: vatRate,
       vat_amount: vatAmount,
@@ -333,6 +334,7 @@ export default function QuoteDetailPage() {
       discount: parseFloat(discount || "0"),
       discount_type: discountType,
     }).eq("id", quote.id);
+    if (totalErr) { setSaving(false); alert("Nu s-a actualizat totalul: " + totalErr.message); return; }
 
     setRows([emptyRow()]);
     setSaving(false);
@@ -341,7 +343,8 @@ export default function QuoteDetailPage() {
   }
 
   async function handleDeleteItem(itemId: string) {
-    await supabase.from("quote_items").delete().eq("id", itemId);
+    const { error: delErr } = await supabase.from("quote_items").delete().eq("id", itemId);
+    if (delErr) { alert("Nu s-a sters linia: " + delErr.message); return; }
     const { data: remaining } = await supabase.from("quote_items").select("quantity, unit_price").eq("quote_id", quote!.id);
     const subtotalBrut = (remaining || []).reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const dVal = discountType === "pct" ? subtotalBrut * parseFloat(discount || "0") / 100 : parseFloat(discount || "0");
@@ -372,7 +375,7 @@ export default function QuoteDetailPage() {
     const emitent = getEmitent();
     const vatRate = isPro ? emitent.vat_rate : 0;
     const vatAmount = Math.round(subtotalNet * vatRate / 100 * 100) / 100;
-    await supabase.from("quotes").update({
+    const { error: discErr } = await supabase.from("quotes").update({
       total: subtotalNet,
       vat_rate: vatRate,
       vat_amount: vatAmount,
@@ -380,22 +383,25 @@ export default function QuoteDetailPage() {
       discount: parseFloat(discount || "0"),
       discount_type: discountType,
     }).eq("id", quote.id);
+    setSavingDiscount(false);
+    if (discErr) { alert("Nu s-a salvat discountul: " + discErr.message); return; }
     setSavedDiscount(discount);
     setSavedDiscountType(discountType);
-    setSavingDiscount(false);
     playSuccessSound();
     await loadQuote();
   }
 
   async function handleFinalize() {
     if (!quote) return;
-    await supabase.from("quotes").update({ status: "final" }).eq("id", quote.id);
+    const { error } = await supabase.from("quotes").update({ status: "final" }).eq("id", quote.id);
+    if (error) { alert("Nu s-a finalizat fisa: " + error.message); return; }
     await loadQuote();
   }
 
   async function handleUnfinalize() {
     if (!quote) return;
-    await supabase.from("quotes").update({ status: "draft" }).eq("id", quote.id);
+    const { error } = await supabase.from("quotes").update({ status: "draft" }).eq("id", quote.id);
+    if (error) { alert("Nu s-a putut readuce fisa la ciorna: " + error.message); return; }
     await loadQuote();
   }
 

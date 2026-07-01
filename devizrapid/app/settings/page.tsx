@@ -101,13 +101,14 @@ export default function SettingsPage() {
   async function saveAccountType(type: 'artizan' | 'pro') {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
+    const { error } = await supabase.from('profiles').update({ account_type: type }).eq('id', session.user.id)
+    if (error) { alert('Nu s-a putut schimba tipul de cont: ' + error.message); return }
     setAccountType(type)
     localStorage.setItem('dashboardMode', type)
     if (type === 'artizan') {
       localStorage.removeItem('activeCompanyId')
       localStorage.removeItem('activeCompanyName')
     }
-    await supabase.from('profiles').update({ account_type: type }).eq('id', session.user.id)
   }
 
   async function saveCompany() {
@@ -115,7 +116,8 @@ export default function SettingsPage() {
     if (!session || !form.name.trim()) return
     const user = session.user
     if (editing === 'new') {
-      const { data: newCompany } = await supabase.from('companies').insert({ ...form, user_id: user.id }).select().single()
+      const { data: newCompany, error } = await supabase.from('companies').insert({ ...form, user_id: user.id }).select().single()
+      if (error) { alert('Nu s-a putut adauga firma: ' + error.message); return }
       if (newCompany) {
         const { data: existingServices } = await supabase.from('services').select('*').eq('user_id', user.id).is('company_id', null)
         if (existingServices && existingServices.length > 0) {
@@ -128,7 +130,8 @@ export default function SettingsPage() {
         }
       }
     } else {
-      await supabase.from('companies').update(form).eq('id', editing!)
+      const { error } = await supabase.from('companies').update(form).eq('id', editing!)
+      if (error) { alert('Nu s-a salvat firma: ' + error.message); return }
     }
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)

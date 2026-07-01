@@ -77,6 +77,7 @@ export function usePricingDraft() {
   }, [roundStep, roundMode])
 
   async function setVatPayer(v: boolean) {
+    const previous = vatPayer
     setVatPayerState(v)
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
@@ -84,18 +85,19 @@ export function usePricingDraft() {
     const companyId = isPro ? localStorage.getItem('activeCompanyId') : null
     if (companyId) {
       if (!v) {
-        supabase.from('companies').update({ vat_rate: 0 }).eq('id', companyId)
+        const { error } = await supabase.from('companies').update({ vat_rate: 0 }).eq('id', companyId)
+        if (error) { setVatPayerState(previous); alert('Nu s-a salvat regimul TVA: ' + error.message) }
       } else {
         // Restore to 21 only if currently non-platitor (0)
-        supabase.from('companies').select('vat_rate').eq('id', companyId).single()
-          .then(({ data }) => {
-            if (data && data.vat_rate === 0) {
-              supabase.from('companies').update({ vat_rate: 21 }).eq('id', companyId)
-            }
-          })
+        const { data } = await supabase.from('companies').select('vat_rate').eq('id', companyId).single()
+        if (data && data.vat_rate === 0) {
+          const { error } = await supabase.from('companies').update({ vat_rate: 21 }).eq('id', companyId)
+          if (error) { setVatPayerState(previous); alert('Nu s-a salvat regimul TVA: ' + error.message) }
+        }
       }
     } else {
-      supabase.from('profiles').update({ vat_rate: v ? 21 : 0 }).eq('id', session.user.id)
+      const { error } = await supabase.from('profiles').update({ vat_rate: v ? 21 : 0 }).eq('id', session.user.id)
+      if (error) { setVatPayerState(previous); alert('Nu s-a salvat regimul TVA: ' + error.message) }
     }
   }
 
@@ -114,9 +116,11 @@ export function usePricingDraft() {
       updated_at: new Date().toISOString(),
     }
     if (draftId) {
-      await supabase.from('pricing_drafts').update(payload).eq('id', draftId)
+      const { error } = await supabase.from('pricing_drafts').update(payload).eq('id', draftId)
+      if (error) { setSaving(false); alert('Nu s-a salvat calculul: ' + error.message); return }
     } else {
-      const { data } = await supabase.from('pricing_drafts').insert(payload).select('id').single()
+      const { data, error } = await supabase.from('pricing_drafts').insert(payload).select('id').single()
+      if (error) { setSaving(false); alert('Nu s-a salvat calculul: ' + error.message); return }
       if (data) setDraftId(data.id)
     }
     setSaving(false)

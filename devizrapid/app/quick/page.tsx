@@ -174,11 +174,12 @@ export default function QuickPage() {
     }
     let client_id = null
     if (preview.client_name) {
-      const { data: existing } = await supabase.from('clients').select('id').ilike('name', preview.client_name).single()
-      if (existing) {
-        client_id = existing.id
+      const { data: existing } = await supabase.from('clients').select('id').ilike('name', preview.client_name).limit(1)
+      if (existing && existing.length > 0) {
+        client_id = existing[0].id
       } else {
-        const { data: newClient } = await supabase.from('clients').insert({ name: preview.client_name, user_id: user?.id }).select().single()
+        const { data: newClient, error: clientErr } = await supabase.from('clients').insert({ name: preview.client_name, user_id: user?.id }).select().single()
+        if (clientErr) { setLoading(false); alert('Nu s-a putut salva clientul: ' + clientErr.message); return }
         client_id = newClient?.id
       }
     }
@@ -187,7 +188,7 @@ export default function QuickPage() {
     const month = String(now.getMonth() + 1).padStart(2, '0')
     const { data: counter } = await supabase.rpc('increment_counter', { counter_key: 'quote_number' })
     const quote_number = 'DR-' + year + month + '-' + String(counter).padStart(3, '0')
-    const { data: quote } = await supabase.from('quotes').insert({
+    const { data: quote, error: quoteErr } = await supabase.from('quotes').insert({
       title: 'Fisa Servicii ' + (preview.client_name || ''),
       user_id: user?.id,
       client_id,
@@ -196,18 +197,20 @@ export default function QuickPage() {
       quote_number,
       company_id: localStorage.getItem('dashboardMode') === 'pro' ? (localStorage.getItem('activeCompanyId') || null) : null
     }).select().single()
-    if (!quote) return setLoading(false)
+    if (quoteErr || !quote) { setLoading(false); alert('Nu s-a creat fisa: ' + (quoteErr?.message || 'eroare necunoscuta')); return }
     for (const item of preview.items) {
-      await supabase.from('quote_items').insert({
+      const { error: itemErr } = await supabase.from('quote_items').insert({
         quote_id: quote.id,
         service_id: item.service_id,
         description: item.name,
         quantity: item.quantity,
         unit_price: item.unit_price
       })
+      if (itemErr) { setLoading(false); alert('Nu s-a salvat o linie din fisa: ' + itemErr.message); return }
     }
     const total = preview.items.reduce((sum, i) => sum + i.total, 0)
-    await supabase.from('quotes').update({ total }).eq('id', quote.id)
+    const { error: totalErr } = await supabase.from('quotes').update({ total }).eq('id', quote.id)
+    if (totalErr) { setLoading(false); alert('Nu s-a actualizat totalul: ' + totalErr.message); return }
     playSuccessSound()
     router.push('/quotes/' + quote.id)
   }
