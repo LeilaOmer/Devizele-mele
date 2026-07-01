@@ -1,5 +1,5 @@
 'use client'
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -14,7 +14,16 @@ export default function LoginPage() {
   const [acceptGdpr, setAcceptGdpr] = useState(false)
   const [acceptRetragere, setAcceptRetragere] = useState(false)
   const [acceptMarketing, setAcceptMarketing] = useState(false)
+  const [promoRemaining, setPromoRemaining] = useState<number | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    if (mode !== 'signup') return
+    fetch('/api/promo-status')
+      .then(res => res.json())
+      .then(data => { if (typeof data.remaining === 'number') setPromoRemaining(data.remaining) })
+      .catch(() => {})
+  }, [mode])
 
   async function handleSubmit() {
     setError(''); setSuccess('')
@@ -72,6 +81,11 @@ export default function LoginPage() {
             <p className="text-xs font-bold text-green-600 uppercase tracking-wide">Oferta Early Adopter</p>
             <p className="text-sm font-semibold text-green-900">6 luni gratuit · Acces complet · Fara card</p>
             <p className="text-xs text-green-600">Disponibil pentru primii 100 de utilizatori</p>
+            {promoRemaining !== null && (
+              <p className="text-xs font-bold text-green-700 pt-1">
+                {promoRemaining > 0 ? `Mai sunt ${promoRemaining} locuri disponibile` : 'Oferta s-a incheiat'}
+              </p>
+            )}
           </div>
         )}
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { getAccountStatus } from '@/lib/plan'
 
 interface Company {
   id: string
@@ -41,6 +42,7 @@ export default function SettingsPage() {
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileAnafLoading, setProfileAnafLoading] = useState(false)
   const [profileAnafError, setProfileAnafError] = useState('')
+  const [canUsePro, setCanUsePro] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -60,6 +62,9 @@ export default function SettingsPage() {
         address: prof.address || '',
         vat_rate: typeof prof.vat_rate === 'number' ? prof.vat_rate : 21,
       })
+      const dbAccountType: 'artizan' | 'pro' = prof.account_type === 'pro' ? 'pro' : 'artizan'
+      const { trial, subscribed } = await getAccountStatus(session, dbAccountType)
+      setCanUsePro(trial.isActive || subscribed)
     }
     const { data: cos } = await supabase.from('companies').select('*').order('name')
     setCompanies(cos || [])
@@ -99,6 +104,7 @@ export default function SettingsPage() {
   }
 
   async function saveAccountType(type: 'artizan' | 'pro') {
+    if (type === 'pro' && !canUsePro) { router.push('/upgrade'); return }
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
     const { error } = await supabase.from('profiles').update({ account_type: type }).eq('id', session.user.id)
@@ -222,25 +228,42 @@ export default function SettingsPage() {
         <div className="bg-white rounded-2xl shadow-sm p-5">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Tip cont</p>
           <div className="grid grid-cols-2 gap-3">
-            {(['artizan', 'pro'] as const).map(type => (
-              <button key={type} onClick={() => saveAccountType(type)}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  accountType === type
-                    ? type === 'pro' ? 'border-purple-500 bg-purple-50' : 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 bg-white'
-                }`}>
-                <span className="text-2xl">{type === 'pro' ? '🏢' : '🔨'}</span>
-                <span className={`text-sm font-bold ${accountType === type ? (type === 'pro' ? 'text-purple-700' : 'text-blue-700') : 'text-gray-700'}`}>
-                  {type === 'pro' ? 'Pro' : 'Artizan'}
-                </span>
-                <span className="text-xs text-gray-400 text-center">{type === 'pro' ? 'TVA · Firme' : 'Fara TVA · Simplu'}</span>
-              </button>
-            ))}
+            {(['artizan', 'pro'] as const).map(type => {
+              const locked = type === 'pro' && !canUsePro
+              return (
+                <button key={type} onClick={() => saveAccountType(type)}
+                  className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                    locked
+                      ? 'border-dashed border-gray-300 bg-gray-50'
+                      : accountType === type
+                        ? type === 'pro' ? 'border-purple-500 bg-purple-50' : 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white'
+                  }`}>
+                  {locked && (
+                    <span className="absolute top-2 right-2 text-[10px] font-bold text-gray-400 uppercase tracking-wide">🔒</span>
+                  )}
+                  <span className="text-2xl">{type === 'pro' ? '🏢' : '🔨'}</span>
+                  <span className={`text-sm font-bold ${locked ? 'text-gray-400' : accountType === type ? (type === 'pro' ? 'text-purple-700' : 'text-blue-700') : 'text-gray-700'}`}>
+                    {type === 'pro' ? 'Pro' : 'Artizan'}
+                  </span>
+                  <span className="text-xs text-gray-400 text-center">
+                    {locked ? 'Necesita abonament' : type === 'pro' ? 'TVA · Firme' : 'Fara TVA · Simplu'}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* Firme — doar Pro */}
-        {accountType === 'pro' && (
+        {accountType === 'pro' && !canUsePro && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm text-amber-700">
+            Firmele tale sunt pastrate, dar acces la ele necesita un abonament Pro activ.{' '}
+            <a href="/upgrade" className="font-bold underline">Reactiveaza →</a>
+          </div>
+        )}
+
+        {/* Firme — doar Pro cu acces activ (trial sau abonament) */}
+        {accountType === 'pro' && canUsePro && (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Firmele mele</p>

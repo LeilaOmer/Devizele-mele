@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { trialInfo } from '@/lib/trial'
+import { trialInfo, getPromoEligible } from '@/lib/trial'
 import { getMonthlyCalcule, isPlanActive, logCalcul, FREE_CALCULE_LIMIT } from '@/lib/usage'
 import { emptyItem } from '@/lib/pricing/calc'
 import { exportPDFContabil, exportPDFMagazin } from '@/lib/pricing/pdf'
@@ -37,9 +37,10 @@ export default function PricingPage() {
   })
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return
-      const t = trialInfo(session.user.created_at)
+      const promoEligible = await getPromoEligible(session.user.id, session.access_token)
+      const t = trialInfo(session.user.created_at, promoEligible)
       if (t.isActive) return
       Promise.all([isPlanActive(session.user.id), getMonthlyCalcule(session.user.id)])
         .then(([active, calcule]) => {
@@ -54,7 +55,8 @@ export default function PricingPage() {
   async function handleExport(exportFn: () => void) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { exportFn(); return }
-    const t = trialInfo(session.user.created_at)
+    const promoEligible = await getPromoEligible(session.user.id, session.access_token)
+    const t = trialInfo(session.user.created_at, promoEligible)
     if (!t.isActive) {
       const [active, calcule] = await Promise.all([isPlanActive(session.user.id), getMonthlyCalcule(session.user.id)])
       if (!active && calcule >= FREE_CALCULE_LIMIT) { router.push('/upgrade?type=calcule'); return }

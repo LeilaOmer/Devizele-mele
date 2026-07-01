@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { trialInfo } from '@/lib/trial'
-import { getMonthlyFise, getMonthlyCalcule, isPlanActive, FREE_FISE_LIMIT, FREE_CALCULE_LIMIT } from '@/lib/usage'
+import { getAccountStatus } from '@/lib/plan'
+import { getMonthlyFise, getMonthlyCalcule, FREE_FISE_LIMIT, FREE_CALCULE_LIMIT } from '@/lib/usage'
 import { useRouter } from 'next/navigation'
 
 interface Company {
@@ -41,19 +41,6 @@ export default function Dashboard() {
         user_email: session.user.email,
       })
 
-      const rawTrial = trialInfo(session.user.created_at)
-      const t = wasDeleted ? { ...rawTrial, isActive: false } : rawTrial
-      setTrial(t)
-      if (!t.isActive) {
-        const [active, fise, calcule] = await Promise.all([
-          isPlanActive(session.user.id),
-          getMonthlyFise(session.user.id),
-          getMonthlyCalcule(session.user.id),
-        ])
-        setSubscribed(active)
-        setUsage({ fise, calcule })
-      }
-
       let { data: prof } = await supabase
         .from('profiles').select('account_type, company_name, email, cui, address, phone, bank, iban, vat_rate').eq('id', session.user.id).single()
       if (!prof) {
@@ -63,12 +50,23 @@ export default function Dashboard() {
         return
       }
 
-      const userPlan: 'artizan' | 'pro' = 'pro'
+      const dbAccountType: 'artizan' | 'pro' = prof.account_type === 'pro' ? 'pro' : 'artizan'
+      const { trial: t, subscribed, effectivePlan } = await getAccountStatus(session, dbAccountType, { forceTrialInactive: !!wasDeleted })
+      setTrial(t)
+      setSubscribed(subscribed)
+      if (!t.isActive) {
+        const [fise, calcule] = await Promise.all([
+          getMonthlyFise(session.user.id),
+          getMonthlyCalcule(session.user.id),
+        ])
+        setUsage({ fise, calcule })
+      }
+
+      const userPlan: 'artizan' | 'pro' = effectivePlan
       setPlan(userPlan)
 
       const savedMode = localStorage.getItem('dashboardMode') as 'artizan' | 'pro' | null
-      const dbMode = prof?.account_type === 'pro' ? 'pro' : 'artizan'
-      const activeMode: 'artizan' | 'pro' = userPlan === 'pro' && (savedMode === 'pro' || (savedMode === null && dbMode === 'pro')) ? 'pro' : 'artizan'
+      const activeMode: 'artizan' | 'pro' = userPlan === 'pro' && (savedMode === 'pro' || (savedMode === null && dbAccountType === 'pro')) ? 'pro' : 'artizan'
       setMode(activeMode)
 
       setArtizanName(prof.company_name || '')
@@ -451,11 +449,16 @@ export default function Dashboard() {
               {feedbackWidget}
             </div>
 
-            {plan === 'pro' && (
+            {plan === 'pro' ? (
               <button onClick={() => switchMode('pro')}
                 className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
                 Treci la modul Pro (TVA, firme multiple)
               </button>
+            ) : !trial?.isActive && (
+              <a href="/upgrade"
+                className="w-full block text-center py-3 rounded-2xl border border-purple-200 bg-purple-50 text-sm font-semibold text-purple-600 hover:bg-purple-100 transition-all">
+                ⚡ Deblocheaza Pro (TVA, firme multiple) →
+              </a>
             )}
           </>
         )}

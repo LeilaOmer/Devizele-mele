@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { trialInfo } from '@/lib/trial'
+import { trialInfo, getPromoEligible } from '@/lib/trial'
 import { getMonthlyFise, isPlanActive, FREE_FISE_LIMIT } from '@/lib/usage'
 import { useRouter } from 'next/navigation'
 
@@ -50,7 +50,8 @@ async function fetchData() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { setLoading(false); return }
 
-    const t = trialInfo(session.user.created_at)
+    const promoEligible = await getPromoEligible(session.user.id, session.access_token)
+    const t = trialInfo(session.user.created_at, promoEligible)
     if (!t.isActive) {
       const [active, fise] = await Promise.all([
         isPlanActive(session.user.id),

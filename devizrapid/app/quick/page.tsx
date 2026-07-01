@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { trialInfo } from '@/lib/trial'
+import { trialInfo, getPromoEligible } from '@/lib/trial'
 import { getMonthlyFise, isPlanActive, FREE_FISE_LIMIT } from '@/lib/usage'
 import { useRouter } from 'next/navigation'
 
@@ -160,7 +160,8 @@ export default function QuickPage() {
     const user = session?.user
     if (!user) { setLoading(false); return }
 
-    const t = trialInfo(user.created_at)
+    const promoEligible = await getPromoEligible(user.id, session.access_token)
+    const t = trialInfo(user.created_at, promoEligible)
     if (!t.isActive) {
       const [active, fise] = await Promise.all([
         isPlanActive(user.id),
