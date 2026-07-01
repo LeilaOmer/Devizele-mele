@@ -266,9 +266,9 @@ export default function Dashboard() {
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
-              ) : displayName ? (
-                <p className="text-sm font-bold text-purple-600 truncate max-w-[200px] mt-0.5">{displayName}</p>
-              ) : null}
+              ) : (
+                <p className="text-xs font-medium text-gray-400 mt-0.5">Mod Artizan</p>
+              )}
             </div>
           </div>
           <div className="flex gap-4 items-center">
@@ -416,66 +416,41 @@ export default function Dashboard() {
               </a>
             </div>
 
-            {/* ARTIZAN — Secondary tools + mode selector */}
+            {/* ARTIZAN — Secondary tools */}
             <div className="grid grid-cols-2 gap-3 items-start">
-              <div className="flex flex-col gap-3">
-                <a href="/quotes"
-                  className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-                  <span className="text-xl">📋</span>
-                  <div>
-                    <p className="font-semibold text-sm text-gray-900">Fise Servicii</p>
-                    <p className="text-gray-400 text-xs">Creeaza si gestioneaza</p>
-                  </div>
-                </a>
-                <a href="/services"
-                  className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-                  <span className="text-xl">🔧</span>
-                  <div>
-                    <p className="font-semibold text-sm text-gray-900">Servicii</p>
-                    <p className="text-gray-400 text-xs">Lista de servicii</p>
-                  </div>
-                </a>
-                <a href="/clients"
-                  className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-                  <span className="text-xl">👥</span>
-                  <div>
-                    <p className="font-semibold text-sm text-gray-900">Clienti</p>
-                    <p className="text-gray-400 text-xs">Lista de clienti</p>
-                  </div>
-                </a>
-                {feedbackWidget}
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => switchMode('artizan')}
-                  disabled={plan !== 'pro'}
-                  className="p-4 rounded-2xl border-2 border-blue-500 bg-blue-50 text-left transition-all">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">🔨</span>
-                    <span className="font-bold text-sm text-blue-700">Artizan</span>
-                    <span className="ml-auto text-[10px] font-bold text-blue-500 uppercase tracking-wide">activ</span>
-                  </div>
-                  <p className="text-xs text-gray-400">Fara TVA · Fara firme</p>
-                </button>
-                <button
-                  onClick={() => plan === 'pro' ? switchMode('pro') : undefined}
-                  disabled={plan !== 'pro'}
-                  className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                    plan !== 'pro'
-                      ? 'border-dashed border-gray-300 bg-gray-50 opacity-60 cursor-not-allowed'
-                      : 'border-gray-200 bg-white hover:border-purple-300 active:scale-95'
-                  }`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">{plan === 'pro' ? '⚡' : '🔒'}</span>
-                    <span className={`font-bold text-sm ${plan === 'pro' ? 'text-gray-600' : 'text-gray-400'}`}>Pro</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    {plan === 'pro' ? 'TVA · Firme multiple' : 'Necesita achizitie'}
-                  </p>
-                </button>
-              </div>
+              <a href="/quotes"
+                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+                <span className="text-xl">📋</span>
+                <div>
+                  <p className="font-semibold text-sm text-gray-900">Fise Servicii</p>
+                  <p className="text-gray-400 text-xs">Creeaza si gestioneaza</p>
+                </div>
+              </a>
+              <a href="/services"
+                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+                <span className="text-xl">🔧</span>
+                <div>
+                  <p className="font-semibold text-sm text-gray-900">Servicii</p>
+                  <p className="text-gray-400 text-xs">Lista de servicii</p>
+                </div>
+              </a>
+              <a href="/clients"
+                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+                <span className="text-xl">👥</span>
+                <div>
+                  <p className="font-semibold text-sm text-gray-900">Clienti</p>
+                  <p className="text-gray-400 text-xs">Lista de clienti</p>
+                </div>
+              </a>
+              {feedbackWidget}
             </div>
+
+            {plan === 'pro' && (
+              <button onClick={() => switchMode('pro')}
+                className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
+                Treci la modul Pro (TVA, firme multiple)
+              </button>
+            )}
           </>
         )}
 
