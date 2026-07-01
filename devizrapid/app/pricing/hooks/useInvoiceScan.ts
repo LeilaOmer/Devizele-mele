@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { Item } from '@/lib/pricing/calc'
 
 type ScanResult = { supplier: string; items: Item[] }
+type ApiItem = { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number }
+type ApiResult = { supplier?: string; items?: ApiItem[]; error?: string }
 
 function readBase64(f: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -14,75 +16,145 @@ function readBase64(f: File): Promise<string> {
   })
 }
 
-function resizeImage(f: File): Promise<string> {
+function loadImage(f: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     const url = URL.createObjectURL(f)
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      const MAX = 1920
-      const scale = Math.min(1, MAX / Math.max(img.width, img.height))
-      const w = Math.round(img.width * scale)
-      const h = Math.round(img.height * scale)
-      const canvas = document.createElement('canvas')
-      canvas.width = w; canvas.height = h
-      const ctx = canvas.getContext('2d')
-      if (!ctx) { reject(new Error('canvas unavailable')); return }
-      ctx.drawImage(img, 0, 0, w, h)
-      resolve(canvas.toDataURL('image/jpeg', 0.88).split(',')[1])
-    }
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img) }
     img.onerror = reject
     img.src = url
   })
+}
+
+function cropAndEncode(img: HTMLImageElement, sy: number, sh: number): string {
+  const MAX = 1920
+  const w = img.width
+  const scale = Math.min(1, MAX / Math.max(w, sh))
+  const dw = Math.round(w * scale)
+  const dh = Math.round(sh * scale)
+  const canvas = document.createElement('canvas')
+  canvas.width = dw; canvas.height = dh
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('canvas unavailable')
+  ctx.drawImage(img, 0, sy, w, sh, 0, 0, dw, dh)
+  return canvas.toDataURL('image/jpeg', 0.88).split(',')[1]
+}
+
+function resizeImage(f: File): Promise<string> {
+  return loadImage(f).then(img => cropAndEncode(img, 0, img.height))
+}
+
+// Fallback pentru facturi lungi/dense: cand o singura poza esueaza (raspuns
+// prea mare/neclar pentru model), o impartim in 2 jumatati cu suprapunere
+// (ca sa nu taie un rand exact la mijloc) — fiecare jumatate ajunge sa fie
+// scalata la rezolutie mai mare per rand decat poza intreaga dintr-o data.
+function splitImageIntoHalves(f: File): Promise<[string, string]> {
+  return loadImage(f).then(img => {
+    const H = img.height
+    const overlap = 0.08
+    const topEnd = Math.round(H * (0.5 + overlap / 2))
+    const bottomStart = Math.round(H * (0.5 - overlap / 2))
+    const top = cropAndEncode(img, 0, topEnd)
+    const bottom = cropAndEncode(img, bottomStart, H - bottomStart)
+    return [top, bottom] as [string, string]
+  })
+}
+
+function mapItems(apiItems: ApiItem[]): Item[] {
+  return apiItems.map(i => ({
+    id: crypto.randomUUID(),
+    name: i.name || '',
+    unit: i.unit || 'buc',
+    supplierPrice: i.supplier_price ? String(i.supplier_price) : '',
+    discount: i.discount ? String(i.discount) : '0',
+    vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
+    sgr: i.sgr ? String(i.sgr) : '0',
+  }))
+}
+
+function dedupeItems(items: Item[]): Item[] {
+  const seen = new Set<string>()
+  const out: Item[] = []
+  for (const item of items) {
+    const key = item.name.trim().toLowerCase().replace(/\s+/g, ' ') + '|' + (Math.round(parseFloat(item.supplierPrice || '0') * 100) / 100)
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(item)
+  }
+  return out
 }
 
 export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState('')
 
+  async function callApi(body: Record<string, string>, token?: string): Promise<{ ok: boolean; status: number; data: ApiResult }> {
+    const res = await fetch('/api/parse-invoice', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json()
+    return { ok: res.ok && !data.error, status: res.status, data }
+  }
+
+  function errorMessage(status: number, data: ApiResult): string {
+    return status === 401 ? 'Trebuie sa fii autentificat pentru a scana facturi.' :
+      status === 429 ? 'Ai atins limita de 50 scanari pe zi. Revino maine.' :
+      data.error === 'groq_rate_limit' ? 'Serverul AI este aglomerat. Asteapta 15 secunde si incearca din nou.' :
+      data.error === 'vision_failed' ? 'Poza neclara sau unghi dificil, chiar si dupa incercarea in 2 jumatati. Incearca o poza mai apropiata, cu lumina mai buna, sau incarca PDF-ul daca il ai.' :
+      `Eroare: ${data.error || 'necunoscuta'}`
+  }
+
   async function handleScan(file: File) {
     setScanning(true)
     setError('')
     try {
       const isImage = file.type.startsWith('image/')
-      const body: Record<string, string> = isImage
-        ? { imageBase64: await resizeImage(file), mimeType: 'image/jpeg' }
-        : { docBase64: await readBase64(file), mimeType: file.type || 'application/pdf', fileName: file.name }
-
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/parse-invoice', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify(body),
-      })
-      const data = await res.json()
-      if (!res.ok || data.error) {
-        setError(
-          res.status === 401 ? 'Trebuie sa fii autentificat pentru a scana facturi.' :
-          res.status === 429 ? 'Ai atins limita de 50 scanari pe zi. Revino maine.' :
-          data.error === 'groq_rate_limit' ? 'Serverul AI este aglomerat. Asteapta 15 secunde si incearca din nou.' :
-          data.error === 'vision_failed' ? 'Poza neclara sau unghi dificil. Incearca mai aproape, cu lumina mai buna, sau incarca PDF-ul direct.' :
-          `Eroare: ${data.error || 'necunoscuta'}`
-        )
+      const token = session?.access_token
+
+      if (!isImage) {
+        const body = { docBase64: await readBase64(file), mimeType: file.type || 'application/pdf', fileName: file.name }
+        const { ok, status, data } = await callApi(body, token)
+        if (!ok) { setError(errorMessage(status, data)); return }
+        if (data.items?.length) { onSuccess({ supplier: data.supplier || '', items: mapItems(data.items) }); return }
+        setError('Nu s-au gasit produse. Incearca o poza mai clara sau incarca PDF-ul.')
         return
       }
-      if (data.items?.length) {
-        const items: Item[] = data.items.map((i: { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number }) => ({
-          id: crypto.randomUUID(),
-          name: i.name || '',
-          unit: i.unit || 'buc',
-          supplierPrice: i.supplier_price ? String(i.supplier_price) : '',
-          discount: i.discount ? String(i.discount) : '0',
-          vat: (i.vat === 11 ? 11 : 21) as 11 | 21,
-          sgr: i.sgr ? String(i.sgr) : '0',
-        }))
-        onSuccess({ supplier: data.supplier || '', items })
-      } else {
-        setError('Nu s-au gasit produse. Incearca o poza mai clara sau incarca PDF-ul.')
+
+      const fullImage = await resizeImage(file)
+      const first = await callApi({ imageBase64: fullImage, mimeType: 'image/jpeg' }, token)
+      if (first.ok && first.data.items?.length) {
+        onSuccess({ supplier: first.data.supplier || '', items: mapItems(first.data.items) })
+        return
       }
+
+      // Prima incercare a esuat sau nu a gasit nimic — factura e probabil
+      // prea lunga/densa pentru o singura poza. Incercam impartita in 2.
+      const [topImage, bottomImage] = await splitImageIntoHalves(file)
+      const [topRes, bottomRes] = await Promise.all([
+        callApi({ imageBase64: topImage, mimeType: 'image/jpeg' }, token),
+        callApi({ imageBase64: bottomImage, mimeType: 'image/jpeg' }, token),
+      ])
+
+      const combinedItems = [
+        ...(topRes.data.items || []),
+        ...(bottomRes.data.items || []),
+      ]
+      const supplier = topRes.data.supplier || bottomRes.data.supplier || ''
+
+      if (combinedItems.length > 0) {
+        onSuccess({ supplier, items: dedupeItems(mapItems(combinedItems)) })
+        return
+      }
+
+      // Nici impartit nu a mers — arata eroarea cea mai relevanta dintre cele 3 incercari.
+      const fallback = !first.ok ? first : (!topRes.ok ? topRes : bottomRes)
+      setError(errorMessage(fallback.status, fallback.data))
     } catch {
       setError('Eroare de retea. Verifica conexiunea si incearca din nou.')
     } finally {
