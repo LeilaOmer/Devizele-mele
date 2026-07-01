@@ -154,6 +154,22 @@ export default function SettingsPage() {
     setPendingCompanyId(null)
   }
 
+  async function createCompanyFromProfile() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session || !profileForm.company_name.trim()) return
+    const { error } = await supabase.from('companies').insert({
+      user_id: session.user.id,
+      name: profileForm.company_name,
+      cui: profileForm.cui || null,
+      address: profileForm.address || null,
+      phone: profileForm.phone || null,
+      email: userEmail || null,
+      vat_rate: profileForm.vat_rate || 0,
+    })
+    if (error) { alert('Nu s-a putut adauga firma: ' + error.message); return }
+    load()
+  }
+
   async function deleteCompany(id: string) {
     if (!confirm('Stergi firma? Fisele asociate raman dar fara firma.')) return
     await supabase.from('companies').delete().eq('id', id)
@@ -247,6 +263,15 @@ export default function SettingsPage() {
             ))}
             {companies.length === 0 && editing !== 'new' && (
               <p className="px-5 py-4 text-sm text-gray-400">Nicio firma adaugata.</p>
+            )}
+            {editing !== 'new' && profileForm.company_name.trim() &&
+              !companies.some(c => c.cui && profileForm.cui && c.cui === profileForm.cui) && (
+              <div className="px-5 py-3 border-b border-gray-50 border-t border-gray-50 bg-blue-50/50">
+                <button onClick={createCompanyFromProfile} className="text-sm font-semibold text-blue-600">
+                  + Adauga „{profileForm.company_name}" (firma contului) in lista
+                </button>
+                <p className="text-xs text-gray-400 mt-0.5">Ca sa poti emite fise pe firma cu care ti-ai creat contul.</p>
+              </div>
             )}
             {editing === 'new' && (
               <CompanyForm form={form} setForm={setForm} onSave={saveCompany} onCancel={() => setEditing(null)} saved={saved} />
