@@ -17,6 +17,13 @@ import ExportBar from './ExportBar'
 export default function PricingPage() {
   const router = useRouter()
   const [usageInfo, setUsageInfo] = useState<{ calcule: number; limit: number; show: boolean } | null>(null)
+  const [proCompanyName, setProCompanyName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (localStorage.getItem('dashboardMode') === 'pro') {
+      setProCompanyName(localStorage.getItem('activeCompanyName'))
+    }
+  }, [])
 
   const draft = usePricingDraft()
 
@@ -64,7 +71,10 @@ export default function PricingPage() {
         <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
           <span className="text-2xl leading-none">‹</span>
         </button>
-        <h1 className="text-base font-bold text-gray-800">Calculator Pret</h1>
+        <div className="text-center">
+          <h1 className="text-base font-bold text-gray-800">Calculator Pret</h1>
+          {proCompanyName && <p className="text-xs text-purple-600 font-medium leading-none mt-0.5">{proCompanyName}</p>}
+        </div>
         <button onClick={() => router.push('/calcule')} className="text-sm font-semibold text-amber-600 bg-amber-50 px-4 py-2 rounded-xl">
           Salvate
         </button>

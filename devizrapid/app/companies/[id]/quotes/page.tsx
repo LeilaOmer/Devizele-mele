@@ -23,7 +23,11 @@ export default function CompanyQuotesPage() {
       supabase.from('quotes').select('*').eq('company_id', id).order('created_at', { ascending: false }),
       supabase.from('clients').select('id, name'),
     ])
-    if (co) setCompany(co)
+    if (co) {
+      setCompany(co)
+      localStorage.setItem('activeCompanyId', id)
+      localStorage.setItem('activeCompanyName', co.name)
+    }
     if (q) setQuotes(q)
     if (c) setClients(c)
     setLoading(false)
@@ -41,16 +45,21 @@ export default function CompanyQuotesPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
-        <button onClick={() => router.push('/settings')} className="flex items-center gap-2 text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
-          <span className="text-xl">‹</span> Setari
+        <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+          <span className="text-2xl leading-none">‹</span>
         </button>
         <h1 className="text-base font-bold text-gray-800 truncate max-w-[200px]">{company?.name}</h1>
-        <button onClick={() => {
-          localStorage.setItem('activeCompanyId', id)
-          router.push('/quotes')
-        }} className="text-sm font-semibold text-purple-600">
-          + Fisa Servicii Noua
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.push('/pricing')} className="text-sm font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl">
+            🧮
+          </button>
+          <button onClick={() => {
+            localStorage.setItem('activeCompanyId', id)
+            router.push('/quotes')
+          }} className="text-sm font-semibold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-xl">
+            + Fisa
+          </button>
+        </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 pt-5">

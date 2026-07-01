@@ -39,8 +39,8 @@ export default function CalculePage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
-        <button onClick={() => router.push('/pricing')} className="flex items-center gap-2 text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
-          <span className="text-xl">‹</span> Calculator
+        <button onClick={() => router.push('/dashboard')} className="flex items-center text-blue-600 font-medium text-base py-1 px-2 -ml-2 rounded-lg">
+          <span className="text-2xl leading-none">‹</span>
         </button>
         <h1 className="text-base font-bold text-gray-800">Calcule salvate</h1>
         <button onClick={() => router.push('/pricing')} className="text-xs font-semibold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl">

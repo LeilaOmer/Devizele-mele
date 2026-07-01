@@ -283,6 +283,35 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Firma activa — hub pro mode */}
+        {mode === 'pro' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-purple-100 p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center shrink-0">
+                <span className="text-white font-bold text-lg">⚡</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wide">Firma activa</p>
+                {companies.length > 0 ? (
+                  <select
+                    value={activeCompanyId || ''}
+                    onChange={e => selectCompany(e.target.value)}
+                    className="w-full text-base font-bold text-gray-900 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none cursor-pointer">
+                    {companies.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <a href="/settings" className="text-sm text-purple-600 font-bold">+ Adauga firma</a>
+                )}
+              </div>
+            </div>
+            <button onClick={() => router.push('/settings')} className="text-xs text-gray-400 hover:text-gray-600 font-medium shrink-0 ml-3">
+              Setari →
+            </button>
+          </div>
+        )}
+
         {/* Unelte principale — carduri mari */}
         <div className="grid grid-cols-2 gap-3">
           <a href="/quick"
@@ -309,12 +338,12 @@ export default function Dashboard() {
 
           {/* Stanga: fise servicii, servicii, clienti */}
           <div className="flex flex-col gap-3">
-            <a href="/quotes"
+            <a href={mode === 'pro' && activeCompanyId ? `/companies/${activeCompanyId}/quotes` : '/quotes'}
               className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
               <span className="text-xl">📋</span>
               <div>
                 <p className="font-semibold text-sm text-gray-900">Fise Servicii</p>
-                <p className="text-gray-400 text-xs">Creeaza si gestioneaza</p>
+                <p className="text-gray-400 text-xs">{mode === 'pro' ? 'Firma curenta' : 'Creeaza si gestioneaza'}</p>
               </div>
             </a>
             <a href="/services"
@@ -333,6 +362,17 @@ export default function Dashboard() {
                 <p className="text-gray-400 text-xs">Lista de clienti</p>
               </div>
             </a>
+
+            {mode === 'pro' && (
+              <a href="/calcule"
+                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+                <span className="text-xl">🧮</span>
+                <div>
+                  <p className="font-semibold text-sm text-gray-900">Calcule Pret</p>
+                  <p className="text-gray-400 text-xs">Calcule salvate</p>
+                </div>
+              </a>
+            )}
 
             {/* Widget feedback */}
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -448,24 +488,6 @@ export default function Dashboard() {
               </p>
             </button>
 
-            {/* Firma activa — vizibila cand modul e pro */}
-            {plan === 'pro' && mode === 'pro' && (
-              <div className="bg-purple-50 border border-purple-100 rounded-2xl p-3">
-                <p className="text-[10px] text-purple-400 font-bold uppercase tracking-wide mb-1">Firma activa</p>
-                {companies.length > 0 ? (
-                  <select
-                    value={activeCompanyId || ''}
-                    onChange={e => selectCompany(e.target.value)}
-                    className="w-full text-sm font-bold text-purple-800 bg-transparent border-0 p-0 focus:ring-0 focus:outline-none cursor-pointer">
-                    {companies.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <a href="/settings" className="text-xs text-purple-500 font-semibold">+ Adauga firma</a>
-                )}
-              </div>
-            )}
           </div>
 
         </div>
