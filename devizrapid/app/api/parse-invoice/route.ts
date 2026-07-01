@@ -155,10 +155,31 @@ async function callGroq(model: string, messages: unknown[], maxTokens = 4096) {
   return data.choices?.[0]?.message?.content || ''
 }
 
+// Incearca parsarea normala; daca raspunsul modelului a fost taiat la mijloc
+// (depaseste max_tokens, sau conexiunea se intrerupe), recupereaza produsele
+// care au apucat sa fie generate COMPLET inainte de taietura, in loc sa
+// pierzi tot raspunsul pentru un singur produs neterminat de la coada.
 function parseJson(raw: string) {
-  const match = raw.match(/\{[\s\S]*\}/)
-  if (!match) return null
-  try { return JSON.parse(match[0]) } catch { return null }
+  const start = raw.indexOf('{')
+  if (start === -1) return null
+  const text = raw.slice(start)
+
+  const fullMatch = text.match(/\{[\s\S]*\}/)
+  if (fullMatch) {
+    try { return JSON.parse(fullMatch[0]) } catch {}
+  }
+
+  const itemsIdx = text.indexOf('"items"')
+  if (itemsIdx === -1) return null
+  for (let i = text.length - 1; i >= itemsIdx; i--) {
+    if (text[i] !== '}') continue
+    const candidate = text.slice(0, i + 1) + ']}'
+    try {
+      const parsed = JSON.parse(candidate)
+      if (Array.isArray(parsed.items) && parsed.items.length > 0) return parsed
+    } catch {}
+  }
+  return null
 }
 
 function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
