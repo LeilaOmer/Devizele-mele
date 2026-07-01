@@ -80,6 +80,7 @@ REGULI OBLIGATORII:
    - Exemplu corect: rand "1,9820 | 5 | kg | 11% | 9,91" => price_raw=1.9820, price_includes_vat=false, validare: 1.9820 x 5 = 9.91 ✓ (NU 9.91 ca pret!)
    - VALIDARE UNIVERSALA (se aplica oricarui format): price_raw x cantitate ≈ valoarea corespunzatoare de pe factura (fara TVA daca price_includes_vat=false, cu TVA daca true). Daca nu se potriveste, ai ales coloana gresita — incearca alt numar din acel rand.
    - NU imparti singur la (1+cota_tva/100) si NU calcula tu pretul fara TVA — doar raporteaza price_raw + price_includes_vat corect, impartirea se face automat dupa.
+   - SUPAPA DE SIGURANTA (obligatorie cand exista coloane clare de Cantitate SI Valoare/Total pe rand — majoritatea facturilor: WinMENTOR, e-Factura Oblio/ANAF, aviz clasic): completeaza SUPLIMENTAR "quantity" (Cantitate) si "line_total" (Valoarea randului, IN ACELASI regim de TVA ca price_raw). Textul extras dintr-un PDF are des cifrele de pe rand LIPITE fara spatii, iar tu poti citi gresit price_raw fara sa-ti dai seama — quantity + line_total corect citite permit corectarea automata in cod dupa (price_raw = line_total / quantity, cand nu se potrivesc). Daca randul nu are o coloana proprie de cantitate/valoare (ex: un serviciu cu cantitate implicita 1) => lasa quantity=1 si line_total=0.
    - FORMAT "Bon Vente"/"Meti" (antet cu logo "Meti", document tip bon de comanda cu sectiunile "Magazin"/"Adresa de facturare"/"Adresa de livrare", ex. magazine SUPECO): "Meti" e DOAR numele soft-ului de facturare care genereaza documentul (la fel ca WinMENTOR mai sus), NU e furnizorul — furnizorul real e compania de la sectiunea "Magazin" (ex: "SC SUPECO INVESTMENT S.R.L."), NU scrie "Meti" in campul "supplier".
    - Coloanele acestui format sunt: Cod Produs | Denumire | Cant. cda | TVA % | Pret unit. TTI | Valoare TTI. price_raw = valoarea din "Pret unit. TTI", price_includes_vat = true, vat = din coloana "TVA %".
    - Sub denumirea fiecarui produs apar linii de genul "Disponibil pe DD/MM/YYYY" si "Emporte immediat pe DD/MM/YYYY" — sunt doar informatii logistice (disponibilitate stoc/livrare), NU produse si nu contin date de pret. IGNORA-le complet, nu le include si nu incerca sa extragi nimic din ele.
@@ -253,7 +254,10 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
       const item = i as Record<string, unknown>
       if (typeof item.name !== 'string' || item.name.trim() === '') return false
       if (isReceipt) return typeof item.line_total === 'number' && item.line_total > 0
-      return typeof item.price_raw === 'number' && item.price_raw > 0
+      const hasPriceRaw = typeof item.price_raw === 'number' && item.price_raw > 0
+      const hasLineTotalQty = typeof item.line_total === 'number' && item.line_total > 0
+        && typeof item.quantity === 'number' && item.quantity > 0
+      return hasPriceRaw || hasLineTotalQty
     })
     .map((i: unknown) => {
       const item = i as Record<string, unknown>
@@ -284,7 +288,22 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
       // Toata aritmetica (scoatere TVA + impartire cutie/bax pe bucata) se face
       // aici, deterministic in cod — modelul AI doar citeste si clasifica
       // (price_raw, price_includes_vat, pieces_per_box), calculul lui de cap era nesigur.
-      const priceRaw = Number(item.price_raw)
+      const declaredPriceRaw = Number(item.price_raw)
+      // Supapa de siguranta: pe multe facturi extrase din PDF, cifrele de pe rand
+      // sunt lipite fara spatii (ex: "buc92169.4687183.36"), iar modelul poate
+      // "rupe" gresit price_raw dintr-o portiune aleatoare a sirului fara sa-si
+      // dea seama (ex: 69.46 in loc de 9.46). Daca avem si quantity si line_total
+      // citite separat, price corect = line_total / quantity il inlocuieste automat
+      // pe cel declarat, ori de cate ori nu se potrivesc.
+      const lineTotal = Number(item.line_total) || 0
+      const quantity = Number(item.quantity) || 0
+      let priceRaw = declaredPriceRaw
+      if (lineTotal > 0 && quantity > 0) {
+        const derived = lineTotal / quantity
+        if (!(declaredPriceRaw > 0) || Math.abs(declaredPriceRaw - derived) > Math.max(derived * 0.03, 0.01)) {
+          priceRaw = derived
+        }
+      }
       const priceExVat = item.price_includes_vat === true ? priceRaw / (1 + vat / 100) : priceRaw
       // Siguranta determinista, in cod, nu doar in prompt: daca modelul insusi
       // a raportat ca UM-ul de pe factura pentru randul asta era deja Buc/ST/DZ
