@@ -8,6 +8,32 @@ function getSupabaseAdmin() {
   )
 }
 
+function normalizeName(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// Raporturi bucati/cutie invatate anterior (de orice user, pentru acelasi furnizor) —
+// au prioritate fata de ce ghiceste AI-ul din text, pentru ca sunt confirmate manual.
+async function getKnownRatios(supabase: ReturnType<typeof getSupabaseAdmin>, supplierName: string): Promise<Map<string, number>> {
+  const map = new Map<string, number>()
+  const name = supplierName?.trim()
+  if (!name) return map
+  const { data } = await supabase
+    .from('product_box_ratios')
+    .select('product_name, pieces_per_box')
+    .ilike('supplier_name', name)
+  if (data) {
+    for (const row of data as { product_name: string; pieces_per_box: number }[]) {
+      map.set(normalizeName(row.product_name), row.pieces_per_box)
+    }
+  }
+  return map
+}
+
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura sau aviz) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
 Format: {"supplier":"Nume Furnizor SRL","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","price_raw":0,"price_includes_vat":false,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0}]}
 
@@ -135,7 +161,7 @@ function parseJson(raw: string) {
   try { return JSON.parse(match[0]) } catch { return null }
 }
 
-function validateAndSanitize(data: unknown) {
+function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
   if (!data || typeof data !== 'object') return null
   const d = data as Record<string, unknown>
   if (!Array.isArray(d.items)) return null
@@ -174,8 +200,11 @@ function validateAndSanitize(data: unknown) {
       // (price_raw, price_includes_vat, pieces_per_box), calculul lui de cap era nesigur.
       const priceRaw = Number(item.price_raw)
       const priceExVat = item.price_includes_vat === true ? priceRaw / (1 + vat / 100) : priceRaw
+      const knownPieces = knownRatios.get(normalizeName(String(item.name)))
       const piecesPerBoxRaw = Math.round(Number(item.pieces_per_box))
-      const piecesPerBox = Number.isFinite(piecesPerBoxRaw) && piecesPerBoxRaw > 1 ? piecesPerBoxRaw : 1
+      const aiPieces = Number.isFinite(piecesPerBoxRaw) && piecesPerBoxRaw > 1 ? piecesPerBoxRaw : 1
+      // Un raport confirmat manual anterior (aceeasi factura/furnizor) e mai de incredere decat ghiceala AI-ului din text.
+      const piecesPerBox = (knownPieces && knownPieces > 1) ? knownPieces : aiPieces
       const supplierPrice = Math.round((priceExVat / piecesPerBox) * 10000) / 10000
       const unit = piecesPerBox > 1 ? 'buc' : (typeof item.unit === 'string' && item.unit.trim() ? item.unit : 'buc')
 
@@ -227,7 +256,9 @@ export async function POST(req: NextRequest) {
         },
       ]
       const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages, 8192)
-      const result = validateAndSanitize(parseJson(raw))
+      const parsed = parseJson(raw)
+      const knownRatios = await getKnownRatios(supabase, typeof parsed?.supplier === 'string' ? parsed.supplier : '')
+      const result = validateAndSanitize(parsed, knownRatios)
       if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
       return NextResponse.json(result ?? { items: [], error: 'vision_failed' })
     }
@@ -255,7 +286,9 @@ export async function POST(req: NextRequest) {
       { role: 'user', content: text.slice(0, 8000) },
     ]
     const raw = await callGroq('llama-3.3-70b-versatile', messages, 8192)
-    const result = validateAndSanitize(parseJson(raw))
+    const parsed = parseJson(raw)
+    const knownRatios = await getKnownRatios(supabase, typeof parsed?.supplier === 'string' ? parsed.supplier : '')
+    const result = validateAndSanitize(parsed, knownRatios)
     if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
     return NextResponse.json(result ?? { items: [] })
 

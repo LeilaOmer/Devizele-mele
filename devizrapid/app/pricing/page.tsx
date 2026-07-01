@@ -110,6 +110,7 @@ export default function PricingPage() {
               roundStep={draft.roundStep}
               roundMode={draft.roundMode}
               vatPayer={draft.vatPayer}
+              supplier={draft.supplier}
               onUpdate={draft.updateItem}
               onRemove={draft.removeItem}
             />

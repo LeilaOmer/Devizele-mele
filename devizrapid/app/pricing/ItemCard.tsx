@@ -1,4 +1,6 @@
 'use client'
+import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
 import { Item, RoundStep, RoundMode, calcItem, fmt2 } from '@/lib/pricing/calc'
 
 type Props = {
@@ -7,12 +9,52 @@ type Props = {
   roundStep: RoundStep
   roundMode: RoundMode
   vatPayer: boolean
+  supplier: string
   onUpdate: (id: string, field: keyof Item, value: string) => void
   onRemove: (id: string) => void
 }
 
-export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, onUpdate, onRemove }: Props) {
+export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, supplier, onUpdate, onRemove }: Props) {
   const c = item.supplierPrice ? calcItem(item, adaos, roundStep, roundMode, vatPayer) : null
+  const [boxFormOpen, setBoxFormOpen] = useState(false)
+  const [boxPrice, setBoxPrice] = useState('')
+  const [boxPieces, setBoxPieces] = useState('')
+  const [boxSaving, setBoxSaving] = useState(false)
+  const [boxSaved, setBoxSaved] = useState(false)
+  const [boxError, setBoxError] = useState('')
+
+  async function saveBoxRatio() {
+    const priceNum = parseFloat(boxPrice)
+    const piecesNum = parseInt(boxPieces, 10)
+    if (!priceNum || priceNum <= 0 || !piecesNum || piecesNum <= 1) {
+      setBoxError('Completeaza pretul cutiei si un numar de bucati mai mare ca 1.')
+      return
+    }
+    setBoxSaving(true)
+    setBoxError('')
+    const newPrice = Math.round((priceNum / piecesNum) * 10000) / 10000
+    onUpdate(item.id, 'unit', 'buc')
+    onUpdate(item.id, 'supplierPrice', String(newPrice))
+    if (supplier.trim() && item.name.trim()) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        const res = await fetch('/api/box-ratio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ supplier_name: supplier.trim(), product_name: item.name.trim(), pieces_per_box: piecesNum }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          setBoxError('Pretul s-a corectat, dar nu s-a retinut raportul: ' + (data.error || 'eroare necunoscuta'))
+          setBoxSaving(false)
+          return
+        }
+      }
+    }
+    setBoxSaving(false)
+    setBoxSaved(true)
+    setTimeout(() => { setBoxSaved(false); setBoxFormOpen(false); setBoxPrice(''); setBoxPieces('') }, 1500)
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-sm p-3 space-y-2">
@@ -140,9 +182,44 @@ export default function ItemCard({ item, adaos, roundStep, roundMode, vatPayer, 
         </div>
       )}
 
-      <button onClick={() => onRemove(item.id)} className="text-xs text-red-400">
-        Sterge
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => onRemove(item.id)} className="text-xs text-red-400">
+          Sterge
+        </button>
+        <button onClick={() => setBoxFormOpen(v => !v)} className="text-xs text-purple-500 font-medium">
+          {boxFormOpen ? 'Inchide' : '📦 Corecteaza cutie/bucata'}
+        </button>
+      </div>
+
+      {boxFormOpen && (
+        <div className="bg-purple-50 rounded-xl p-3 space-y-2">
+          <p className="text-xs text-purple-700">
+            Daca pretul de mai sus e gresit pentru ca produsul vine in cutie/bax, completeaza aici pretul cutiei intregi (fara TVA) si cate bucati contine — corectam pretul acum si retinem raportul pentru viitoarele scanari de la acest furnizor.
+          </p>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="text-xs text-gray-500 mb-0.5 block">Pret cutie (fara TVA)</label>
+              <input type="number" min="0" step="0.01"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+                placeholder="0.00" value={boxPrice} onChange={e => setBoxPrice(e.target.value)} />
+            </div>
+            <div className="w-28">
+              <label className="text-xs text-gray-500 mb-0.5 block">Bucati/cutie</label>
+              <input type="number" min="2" step="1"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900"
+                placeholder="24" value={boxPieces} onChange={e => setBoxPieces(e.target.value)} />
+            </div>
+          </div>
+          {!supplier.trim() && (
+            <p className="text-xs text-amber-600">Fara furnizor completat mai sus, pretul se corecteaza dar raportul nu se retine pentru viitor.</p>
+          )}
+          {boxError && <p className="text-xs text-red-500">{boxError}</p>}
+          <button onClick={saveBoxRatio} disabled={boxSaving}
+            className={`w-full py-2 rounded-xl text-sm font-semibold text-white disabled:bg-gray-300 ${boxSaved ? 'bg-green-500' : 'bg-purple-600'}`}>
+            {boxSaved ? '✓ Salvat!' : boxSaving ? 'Se salveaza...' : 'Corecteaza si retine'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
