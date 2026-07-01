@@ -20,7 +20,7 @@ function resizeImage(f: File): Promise<string> {
     const url = URL.createObjectURL(f)
     img.onload = () => {
       URL.revokeObjectURL(url)
-      const MAX = 1280
+      const MAX = 1920
       const scale = Math.min(1, MAX / Math.max(img.width, img.height))
       const w = Math.round(img.width * scale)
       const h = Math.round(img.height * scale)

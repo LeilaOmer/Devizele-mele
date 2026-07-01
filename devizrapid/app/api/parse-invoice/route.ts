@@ -11,6 +11,10 @@ function getSupabaseAdmin() {
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura sau aviz) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
 Format: {"supplier":"Nume Furnizor SRL","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","supplier_price":0,"discount":0,"vat":21,"sgr":0}]}
 
+Daca in imagine sunt vizibile mai multe documente/foi suprapuse (ex: o factura pusa peste alta, colturi de pagini din spate care se vad partial, o alta factura vizibila in fundal) => citeste STRICT documentul din prim-plan, cel mai clar si mai apropiat de camera. Ignora complet orice text din paginile suprapuse/din fundal, chiar daca e partial vizibil — nu il amesteca cu datele documentului principal.
+
+Daca numele furnizorului nu apare vizibil in imagine sau text (ex: poza arata doar o pagina de continuare a facturii, fara antet) => las-a campul "supplier" gol (""). NU inventa sau ghici un nume de furnizor care nu e scris explicit in document.
+
 Campul "discounts" se completeaza PRIMUL, inainte de items. Contine procentul de discount global per cota TVA (ex: {"11":5,"21":5} daca exista "SCONTURI ACORDATE 5.00%" pentru ambele TVA-uri). Daca nu exista discount global, lasa {"11":0,"21":0}. Liniile "SCONTURI ACORDATE X%", "SCONT X%", "REMIZA X%", "REDUCERE X%" cu valoare negativa NU sunt produse — extrage din ele procentul X si TVA-ul si pune-le in "discounts".
 
 REGULI OBLIGATORII:
@@ -199,7 +203,7 @@ export async function POST(req: NextRequest) {
           ],
         },
       ]
-      const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages)
+      const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages, 8192)
       const result = validateAndSanitize(parseJson(raw))
       if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
       return NextResponse.json(result ?? { items: [], error: 'vision_failed' })
@@ -227,7 +231,7 @@ export async function POST(req: NextRequest) {
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: text.slice(0, 8000) },
     ]
-    const raw = await callGroq('llama-3.3-70b-versatile', messages)
+    const raw = await callGroq('llama-3.3-70b-versatile', messages, 8192)
     const result = validateAndSanitize(parseJson(raw))
     if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
     return NextResponse.json(result ?? { items: [] })
