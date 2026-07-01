@@ -95,7 +95,7 @@ export function usePricingDraft() {
           })
       }
     } else {
-      supabase.from('profiles').upsert({ id: session.user.id, vat_rate: v ? 21 : 0 })
+      supabase.from('profiles').update({ vat_rate: v ? 21 : 0 }).eq('id', session.user.id)
     }
   }
 

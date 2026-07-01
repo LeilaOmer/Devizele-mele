@@ -69,7 +69,7 @@ export default function SettingsPage() {
   async function saveProfile() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return
-    const { error } = await supabase.from('profiles').upsert({ id: session.user.id, ...profileForm })
+    const { error } = await supabase.from('profiles').update(profileForm).eq('id', session.user.id)
     if (error) { alert('Nu s-a salvat: ' + error.message); return }
     setProfileSaved(true)
     setProfileEditing(false)
@@ -107,7 +107,7 @@ export default function SettingsPage() {
       localStorage.removeItem('activeCompanyId')
       localStorage.removeItem('activeCompanyName')
     }
-    await supabase.from('profiles').upsert({ id: session.user.id, account_type: type })
+    await supabase.from('profiles').update({ account_type: type }).eq('id', session.user.id)
   }
 
   async function saveCompany() {
