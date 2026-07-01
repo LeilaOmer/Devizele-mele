@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { trialInfo, getPromoEligible } from '@/lib/trial'
 import { getMonthlyFise, isPlanActive, FREE_FISE_LIMIT } from '@/lib/usage'
+import { nextQuoteNumber } from '@/lib/quoteNumber'
 import { useRouter } from 'next/navigation'
 
 type Quote = { id: string; title: string; status: string; total: number; created_at: string; client_id: string | null; company_id: string | null }
@@ -65,11 +66,7 @@ async function fetchData() {
     }
 
     const user = session.user
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const { data: counter } = await supabase.rpc('increment_counter', { counter_key: 'quote_number' })
-    const quote_number = 'DR-' + year + month + '-' + String(counter).padStart(3, '0')
+    const quote_number = await nextQuoteNumber(user.id, activeCompanyId || null)
     const { data, error } = await supabase.from('quotes').insert({
       title, user_id: user.id, status: 'draft', total: 0,
       client_id: clientId || null, quote_number,

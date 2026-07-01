@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { trialInfo, getPromoEligible } from '@/lib/trial'
 import { getMonthlyFise, isPlanActive, FREE_FISE_LIMIT } from '@/lib/usage'
+import { nextQuoteNumber } from '@/lib/quoteNumber'
 import { useRouter } from 'next/navigation'
 
 type Service = { id: string; name: string; unit: string; price_per_unit: number }
@@ -184,11 +185,8 @@ export default function QuickPage() {
         client_id = newClient?.id
       }
     }
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const { data: counter } = await supabase.rpc('increment_counter', { counter_key: 'quote_number' })
-    const quote_number = 'DR-' + year + month + '-' + String(counter).padStart(3, '0')
+    const companyId = localStorage.getItem('dashboardMode') === 'pro' ? (localStorage.getItem('activeCompanyId') || null) : null
+    const quote_number = await nextQuoteNumber(user.id, companyId)
     const { data: quote, error: quoteErr } = await supabase.from('quotes').insert({
       title: 'Fisa Servicii ' + (preview.client_name || ''),
       user_id: user?.id,
@@ -196,7 +194,7 @@ export default function QuickPage() {
       status: 'draft',
       total: 0,
       quote_number,
-      company_id: localStorage.getItem('dashboardMode') === 'pro' ? (localStorage.getItem('activeCompanyId') || null) : null
+      company_id: companyId
     }).select().single()
     if (quoteErr || !quote) { setLoading(false); alert('Nu s-a creat fisa: ' + (quoteErr?.message || 'eroare necunoscuta')); return }
     for (const item of preview.items) {

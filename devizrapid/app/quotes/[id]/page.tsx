@@ -58,7 +58,7 @@ interface Quote {
   total_with_vat: number;
   discount: number;
   discount_type: "pct" | "val";
-  clients: Client;
+  clients: Client | null;
   quote_items: QuoteItem[];
 }
 
@@ -135,11 +135,15 @@ function buildPDF(quote: Quote, emitent: Emitent, isPro: boolean, discount: numb
   doc.text("BENEFICIAR", margin, y); y += 5;
 
   const c = quote.clients;
-  addLine(c.name, 10, true, [20, 20, 20]);
-  if (c.cui) addLine(`CUI: ${c.cui}`, 9, false, [80, 80, 80]);
-  if (c.address) addLine(c.address, 9, false, [80, 80, 80]);
-  if (c.contact_person) addLine(`Contact: ${c.contact_person}`, 9, false, [80, 80, 80]);
-  if (c.phone) addLine(`Tel: ${c.phone}`, 9, false, [80, 80, 80]);
+  if (c) {
+    addLine(c.name, 10, true, [20, 20, 20]);
+    if (c.cui) addLine(`CUI: ${c.cui}`, 9, false, [80, 80, 80]);
+    if (c.address) addLine(c.address, 9, false, [80, 80, 80]);
+    if (c.contact_person) addLine(`Contact: ${c.contact_person}`, 9, false, [80, 80, 80]);
+    if (c.phone) addLine(`Tel: ${c.phone}`, 9, false, [80, 80, 80]);
+  } else {
+    addLine("Fara beneficiar", 10, false, [130, 130, 130]);
+  }
   y += 4;
 
   doc.line(margin, y, W - margin, y); y += 7;
