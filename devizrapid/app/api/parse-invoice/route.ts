@@ -80,6 +80,10 @@ REGULI OBLIGATORII:
    - Exemplu corect: rand "1,9820 | 5 | kg | 11% | 9,91" => price_raw=1.9820, price_includes_vat=false, validare: 1.9820 x 5 = 9.91 ✓ (NU 9.91 ca pret!)
    - VALIDARE UNIVERSALA (se aplica oricarui format): price_raw x cantitate ≈ valoarea corespunzatoare de pe factura (fara TVA daca price_includes_vat=false, cu TVA daca true). Daca nu se potriveste, ai ales coloana gresita — incearca alt numar din acel rand.
    - NU imparti singur la (1+cota_tva/100) si NU calcula tu pretul fara TVA — doar raporteaza price_raw + price_includes_vat corect, impartirea se face automat dupa.
+   - FORMAT "Bon Vente"/"Meti" (antet cu logo "Meti", document tip bon de comanda cu sectiunile "Magazin"/"Adresa de facturare"/"Adresa de livrare", ex. magazine SUPECO): "Meti" e DOAR numele soft-ului de facturare care genereaza documentul (la fel ca WinMENTOR mai sus), NU e furnizorul — furnizorul real e compania de la sectiunea "Magazin" (ex: "SC SUPECO INVESTMENT S.R.L."), NU scrie "Meti" in campul "supplier".
+   - Coloanele acestui format sunt: Cod Produs | Denumire | Cant. cda | TVA % | Pret unit. TTI | Valoare TTI. price_raw = valoarea din "Pret unit. TTI", price_includes_vat = true, vat = din coloana "TVA %".
+   - Sub denumirea fiecarui produs apar linii de genul "Disponibil pe DD/MM/YYYY" si "Emporte immediat pe DD/MM/YYYY" — sunt doar informatii logistice (disponibilitate stoc/livrare), NU produse si nu contin date de pret. IGNORA-le complet, nu le include si nu incerca sa extragi nimic din ele.
+   - Linia "GARANTIE PET" de la finalul listei (cu propria cantitate/TVA/pret/valoare) se trateaza dupa Regula 2: daca cantitatea ei egaleaza suma cantitatilor produselor de bautura de deasupra => sgr=0.50 la toate acelea, iar "GARANTIE PET" NU intra ca produs separat in "items".
 
 2. SGR (Sistemul Garantie-Returnare) — CERINTA LEGALA, nu se ignora:
    - SGR = 0.50 lei fix per unitate de ambalaj returnabil. NU face parte din pretul produsului.
@@ -371,7 +375,7 @@ export async function POST(req: NextRequest) {
 
     const messages = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: text.slice(0, 6000) },
+      { role: 'user', content: text.slice(0, 5000) },
     ]
     // max_tokens e rezervat integral din bugetul TPM de Groq inainte sa vada raspunsul real,
     // deci trebuie tinut jos ca sa incapa alaturi de system prompt-ul, care a crescut cu regulile noi.
