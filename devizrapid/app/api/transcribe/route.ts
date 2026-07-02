@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { allowDaily } from '@/lib/rateLimit'
 
 function getSupabaseAdmin() {
   return createClient(
@@ -16,6 +17,10 @@ export async function POST(req: NextRequest) {
   const supabase = getSupabaseAdmin()
   const { data: { user }, error } = await supabase.auth.getUser(token)
   if (error || !user) return NextResponse.json({ text: '' }, { status: 401 })
+
+  if (!(await allowDaily(user.id, 'transcribe', 300))) {
+    return NextResponse.json({ text: '', error: 'rate_limit', message: 'Limita zilnica de dictari atinsa. Revino maine.' }, { status: 429 })
+  }
 
   const formData = await req.formData()
   const file = formData.get('file') as File

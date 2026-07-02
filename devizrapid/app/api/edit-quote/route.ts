@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyBearer } from '@/lib/apiAuth'
+import { allowDaily } from '@/lib/rateLimit'
 
 export async function POST(req: NextRequest) {
   const userId = await verifyBearer(req.headers.get('authorization'))
   if (!userId) return NextResponse.json({ items: [] }, { status: 401 })
+  if (!(await allowDaily(userId, 'edit-quote', 300))) {
+    return NextResponse.json({ items: [], error: 'rate_limit' }, { status: 429 })
+  }
 
   const { command, items, services } = await req.json()
   const simple = services.map((s: any) => ({ id: s.id, name: s.name, unit: s.unit }))
