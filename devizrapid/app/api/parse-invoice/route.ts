@@ -246,11 +246,14 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
     if (!i || typeof i !== 'object') return false
     const item = i as Record<string, unknown>
     if (typeof item.name !== 'string' || item.name.trim() === '') return false
-    if (isReceipt) return typeof item.line_total === 'number' && item.line_total > 0
-    const hasPriceRaw = typeof item.price_raw === 'number' && item.price_raw > 0
-    const hasLineTotalQty = typeof item.line_total === 'number' && item.line_total > 0
-      && typeof item.quantity === 'number' && item.quantity > 0
-    return hasPriceRaw || hasLineTotalQty
+    // Number(...) accepta si numere, si numere ca text ("2.64"): modelul le
+    // intoarce inconsistent, iar daca ceream strict typeof==='number' un raspuns
+    // cu preturi ca string ar fi fost filtrat COMPLET (0 produse => vision_failed).
+    const priceRaw = Number(item.price_raw)
+    const lineTotal = Number(item.line_total)
+    const quantity = Number(item.quantity)
+    if (isReceipt) return lineTotal > 0
+    return priceRaw > 0 || (lineTotal > 0 && quantity > 0)
   }) as Record<string, unknown>[]
 
   if (isReceipt) {
