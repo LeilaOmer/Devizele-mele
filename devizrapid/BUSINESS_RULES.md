@@ -1,0 +1,106 @@
+# Reguli de business — Tarifator
+
+Regulile de domeniu (contabile + de produs) pe care se bazeaza aplicatia.
+Sunt reguli STABILE — nu descriu cod care se schimba des, ci logica pe care
+codul TREBUIE s-o respecte. Cand modifici o formula sau o limita, actualizeaza
+si aici. Fisierele de cod sunt trecute ca referinta, nu ca sursa de adevar.
+
+---
+
+## 0. Trei axe care se confunda usor (citeste asta primul)
+
+Aplicatia are TREI concepte diferite care par similare. NU le amesteca:
+
+1. **Modul** = ce face aplicatia. Doua module:
+   - **Calculator Pret** (`/pricing`, `/calcule`) — calculeaza pret de vanzare din facturi de furnizor.
+   - **Fise Servicii** (`/quick`, `/quotes`, `/services`, `/clients`) — devize/fise pentru clienti.
+2. **Mod de lucru** (`profiles.account_type` = `artizan` | `pro`) = regimul de lucru, LIBER pentru toti, fara legatura cu plata:
+   - `artizan` ("Simplu") — fara TVA, o singura firma (datele contului).
+   - `pro` ("Firma") — cu TVA, mai multe firme.
+3. **Tip de cont / abonament** (`profiles.plan_tier` = `free` | `artizan` | `mercator` | `pro`) = ce a PLATIT userul; controleaza DOAR limitele lunare (vezi cap. 5).
+
+Numele "artizan"/"pro" apar la 2 si la 3 — sunt concepte DISTINCTE. In UI: axa 2 se numeste "Mod de lucru", axa 3 "Abonament". `Mercator` = numele tipului de cont (3) care deblocheaza Calculatorul de Pret; NU e numele modulului (modulul se cheama "Calculator Pret").
+
+---
+
+## 1. TVA
+
+- Cotele ACTUALE in Romania: **11% (redusa)** si **21% (standard)**. NU 9%/19% (alea sunt pre-2024; pe facturi vechi 9%=>11, 19%=>21).
+- Aplicatia foloseste DOAR 11 sau 21 intern.
+- **Cota redusa 11%**: apa potabila, alimente si bauturi nealcoolice (om/animal), lapte/carne/oua/paine/faina/zahar/ulei/legume/fructe/conserve/condimente, hrana animale, animale vii domestice, lemne de foc, energie termica, carti/ziare/reviste, cazare hoteliera.
+- **Cota standard 21%**: orice altceva — bauturi alcoolice, suplimente/vitamine, cosmetice, detergenti, electrice/electronice, textile/incaltaminte, jucarii, unelte, materiale de constructii, papetarie.
+
+## 2. Regim TVA: platitor vs neplatitor
+
+`vat_rate` (pe firma sau pe profil): `0` = neplatitor, `11`/`21` = platitor. In calculator, `vatPayer = vat_rate !== 0`. Sursa: firma activa (mod Pro) sau profilul (mod Artizan).
+
+Pretul furnizorului introdus/scanat e MEREU fara TVA (net).
+
+- **Platitor** (`vatPayer=true`): adaosul se pune pe net, apoi se ADAUGA TVA la client.
+  `net → +adaos → pret fara TVA → +TVA(11/21) → pret cu TVA` (linie de TVA separata catre client).
+- **Neplatitor** (`vatPayer=false`): TVA-ul platit furnizorului e cost IRECUPERABIL, intra in cost; NU se adauga TVA la client.
+  `net → +TVA furnizor → pret intrare (cu TVA) → +adaos → pret vanzare` (fara TVA la client).
+
+Referinta: `lib/pricing/calc.ts` (`calcItem`).
+
+## 3. Adaos si rotunjire
+
+- **Adaos** = procent aplicat pe costul de intrare (dupa discount).
+- **Rotunjire pret final**: fara / 0.10 / 0.50 / 1.00 lei, mod "la cel mai apropiat" sau "in sus".
+- **Discount** furnizor = procent, se scade din pretul furnizorului INAINTE de adaos (nu se aplica pe pretul brut de doua ori).
+
+## 4. SGR (Sistemul Garantie-Returnare) — cerinta legala
+
+- SGR = **0,50 lei fix** per unitate de ambalaj returnabil.
+- NU face parte din pretul produsului; NU intra in baza de calcul a adaosului sau a TVA. Se afiseaza separat ("+0,50 SGR").
+- Linii de tip "SGR", "GARANTIE PET/STICLA/DOZA", "AMBALAJ SGR", "Garantie-Returnare" NU sunt produse — se exclud din lista; daca o astfel de linie are cantitatea = suma cantitatilor produselor de bautura, se aplica `sgr=0.50` la acele produse.
+- Produse cu "NAV"/"NAVETA" in denumire => `sgr=0` (returnate pe naveta, nu individual).
+
+## 5. Tipuri de cont (abonament) si limite
+
+Fiecare tip de cont are limite LUNARE diferite pe cele doua module:
+
+| Tip cont | Pret | Primii 50 (dupa lansare) | Fise/luna | Calcule/luna |
+|---|---|---|---|---|
+| Free | gratis | gratis | 3 | 3 |
+| Artizan | 59 lei | 39 lei | nelimitat | 3 |
+| Mercator | 129 lei | 89 lei | 3 | nelimitat |
+| Pro | 149 lei | 99 lei | nelimitat | nelimitat |
+
+- **Freemium**: primele 30 de zile de la inregistrare, un cont Free primeste 10 fise + 10 calcule (in loc de 3+3), apoi cade pe Free. Free e podeaua permanenta — nimeni nu ramane blocat complet.
+- **PRELAUNCH** (`lib/plan.ts`): cat e `true`, oricine e tratat ca Pro (totul nelimitat). Se stinge MANUAL la lansare.
+- Activarea unui abonament platit e MANUALA (se seteaza `plan_tier` + `plan_active_until` in DB) pana la integrarea unui procesator de plati.
+- Numararea consumului e pe luna calendaristica: fise = tabelul `quotes`, calcule = `pricing_usage`.
+
+Referinta: `lib/plan.ts` (`TIER_LIMITS`, `getEffectiveLimits`), `lib/usage.ts`.
+
+## 6. Scanare facturi — impartirea rolurilor
+
+Principiu central: **AI-ul doar CITESTE si TRANSCRIE numere brute; TOATA aritmetica se face determinist in cod** (`app/api/parse-invoice/route.ts`, `validateAndSanitize`). Modelele gresesc la calcul; codul nu.
+
+- **Furnizor**: firma reala din antet. `Meti`/`Oblio`/`WinMENTOR` = soft de facturare, NU furnizorul. Daca nu apare, se lasa gol (nu se inventeaza).
+- **Pret**: `price_raw` = pretul unitar tiparit + `price_includes_vat` (din header: "TTI"/"cu TVA" => true; "net"/"fara TVA" => false). Verificare: `cantitate × pret ≈ valoarea randului` — daca nu se potriveste, citirea e gresita.
+- **Cutie/bucata** (cap. 7).
+- **Formate**: factura/aviz (tabel cu coloane), bon fiscal de casa de marcat (Lidl/Kaufland — layout inversat, pret cu TVA inclus, legenda de litere TVA A/B/C/D citita de pe bonul curent), e-Factura (cifre uneori lipite fara spatii).
+- **Discount global** ("SCONTURI ACORDATE X%") si **SGR** — vezi cap. 4.
+
+## 7. Cutie / bucata (box vs piece)
+
+- Decizia "se imparte pe bucata?" se ia din **coloana UM** a randului (determinist in cod), NU din text: doar UM de tip `Cut`/`Cutie`/`Bax`/`Bx`/`Set` se imparte; `Buc`/`ST`/`kg` raman ca atare.
+- Raportul bucati/cutie se ia din DENUMIRE daca e scris ("24BUC/CUT" => 24). Un "18 BUC/CUT" cand UM=Buc e doar info de ambalare — NU se imparte.
+- **Raport imprumutat de la "frate"**: un produs-cutie fara raport in nume imprumuta raportul de la alt produs-cutie cu ACELASI pret de cutie + aceleasi prime 3 cuvinte din denumire (util cand furnizorul nu scrie raportul pe fiecare rand).
+- Corectiile manuale de raport (butonul "Corecteaza cutie/bucata") se salveaza per user (`product_box_ratios`, `created_by`) si au prioritate la scanarile viitoare ale ACELUI user pentru acelasi furnizor. NU sunt partajate intre useri (evita otravirea preturilor altora).
+
+## 8. Numerotare fise
+
+- Format: `DR-YYYYMM-NNN`.
+- Scop: per firma (mod Pro) sau per user (mod Artizan, fara firma), si per luna calendaristica.
+- Numarul = `max(secventa existenta in scope luna asta) + 1` (nu count+1 — count-ul scade la stergere si ar reproduce un numar deja folosit).
+
+Referinta: `lib/quoteNumber.ts`.
+
+## 9. Limite AI (Groq) — constrangere de infrastructura, nu de cod
+
+- Scanarea foloseste Groq (model de vedere pentru poze, model text pentru PDF/dictare). Pe planul GRATUIT: ~30.000 tokeni/minut si ~500.000 tokeni/zi per model.
+- O factura densa se citeste pe felii (2-4, secvential, cu retry pe limita de rata). Cand cota zilnica e epuizata, scanarea iese incompleta — NU e bug de cod, e plafonul planului. Solutie: plan Groq Dev (limite ~10×) sau asteptarea resetului.
+- Rate-limit propriu per user: 50 scanari/zi (`invoice_scan_logs`), 300/zi pe transcribe/parse-pricing/parse-quote/edit-quote (`api_usage`).
