@@ -75,16 +75,19 @@ function mapItems(apiItems: ApiItem[]): Item[] {
   }))
 }
 
-// Cheia = denumirea redusa la DOAR litere+cifre (fara spatii, punctuatie,
-// diacritice). Acelasi produs citit din doua felii suprapuse poate diferi prin
-// spatii/semne ("... /17 B" vs "...17B") — pe litere+cifre se potrivesc si se
-// unesc intr-un singur exemplar. Produse diferite (difera aroma/gramaj, care
-// sunt tot litere+cifre) raman distincte, deci nu le contopim gresit.
+// Cheia = nume (redus la litere+cifre) + pret. Contopim doua intrari DOAR daca
+// se potrivesc pe AMBELE. Acelasi produs citit din doua felii suprapuse are
+// acelasi pret (calculul e determinist) + nume aproape identic ("/17 B" vs
+// "17B" devin la fel pe litere+cifre) => se unesc. Doua produse DIFERITE care
+// din intamplare se reduc la aceleasi litere+cifre au preturi diferite => raman
+// separate (asa nu mai pierdem produse crezandu-le duplicate).
 function dedupeItems(items: Item[]): Item[] {
   const seen = new Set<string>()
   const out: Item[] = []
   for (const item of items) {
-    const key = item.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const name = item.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const price = Math.round(parseFloat(item.supplierPrice || '0') * 100)
+    const key = name + '|' + price
     if (seen.has(key)) continue
     seen.add(key)
     out.push(item)
