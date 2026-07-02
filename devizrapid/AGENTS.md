@@ -23,6 +23,10 @@ regulile de domeniu (contabile + de produs) pe care codul trebuie sa le respecte
 - **Aritmetica preturilor se face in cod, nu de AI.** La scanare, modelul doar
   citeste/transcrie; orice calcul (TVA, cutie/bucata, discount) e determinist in
   cod. Nu muta calcule inapoi in prompt.
+- **Logica de business sta separata de UI.** Calculele (pret, TVA, cutie/bucata,
+  limite de abonament) traiesc in `lib/` sau in rutele API (`app/api/`), NICIODATA
+  in componentele UI — componentele doar citesc si afiseaza. Nu amesteca logica de
+  randare cu cea de calcul (ex: `lib/pricing/calc.ts`, `lib/plan.ts`).
 - **La debugging, NU schimba codul imediat.** Intai identifica: cauza probabila,
   fisierele afectate si cum se reproduce. Explica diagnosticul, apoi propune fix-ul.
   Un patch aruncat inainte de a intelege cauza reintroduce des alta problema.
