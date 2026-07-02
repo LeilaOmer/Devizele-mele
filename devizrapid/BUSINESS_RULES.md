@@ -104,3 +104,24 @@ Referinta: `lib/quoteNumber.ts`.
 - Scanarea foloseste Groq (model de vedere pentru poze, model text pentru PDF/dictare). Pe planul GRATUIT: ~30.000 tokeni/minut si ~500.000 tokeni/zi per model.
 - O factura densa se citeste pe felii (2-4, secvential, cu retry pe limita de rata). Cand cota zilnica e epuizata, scanarea iese incompleta — NU e bug de cod, e plafonul planului. Solutie: plan Groq Dev (limite ~10×) sau asteptarea resetului.
 - Rate-limit propriu per user: 50 scanari/zi (`invoice_scan_logs`), 300/zi pe transcribe/parse-pricing/parse-quote/edit-quote (`api_usage`).
+
+---
+
+## 10. Harta codului (unde traieste fiecare regula)
+
+Repere scurte, ca sa te orientezi rapid. Sunt STABILE (locatiile nu se muta des):
+
+- **Scanare factura / OCR + parsare**: `app/api/parse-invoice/route.ts` (model Groq citeste, `validateAndSanitize` face aritmetica). UI: `app/pricing/hooks/useInvoiceScan.ts`, `app/pricing/InvoiceScanner.tsx`.
+- **Calcul pret (TVA, adaos, rotunjire, neplatitor)**: `lib/pricing/calc.ts`. Regimul TVA: `app/pricing/hooks/usePricingDraft.ts`.
+- **Abonamente + limite**: `lib/plan.ts` (`TIER_LIMITS`, `getEffectiveLimits`, `PRELAUNCH`), consum lunar in `lib/usage.ts`.
+- **Numerotare fise**: `lib/quoteNumber.ts`.
+- **Generare PDF**: calculator → `lib/pricing/pdf.ts`; fisa/deviz → `app/quotes/[id]/page.tsx` (`buildPDF`). Preview mobil: `lib/pricing/pdfPreview.ts`.
+- **Dictare voce**: `app/api/transcribe/route.ts` (Whisper) → `app/api/parse-quote/route.ts` / `parse-pricing`.
+- **Auth pe rutele API**: `lib/apiAuth.ts` (`verifyBearer`), rate-limit `lib/rateLimit.ts`.
+- **Module + mod de lucru pe dashboard**: `app/dashboard/page.tsx`, `lib/module.ts`.
+
+## Idei de roadmap (NU implementate — nu sunt reguli)
+
+- Export catre software de contabilitate (ex. Senior ERP / SAGA) — ar atrage contabili.
+- Adaos minim configurabil per categorie.
+- Alerta de pret schimbat fata de ultima factura a aceluiasi furnizor (folosind istoricul `product_box_ratios` / preturi).
