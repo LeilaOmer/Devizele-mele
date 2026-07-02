@@ -7,6 +7,19 @@ type ScanResult = { supplier: string; items: Item[] }
 type ApiItem = { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number }
 type ApiResult = { supplier?: string; items?: ApiItem[]; error?: string; detail?: string; debug?: string }
 
+const sleep = (ms: number) => new Promise(res => setTimeout(res, ms))
+
+// Cat sa asteptam inainte de a reincerca o felie respinsa pe limita de rata.
+// Groq pune in mesaj "try again in 12.5s" / "in 1m30s" — il parsam si il
+// plafonam (5..45s) ca sa nu blocam prea mult, dar suficient sa se elibereze
+// fereastra de tokeni-pe-minut.
+function retrySeconds(detail?: string): number {
+  const m = detail?.match(/in (?:(\d+)m)?([\d.]+)s/)
+  if (!m) return 20
+  const secs = (m[1] ? parseInt(m[1], 10) * 60 : 0) + Math.ceil(parseFloat(m[2]))
+  return Math.min(45, Math.max(5, secs + 1))
+}
+
 function readBase64(f: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -141,46 +154,50 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
         return
       }
 
-      // Citim poza DOAR pe felii orizontale suprapuse (nu si poza intreaga —
-      // feliile, cu suprapunere, o acopera complet, iar prima felie contine
-      // antetul cu furnizorul). Fiecare felie e redusa mai putin => text mai
-      // mare, mai multe randuri citite corect pe o factura densa.
+      // Citim poza pe felii orizontale suprapuse (feliile, cu suprapunere, o
+      // acopera complet, iar prima felie contine antetul cu furnizorul). Fiecare
+      // felie e redusa mai putin => text mai mare, mai multe randuri citite.
       const slices = await splitImageIntoSlices(file)
 
-      // Trimitem feliile in valuri de cate 2, NU toate deodata: modelul de
-      // vedere are o limita de tokeni-pe-minut (~30k pe tier-ul gratuit) si
-      // fiecare felie e ~7-8k tokeni; 4 deodata ar depasi limita si unele felii
-      // ar fi respinse (429), pierzand exact produsele pe care voiam sa le prindem.
-      const CONCURRENCY = 2
+      // Le trimitem SECVENTIAL (una cate una): modelul de vedere are o limita de
+      // tokeni-pe-minut (~30k pe tier-ul gratuit), iar o factura densa in 4 felii
+      // depaseste acea limita daca sunt trimise in rafala => feliile de la coada
+      // ar fi respinse si jumatate din factura ar lipsi. Daca o felie e respinsa
+      // pe limita de rata (nu cota epuizata), o REINCERCAM dupa o pauza, in loc
+      // sa abandonam restul facturii.
       const sliceRes: ApiResult[] = []
-      let firstFatal: { status: number; data: ApiResult } | null = null
-      for (let i = 0; i < slices.length; i += CONCURRENCY) {
-        const batch = slices.slice(i, i + CONCURRENCY)
-        const res = await Promise.all(
-          batch.map(s => callApi({ imageBase64: s, mimeType: 'image/jpeg' }, token))
-        )
-        for (const r of res) {
-          sliceRes.push(r.data)
-          // Eroare de cota => oprim tot: reincercarea altor felii doar arde
-          // cota deja epuizata, fara sanse de reusita.
-          if (!r.ok && (r.data.error === 'groq_rate_limit' || r.data.error === 'groq_too_large') && !firstFatal) {
-            firstFatal = { status: r.status, data: r.data }
-          }
+      let rateLimited = false
+      let fatalTooLarge: { status: number; data: ApiResult } | null = null
+      for (const s of slices) {
+        let r = await callApi({ imageBase64: s, mimeType: 'image/jpeg' }, token)
+        let attempts = 0
+        while (!r.ok && r.data.error === 'groq_rate_limit' && attempts < 2) {
+          const wait = retrySeconds(r.data.detail)
+          setError(`Se citeste factura... (astept ${wait}s, limita AI)`)
+          await sleep(wait * 1000)
+          r = await callApi({ imageBase64: s, mimeType: 'image/jpeg' }, token)
+          attempts++
         }
-        if (firstFatal) break
+        sliceRes.push(r.data)
+        if (!r.ok && r.data.error === 'groq_rate_limit') rateLimited = true
+        if (!r.ok && r.data.error === 'groq_too_large' && !fatalTooLarge) fatalTooLarge = { status: r.status, data: r.data }
       }
+      setError('')
 
       const combinedItems = sliceRes.flatMap(r => r.items || [])
       const supplier = sliceRes.find(r => r.supplier)?.supplier || ''
 
       if (combinedItems.length > 0) {
         onSuccess({ supplier, items: dedupeItems(mapItems(combinedItems)) })
+        // Rezultat PARTIAL: o felie tot n-a incaput in limita chiar si dupa
+        // reincercari. Anuntam clar, ca sa nu para complet cand nu e.
+        if (rateLimited) setError('Am citit doar o parte din produse (limita AI atinsa). Mai apasa o data peste ~1 minut ca sa completezi restul.')
         return
       }
 
-      if (firstFatal) { setError(errorMessage(firstFatal.status, firstFatal.data)); return }
-      // Nimic gasit — aratam si un fragment din raspunsul brut al modelului
-      // (primul disponibil dintre felii) pentru diagnostic.
+      if (fatalTooLarge) { setError(errorMessage(fatalTooLarge.status, fatalTooLarge.data)); return }
+      if (rateLimited) { setError('Limita AI atinsa. Asteapta ~1 minut si incearca din nou.'); return }
+      // Nimic gasit — aratam si un fragment din raspunsul brut al modelului.
       const debug = sliceRes.map(r => r.debug).find(Boolean)
       setError(errorMessage(200, { error: 'vision_failed', debug }))
     } catch {
