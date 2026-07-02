@@ -196,7 +196,14 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       }
 
       if (fatalTooLarge) { setError(errorMessage(fatalTooLarge.status, fatalTooLarge.data)); return }
-      if (rateLimited) { setError('Limita AI atinsa. Asteapta ~1 minut si incearca din nou.'); return }
+      if (rateLimited) {
+        // Aratam mesajul brut de la Groq: spune daca e limita pe MINUT ("in 30s"
+        // => asteapta putin) sau pe ZI ("in 3h" => cota zilnica epuizata, revii
+        // maine sau treci pe Dev tier). Fara el, userul nu stie cat sa astepte.
+        const detail = sliceRes.map(r => r.detail).find(Boolean)
+        setError(`Limita AI atinsa (plan gratuit Groq).${detail ? ' Groq: ' + detail : ' Asteapta ~1 minut si incearca din nou.'}`)
+        return
+      }
       // Nimic gasit — aratam si un fragment din raspunsul brut al modelului.
       const debug = sliceRes.map(r => r.debug).find(Boolean)
       setError(errorMessage(200, { error: 'vision_failed', debug }))
