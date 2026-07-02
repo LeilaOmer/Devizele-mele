@@ -138,6 +138,13 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
   }
 
   async function handleScan(file: File) {
+    // Limita de marime: apara serverul de un fisier urias (memorie/timp) si
+    // respinge din start ceva ce oricum nu s-ar putea procesa.
+    const MAX_BYTES = 15 * 1024 * 1024
+    if (file.size > MAX_BYTES) {
+      setError('Fisierul e prea mare (peste 15 MB). Incearca o poza mai mica sau un PDF.')
+      return
+    }
     setScanning(true)
     setError('')
     try {

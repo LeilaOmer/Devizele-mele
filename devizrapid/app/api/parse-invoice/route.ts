@@ -346,6 +346,15 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
 
+  // Limita de marime pe server (clientul poate fi ocolit): un base64 ~1.33x fata
+  // de bytes, deci 15 MB fisier ≈ 21 MB string. Blocheaza fisiere uriase inainte
+  // de a atinge pdf-parse / randare / Groq.
+  const b64 = typeof body.imageBase64 === 'string' ? body.imageBase64
+    : typeof body.docBase64 === 'string' ? body.docBase64 : ''
+  if (b64.length > 22 * 1024 * 1024) {
+    return NextResponse.json({ items: [], error: 'file_too_large', message: 'Fisier prea mare (max 15 MB).' }, { status: 413 })
+  }
+
   try {
     if (body.imageBase64) {
       return await runVisionScan(supabase, user.id, body.imageBase64, body.mimeType || 'image/jpeg')
