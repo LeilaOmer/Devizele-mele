@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { PrimaryModule, setPrimaryModule } from '@/lib/module'
 import { useRouter } from 'next/navigation'
 
 interface Company {
@@ -28,6 +29,7 @@ export default function SettingsPage() {
   const [editing, setEditing] = useState<string | null>(null)
   const [form, setForm] = useState(emptyCompany())
   const [accountType, setAccountType] = useState<'artizan' | 'pro'>('artizan')
+  const [primaryModule, setPrimaryModuleState] = useState<PrimaryModule>('both')
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null)
@@ -52,6 +54,7 @@ export default function SettingsPage() {
     const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     if (prof) {
       setAccountType(prof.account_type || 'artizan')
+      setPrimaryModuleState((prof.primary_module as PrimaryModule | null) || 'both')
       setPlanActiveUntil(prof.plan_active_until || null)
       setProfileForm({
         company_name: prof.company_name || '',
@@ -109,6 +112,14 @@ export default function SettingsPage() {
       localStorage.removeItem('activeCompanyId')
       localStorage.removeItem('activeCompanyName')
     }
+  }
+
+  async function saveModule(value: PrimaryModule) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const { error } = await setPrimaryModule(session.user.id, value)
+    if (error) { alert('Nu s-a putut schimba modulul principal: ' + error); return }
+    setPrimaryModuleState(value)
   }
 
   async function saveCompany() {
@@ -234,6 +245,26 @@ export default function SettingsPage() {
                   {type === 'pro' ? 'Pro' : 'Artizan'}
                 </span>
                 <span className="text-xs text-gray-400 text-center">{type === 'pro' ? 'TVA · Firme' : 'Fara TVA · Simplu'}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Modul principal */}
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Modul principal pe dashboard</p>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { value: 'calculator', icon: '🧮', label: 'Mercator' },
+              { value: 'devize', icon: '📋', label: 'Fise Servicii' },
+              { value: 'both', icon: '✨', label: 'Amandoua' },
+            ] as const).map(opt => (
+              <button key={opt.value} onClick={() => saveModule(opt.value)}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
+                  primaryModule === opt.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+                }`}>
+                <span className="text-xl">{opt.icon}</span>
+                <span className={`text-xs font-bold text-center ${primaryModule === opt.value ? 'text-blue-700' : 'text-gray-700'}`}>{opt.label}</span>
               </button>
             ))}
           </div>

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getAccountStatus } from '@/lib/plan'
 import { getMonthlyFise, getMonthlyCalcule, FREE_FISE_LIMIT, FREE_CALCULE_LIMIT } from '@/lib/usage'
+import { PrimaryModule, setPrimaryModule } from '@/lib/module'
 import { useRouter } from 'next/navigation'
 
 interface Company {
@@ -25,6 +26,8 @@ export default function Dashboard() {
   const [subscribed, setSubscribed] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showWelcome, setShowWelcome] = useState(false)
+  const [primaryModule, setPrimaryModuleValue] = useState<PrimaryModule | null>(null)
+  const [choosingModule, setChoosingModule] = useState(false)
   const [fbOpen, setFbOpen] = useState(false)
   const [fbText, setFbText] = useState('')
   const [fbRecording, setFbRecording] = useState(false)
@@ -42,7 +45,7 @@ export default function Dashboard() {
       })
 
       let { data: prof } = await supabase
-        .from('profiles').select('account_type, company_name, email, cui, address, phone, bank, iban, vat_rate').eq('id', session.user.id).single()
+        .from('profiles').select('account_type, company_name, email, cui, address, phone, bank, iban, vat_rate, primary_module').eq('id', session.user.id).single()
       if (!prof) {
         const { error: profInsertErr } = await supabase.from('profiles').insert({ id: session.user.id, account_type: 'artizan' })
         if (profInsertErr) console.error('Nu s-a putut crea profilul:', profInsertErr.message)
@@ -104,7 +107,13 @@ export default function Dashboard() {
           localStorage.setItem('activeCompanyName', active.name)
         }
       }
-      if (!localStorage.getItem('welcomed')) setShowWelcome(true)
+      const chosenModule = (prof.primary_module as PrimaryModule | null) ?? null
+      setPrimaryModuleValue(chosenModule)
+      // Alegerea de modul (Mercator / Fise Servicii / Amandoua) inlocuieste
+      // bannerul vechi de bun-venit — e persistenta in DB (primary_module),
+      // nu doar in localStorage, ca sa nu reapara pe alt dispozitiv dupa ce a
+      // fost aleasa deja, si sa apara sigur pentru orice cont nou.
+      if (!chosenModule) setShowWelcome(true)
       setLoading(false)
     }
     load()
@@ -118,6 +127,18 @@ export default function Dashboard() {
       const active = companies.find(c => c.id === activeCompanyId) || companies[0]
       if (active) setDisplayName(active.name)
     }
+  }
+
+  async function chooseModule(value: PrimaryModule) {
+    setChoosingModule(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      const { error } = await setPrimaryModule(session.user.id, value)
+      if (error) { setChoosingModule(false); alert('Nu s-a salvat alegerea: ' + error); return }
+    }
+    setPrimaryModuleValue(value)
+    setShowWelcome(false)
+    setChoosingModule(false)
   }
 
   function selectCompany(id: string) {
@@ -248,6 +269,81 @@ export default function Dashboard() {
     </div>
   )
 
+  // Tile-uri partajate intre modul Pro si Artizan — extrase o singura data ca
+  // sa nu dublam conditia de primaryModule in ambele ramuri de mai jos.
+  const fisaVoceTile = (
+    <a href="/quick"
+      className="bg-blue-100 p-5 rounded-2xl shadow-sm hover:bg-blue-200 active:scale-95 transition-all flex flex-col min-h-[140px]">
+      <svg className="w-7 h-7 mb-2.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+      </svg>
+      <h2 className="font-bold text-lg leading-tight text-gray-900">Fisa Servicii Voce</h2>
+      <p className="text-blue-700 text-xs mt-1">Dicteaza si genereaza instant</p>
+    </a>
+  )
+
+  const mercatorTile = (
+    <a href="/pricing"
+      className="bg-amber-100 p-5 rounded-2xl shadow-sm hover:bg-amber-200 active:scale-95 transition-all flex flex-col min-h-[140px]">
+      <svg className="w-7 h-7 mb-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+      </svg>
+      <h2 className="font-bold text-lg leading-tight text-gray-900">Mercator</h2>
+      <p className="text-amber-700 text-xs mt-1">Adaos · TVA · PDF</p>
+    </a>
+  )
+
+  const mercatorTileSmall = (
+    <a href="/pricing" className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+      <span className="text-xl">🧮</span>
+      <div>
+        <p className="font-semibold text-sm text-gray-900">Mercator</p>
+        <p className="text-gray-400 text-xs">Calculator de pret</p>
+      </div>
+    </a>
+  )
+
+  const fisaVoceTileSmall = (
+    <a href="/quick" className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+      <span className="text-xl">🎙️</span>
+      <div>
+        <p className="font-semibold text-sm text-gray-900">Fisa Servicii Voce</p>
+        <p className="text-gray-400 text-xs">Dicteaza si genereaza</p>
+      </div>
+    </a>
+  )
+
+  const calculePretTile = (
+    <a href="/calcule" className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+      <span className="text-xl">💾</span>
+      <div>
+        <p className="font-semibold text-sm text-gray-900">Calcule Pret</p>
+        <p className="text-gray-400 text-xs">Calcule salvate</p>
+      </div>
+    </a>
+  )
+
+  const serviciiTile = (
+    <a href="/services" className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+      <span className="text-xl">🔧</span>
+      <div>
+        <p className="font-semibold text-sm text-gray-900">Servicii</p>
+        <p className="text-gray-400 text-xs">Lista de servicii</p>
+      </div>
+    </a>
+  )
+
+  const clientiTile = (
+    <a href="/clients" className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+      <span className="text-xl">👥</span>
+      <div>
+        <p className="font-semibold text-sm text-gray-900">Clienti</p>
+        <p className="text-gray-400 text-xs">Lista de clienti</p>
+      </div>
+    </a>
+  )
+
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
       <div className="max-w-lg mx-auto px-4 space-y-3">
@@ -313,155 +409,107 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Onboarding — prima vizita */}
+        {/* Onboarding — prima vizita: alegere de modul, inlocuieste vechiul banner */}
         {showWelcome && (
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3.5 space-y-2">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-sm font-bold text-blue-900 flex items-center gap-1.5">
-                <span className="text-lg">👋</span> Bine ai venit la Tarifator!
-              </p>
-              <button onClick={() => { localStorage.setItem('welcomed', '1'); setShowWelcome(false) }}
-                className="text-blue-300 hover:text-blue-500 text-xl leading-none shrink-0">×</button>
-            </div>
-            <p className="text-xs text-blue-700 leading-relaxed">
-              Raspundem instant la „Cat costa?" — genereaza fise de servicii prin dictare vocala si calculeaza preturi de vanzare cu adaos si TVA, in cateva secunde.
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-4 space-y-3">
+            <p className="text-sm font-bold text-blue-900 flex items-center gap-1.5">
+              <span className="text-lg">👋</span> Bine ai venit la Tarifator! Ce ai nevoie in primul rand?
             </p>
-            <div className="flex items-center justify-between gap-3 pt-0.5">
-              <p className="text-xs text-blue-500">Primul pas: adauga-ti serviciile.</p>
-              <a href="/services" onClick={() => localStorage.setItem('welcomed', '1')}
-                className="text-xs font-bold text-blue-600 hover:text-blue-800 whitespace-nowrap shrink-0">Adauga servicii →</a>
+            <div className="space-y-2">
+              <button onClick={() => chooseModule('calculator')} disabled={choosingModule}
+                className="w-full text-left bg-white rounded-xl px-4 py-3 hover:bg-blue-100/50 active:scale-95 transition-all disabled:opacity-50">
+                <p className="text-sm font-bold text-gray-900">🧮 Mercator</p>
+                <p className="text-xs text-gray-500 mt-0.5">Calculez preturi de vanzare din facturi de furnizor</p>
+              </button>
+              <button onClick={() => chooseModule('devize')} disabled={choosingModule}
+                className="w-full text-left bg-white rounded-xl px-4 py-3 hover:bg-blue-100/50 active:scale-95 transition-all disabled:opacity-50">
+                <p className="text-sm font-bold text-gray-900">📋 Fise Servicii</p>
+                <p className="text-xs text-gray-500 mt-0.5">Fac devize/fise de servicii pentru clienti</p>
+              </button>
+              <button onClick={() => chooseModule('both')} disabled={choosingModule}
+                className="w-full text-left text-xs font-semibold text-blue-500 hover:text-blue-700 px-4 py-1.5">
+                Nu stiu inca / am nevoie de amandoua →
+              </button>
             </div>
           </div>
         )}
 
-        {mode === 'pro' ? (
-          <>
-            {/* Primary tools */}
-            <div className="grid grid-cols-2 gap-3">
-              <a href="/quick"
-                className="bg-blue-100 p-5 rounded-2xl shadow-sm hover:bg-blue-200 active:scale-95 transition-all flex flex-col min-h-[140px]">
-                <svg className="w-7 h-7 mb-2.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-                </svg>
-                <h2 className="font-bold text-lg leading-tight text-gray-900">Fisa Servicii Voce</h2>
-                <p className="text-blue-700 text-xs mt-1">Dicteaza si genereaza instant</p>
-              </a>
-              <a href="/pricing"
-                className="bg-amber-100 p-5 rounded-2xl shadow-sm hover:bg-amber-200 active:scale-95 transition-all flex flex-col min-h-[140px]">
-                <svg className="w-7 h-7 mb-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
-                </svg>
-                <h2 className="font-bold text-lg leading-tight text-gray-900">Calculator Pret</h2>
-                <p className="text-amber-700 text-xs mt-1">Adaos · TVA · PDF</p>
-              </a>
-            </div>
+        {(() => {
+          const fiseServiciiTile = (
+            <a href={mode === 'pro' && activeCompanyId ? `/companies/${activeCompanyId}/quotes` : '/quotes'}
+              className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
+              <span className="text-xl">📋</span>
+              <div>
+                <p className="font-semibold text-sm text-gray-900">Fise Servicii</p>
+                <p className="text-gray-400 text-xs truncate">
+                  {mode === 'pro'
+                    ? (activeCompanyId ? (companies.find(c => c.id === activeCompanyId)?.name || 'Firma curenta') : 'Toate fisele')
+                    : 'Creeaza si gestioneaza'}
+                </p>
+              </div>
+            </a>
+          )
 
-            {/* Secondary tools */}
-            <div className="grid grid-cols-2 gap-3">
-              <a href={activeCompanyId ? `/companies/${activeCompanyId}/quotes` : '/quotes'}
-                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-                <span className="text-xl">📋</span>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">Fise Servicii</p>
-                  <p className="text-gray-400 text-xs truncate">
-                    {activeCompanyId ? (companies.find(c => c.id === activeCompanyId)?.name || 'Firma curenta') : 'Toate fisele'}
-                  </p>
-                </div>
-              </a>
-              <a href="/calcule"
-                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-                <span className="text-xl">🧮</span>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">Calcule Pret</p>
-                  <p className="text-gray-400 text-xs">Calcule salvate</p>
-                </div>
-              </a>
-              <a href="/services"
-                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-                <span className="text-xl">🔧</span>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">Servicii</p>
-                  <p className="text-gray-400 text-xs">Lista de servicii</p>
-                </div>
-              </a>
-              <a href="/clients"
-                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-                <span className="text-xl">👥</span>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">Clienti</p>
-                  <p className="text-gray-400 text-xs">Lista de clienti</p>
-                </div>
-              </a>
-            </div>
+          return (
+            <>
+              {primaryModule === 'calculator' ? (
+                <>
+                  <div className="grid grid-cols-1 gap-3">{mercatorTile}</div>
+                  <div className="grid grid-cols-2 gap-3">{calculePretTile}</div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-gray-400 px-1">Vezi si Fise Servicii</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {fisaVoceTileSmall}
+                      {fiseServiciiTile}
+                      {serviciiTile}
+                      {clientiTile}
+                    </div>
+                  </div>
+                </>
+              ) : primaryModule === 'devize' ? (
+                <>
+                  <div className="grid grid-cols-1 gap-3">{fisaVoceTile}</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {fiseServiciiTile}
+                    {serviciiTile}
+                    {clientiTile}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-gray-400 px-1">Vezi si Mercator</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {mercatorTileSmall}
+                      {calculePretTile}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">{fisaVoceTile}{mercatorTile}</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {fiseServiciiTile}
+                    {calculePretTile}
+                    {serviciiTile}
+                    {clientiTile}
+                  </div>
+                </>
+              )}
 
-            {feedbackWidget}
-
-            <button onClick={() => switchMode('artizan')}
-              className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
-              Treci la modul Artizan (fara TVA)
-            </button>
-          </>
-        ) : (
-          <>
-            {/* ARTIZAN — Primary tools */}
-            <div className="grid grid-cols-2 gap-3">
-              <a href="/quick"
-                className="bg-blue-100 p-5 rounded-2xl shadow-sm hover:bg-blue-200 active:scale-95 transition-all flex flex-col min-h-[140px]">
-                <svg className="w-7 h-7 mb-2.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-                </svg>
-                <h2 className="font-bold text-lg leading-tight text-gray-900">Fisa Servicii Voce</h2>
-                <p className="text-blue-700 text-xs mt-1">Dicteaza si genereaza instant</p>
-              </a>
-              <a href="/pricing"
-                className="bg-amber-100 p-5 rounded-2xl shadow-sm hover:bg-amber-200 active:scale-95 transition-all flex flex-col min-h-[140px]">
-                <svg className="w-7 h-7 mb-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
-                </svg>
-                <h2 className="font-bold text-lg leading-tight text-gray-900">Calculator Pret Vanzare</h2>
-                <p className="text-amber-700 text-xs mt-1">Adaos · TVA · PDF</p>
-              </a>
-            </div>
-
-            {/* ARTIZAN — Secondary tools */}
-            <div className="grid grid-cols-2 gap-3 items-start">
-              <a href="/quotes"
-                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-                <span className="text-xl">📋</span>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">Fise Servicii</p>
-                  <p className="text-gray-400 text-xs">Creeaza si gestioneaza</p>
-                </div>
-              </a>
-              <a href="/services"
-                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-                <span className="text-xl">🔧</span>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">Servicii</p>
-                  <p className="text-gray-400 text-xs">Lista de servicii</p>
-                </div>
-              </a>
-              <a href="/clients"
-                className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-                <span className="text-xl">👥</span>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">Clienti</p>
-                  <p className="text-gray-400 text-xs">Lista de clienti</p>
-                </div>
-              </a>
               {feedbackWidget}
-            </div>
 
-            {plan === 'pro' && (
-              <button onClick={() => switchMode('pro')}
-                className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
-                Treci la modul Pro (TVA, firme multiple)
-              </button>
-            )}
-          </>
-        )}
+              {mode === 'pro' ? (
+                <button onClick={() => switchMode('artizan')}
+                  className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
+                  Treci la modul Artizan (fara TVA)
+                </button>
+              ) : plan === 'pro' && (
+                <button onClick={() => switchMode('pro')}
+                  className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
+                  Treci la modul Pro (TVA, firme multiple)
+                </button>
+              )}
+            </>
+          )
+        })()}
 
       </div>
     </div>
