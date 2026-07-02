@@ -27,7 +27,7 @@ function loadImage(f: File): Promise<HTMLImageElement> {
 }
 
 function cropAndEncode(img: HTMLImageElement, sy: number, sh: number): string {
-  const MAX = 1920
+  const MAX = 2048
   const w = img.width
   const scale = Math.min(1, MAX / Math.max(w, sh))
   const dw = Math.round(w * scale)
@@ -40,23 +40,26 @@ function cropAndEncode(img: HTMLImageElement, sy: number, sh: number): string {
   return canvas.toDataURL('image/jpeg', 0.88).split(',')[1]
 }
 
-function resizeImage(f: File): Promise<string> {
-  return loadImage(f).then(img => cropAndEncode(img, 0, img.height))
-}
 
-// Fallback pentru facturi lungi/dense: cand o singura poza esueaza (raspuns
-// prea mare/neclar pentru model), o impartim in 2 jumatati cu suprapunere
-// (ca sa nu taie un rand exact la mijloc) — fiecare jumatate ajunge sa fie
-// scalata la rezolutie mai mare per rand decat poza intreaga dintr-o data.
-function splitImageIntoHalves(f: File): Promise<[string, string]> {
+// Impartire in felii orizontale suprapuse pentru a citi facturi dense: o poza
+// intreaga cu multe randuri, redusa ca sa incapa in rezolutia modelului, are
+// randuri prea mici de citit — feliile sunt fiecare redusa mai putin, deci mai
+// multi pixeli per rand. Numarul de felii creste cu inaltimea pozei (mai multe
+// randuri => mai multe felii), plafonat la 4 ca sa nu explodeze costul de tokeni.
+// Suprapunere intre felii vecine ca sa nu taiem un rand exact la granita.
+function splitImageIntoSlices(f: File): Promise<string[]> {
   return loadImage(f).then(img => {
     const H = img.height
-    const overlap = 0.08
-    const topEnd = Math.round(H * (0.5 + overlap / 2))
-    const bottomStart = Math.round(H * (0.5 - overlap / 2))
-    const top = cropAndEncode(img, 0, topEnd)
-    const bottom = cropAndEncode(img, bottomStart, H - bottomStart)
-    return [top, bottom] as [string, string]
+    const n = Math.min(4, Math.max(2, Math.round(H / 1400)))
+    const base = H / n
+    const overlap = base * 0.08
+    const slices: string[] = []
+    for (let i = 0; i < n; i++) {
+      const start = Math.max(0, Math.round(i * base - overlap))
+      const end = Math.min(H, Math.round((i + 1) * base + overlap))
+      slices.push(cropAndEncode(img, start, end - start))
+    }
+    return slices
   })
 }
 
@@ -113,7 +116,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       status === 429 ? 'Ai atins limita de 50 scanari pe zi. Revino maine.' :
       data.error === 'groq_rate_limit' ? `Serverul AI este aglomerat. Asteapta 15 secunde si incearca din nou.${suffix}` :
       data.error === 'groq_too_large' ? `Factura e prea lunga/complexa pentru a fi citita dintr-o singura cerere. Incearca sa o imparti (scaneaza doar o parte din pagina sau doar o pagina din PDF).${suffix}` :
-      data.error === 'vision_failed' ? 'Poza neclara sau unghi dificil, chiar si dupa incercarea in 2 jumatati. Incearca o poza mai apropiata, cu lumina mai buna, sau incarca PDF-ul daca il ai.' :
+      data.error === 'vision_failed' ? 'Poza neclara sau unghi dificil, chiar si dupa citirea pe felii. Incearca o poza mai apropiata, cu lumina mai buna, sau incarca PDF-ul daca il ai.' :
       `Eroare: ${data.error || 'necunoscuta'}`
   }
 
@@ -134,46 +137,45 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
         return
       }
 
-      const fullImage = await resizeImage(file)
-      const first = await callApi({ imageBase64: fullImage, mimeType: 'image/jpeg' }, token)
+      // Citim poza DOAR pe felii orizontale suprapuse (nu si poza intreaga —
+      // feliile, cu suprapunere, o acopera complet, iar prima felie contine
+      // antetul cu furnizorul). Fiecare felie e redusa mai putin => text mai
+      // mare, mai multe randuri citite corect pe o factura densa.
+      const slices = await splitImageIntoSlices(file)
 
-      // Daca prima incercare a esuat din lipsa de cota (rate limit sau buget de
-      // tokeni epuizat), NU mai trimitem inca 2 cereri (jumatatile) — ar esua
-      // garantat la fel si ar arde si mai mult din cota deja epuizata, in loc
-      // sa ajute cu ceva.
-      if (!first.ok && (first.data.error === 'groq_rate_limit' || first.data.error === 'groq_too_large')) {
-        setError(errorMessage(first.status, first.data))
-        return
+      // Trimitem feliile in valuri de cate 2, NU toate deodata: modelul de
+      // vedere are o limita de tokeni-pe-minut (~30k pe tier-ul gratuit) si
+      // fiecare felie e ~7-8k tokeni; 4 deodata ar depasi limita si unele felii
+      // ar fi respinse (429), pierzand exact produsele pe care voiam sa le prindem.
+      const CONCURRENCY = 2
+      const sliceRes: ApiResult[] = []
+      let firstFatal: { status: number; data: ApiResult } | null = null
+      for (let i = 0; i < slices.length; i += CONCURRENCY) {
+        const batch = slices.slice(i, i + CONCURRENCY)
+        const res = await Promise.all(
+          batch.map(s => callApi({ imageBase64: s, mimeType: 'image/jpeg' }, token))
+        )
+        for (const r of res) {
+          sliceRes.push(r.data)
+          // Eroare de cota => oprim tot: reincercarea altor felii doar arde
+          // cota deja epuizata, fara sanse de reusita.
+          if (!r.ok && (r.data.error === 'groq_rate_limit' || r.data.error === 'groq_too_large') && !firstFatal) {
+            firstFatal = { status: r.status, data: r.data }
+          }
+        }
+        if (firstFatal) break
       }
 
-      // Rulam MEREU si varianta impartita in 2, chiar daca poza intreaga a
-      // "reusit" (a gasit niste produse) — o factura densa poate fi citita
-      // partial (unele randuri ratate din poza intreaga la rezolutie mai mica),
-      // iar jumatatile citite la rezolutie mai mare per rand prind adesea
-      // produse ratate de prima incercare. Costul in tokeni e mic (cativa
-      // centi), dar un rezultat incomplet la o singura scanare din putinele
-      // disponibile pe luna e mult mai rau.
-      const [topImage, bottomImage] = await splitImageIntoHalves(file)
-      const [topRes, bottomRes] = await Promise.all([
-        callApi({ imageBase64: topImage, mimeType: 'image/jpeg' }, token),
-        callApi({ imageBase64: bottomImage, mimeType: 'image/jpeg' }, token),
-      ])
-
-      const combinedItems = [
-        ...(first.ok ? first.data.items || [] : []),
-        ...(topRes.data.items || []),
-        ...(bottomRes.data.items || []),
-      ]
-      const supplier = first.data.supplier || topRes.data.supplier || bottomRes.data.supplier || ''
+      const combinedItems = sliceRes.flatMap(r => r.items || [])
+      const supplier = sliceRes.find(r => r.supplier)?.supplier || ''
 
       if (combinedItems.length > 0) {
         onSuccess({ supplier, items: dedupeItems(mapItems(combinedItems)) })
         return
       }
 
-      // Nici una din cele 3 nu a mers — arata eroarea cea mai relevanta.
-      const fallback = !first.ok ? first : (!topRes.ok ? topRes : bottomRes)
-      setError(errorMessage(fallback.status, fallback.data))
+      if (firstFatal) { setError(errorMessage(firstFatal.status, firstFatal.data)); return }
+      setError(errorMessage(200, { error: 'vision_failed' }))
     } catch {
       setError('Eroare de retea. Verifica conexiunea si incearca din nou.')
     } finally {
