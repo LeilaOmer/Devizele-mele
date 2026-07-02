@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PrimaryModule, setPrimaryModule } from '@/lib/module'
-import { PlanTier, TIER_LABELS, PRELAUNCH } from '@/lib/plan'
+import { PlanTier, TIER_LABELS, getEffectiveLimits } from '@/lib/plan'
+import { getMonthlyFise, getMonthlyCalcule } from '@/lib/usage'
 import { useRouter } from 'next/navigation'
 
 interface Company {
@@ -31,7 +32,7 @@ export default function SettingsPage() {
   const [form, setForm] = useState(emptyCompany())
   const [accountType, setAccountType] = useState<'artizan' | 'pro'>('artizan')
   const [primaryModule, setPrimaryModuleState] = useState<PrimaryModule>('both')
-  const [planTier, setPlanTier] = useState<PlanTier>('free')
+  const [sub, setSub] = useState<{ tier: PlanTier; fise: number; fiseLimit: number; calcule: number; calculeLimit: number; prelaunch: boolean; freemium: boolean } | null>(null)
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null)
@@ -58,7 +59,6 @@ export default function SettingsPage() {
       setAccountType(prof.account_type || 'artizan')
       setPrimaryModuleState((prof.primary_module as PrimaryModule | null) || 'both')
       setPlanActiveUntil(prof.plan_active_until || null)
-      setPlanTier((prof.plan_tier as PlanTier | null) || 'free')
       setProfileForm({
         company_name: prof.company_name || '',
         cui: prof.cui || '',
@@ -69,6 +69,11 @@ export default function SettingsPage() {
     }
     const { data: cos } = await supabase.from('companies').select('*').order('name')
     setCompanies(cos || [])
+
+    const limits = await getEffectiveLimits(user.id, user.created_at)
+    const [fise, calcule] = await Promise.all([getMonthlyFise(user.id), getMonthlyCalcule(user.id)])
+    setSub({ tier: limits.tier, fise, fiseLimit: limits.fise, calcule, calculeLimit: limits.calcule, prelaunch: limits.prelaunch, freemium: limits.freemium })
+
     setLoading(false)
   }
 
@@ -232,22 +237,63 @@ export default function SettingsPage() {
 
       <div className="max-w-lg mx-auto px-4 pt-6 space-y-5">
 
-        {/* Tip cont */}
+        {/* Abonament — card clar, sus */}
+        {sub && (
+          <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Abonament</p>
+                <p className="text-lg font-black text-gray-900 mt-0.5">
+                  {sub.prelaunch ? 'Pro' : TIER_LABELS[sub.tier]}
+                  {sub.prelaunch && <span className="text-xs font-semibold text-green-600 ml-2">gratuit · perioada de lansare</span>}
+                  {!sub.prelaunch && sub.freemium && <span className="text-xs font-semibold text-green-600 ml-2">prima luna gratuita</span>}
+                </p>
+                {planActiveUntil && new Date(planActiveUntil) > new Date() && sub.tier !== 'free' && !sub.prelaunch && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Activ pana la {new Date(planActiveUntil).toLocaleDateString('ro-RO')}
+                    <button onClick={() => setShowCancelModal(true)} className="text-amber-600 hover:text-amber-800 font-semibold ml-2">Anuleaza</button>
+                  </p>
+                )}
+              </div>
+              <a href="/upgrade" className="text-xs font-bold text-blue-600 shrink-0 bg-blue-50 px-3 py-2 rounded-xl whitespace-nowrap">Schimba abonament</a>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                <p className="text-xs text-gray-400">Fise Servicii (luna asta)</p>
+                <p className={`text-sm font-bold ${Number.isFinite(sub.fiseLimit) && sub.fise >= sub.fiseLimit ? 'text-red-600' : 'text-gray-800'}`}>
+                  {Number.isFinite(sub.fiseLimit) ? `${sub.fise} / ${sub.fiseLimit}` : 'Nelimitat'}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                <p className="text-xs text-gray-400">Calcule Pret (luna asta)</p>
+                <p className={`text-sm font-bold ${Number.isFinite(sub.calculeLimit) && sub.calcule >= sub.calculeLimit ? 'text-red-600' : 'text-gray-800'}`}>
+                  {Number.isFinite(sub.calculeLimit) ? `${sub.calcule} / ${sub.calculeLimit}` : 'Nelimitat'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mod de lucru — comutatorul TVA/firme (NU abonamentul) */}
         <div className="bg-white rounded-2xl shadow-sm p-5">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Tip cont</p>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Mod de lucru</p>
+          <p className="text-xs text-gray-400 mb-3">Nu tine de abonament — poate fi schimbat oricand.</p>
           <div className="grid grid-cols-2 gap-3">
-            {(['artizan', 'pro'] as const).map(type => (
-              <button key={type} onClick={() => saveAccountType(type)}
+            {([
+              { type: 'artizan' as const, icon: '🔨', label: 'Simplu', desc: 'Fara TVA · o firma' },
+              { type: 'pro' as const, icon: '🏢', label: 'Firma', desc: 'Cu TVA · mai multe firme' },
+            ]).map(o => (
+              <button key={o.type} onClick={() => saveAccountType(o.type)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                  accountType === type
-                    ? type === 'pro' ? 'border-purple-500 bg-purple-50' : 'border-blue-500 bg-blue-50'
+                  accountType === o.type
+                    ? o.type === 'pro' ? 'border-purple-500 bg-purple-50' : 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 bg-white'
                 }`}>
-                <span className="text-2xl">{type === 'pro' ? '🏢' : '🔨'}</span>
-                <span className={`text-sm font-bold ${accountType === type ? (type === 'pro' ? 'text-purple-700' : 'text-blue-700') : 'text-gray-700'}`}>
-                  {type === 'pro' ? 'Pro' : 'Artizan'}
+                <span className="text-2xl">{o.icon}</span>
+                <span className={`text-sm font-bold ${accountType === o.type ? (o.type === 'pro' ? 'text-purple-700' : 'text-blue-700') : 'text-gray-700'}`}>
+                  {o.label}
                 </span>
-                <span className="text-xs text-gray-400 text-center">{type === 'pro' ? 'TVA · Firme' : 'Fara TVA · Simplu'}</span>
+                <span className="text-xs text-gray-400 text-center">{o.desc}</span>
               </button>
             ))}
           </div>
@@ -417,25 +463,6 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
-
-          <div className="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-gray-400">Abonament</p>
-              <p className="text-sm font-semibold text-gray-800">
-                {PRELAUNCH
-                  ? 'Pro · gratuit in perioada de lansare'
-                  : planActiveUntil && new Date(planActiveUntil) > new Date() && planTier !== 'free'
-                  ? `${TIER_LABELS[planTier]} · activ pana la ${new Date(planActiveUntil).toLocaleDateString('ro-RO')}`
-                  : 'Free'}
-              </p>
-            </div>
-            {planActiveUntil && new Date(planActiveUntil) > new Date() && (
-              <button onClick={() => setShowCancelModal(true)}
-                className="text-xs font-semibold text-amber-600 hover:text-amber-800">
-                Anuleaza
-              </button>
-            )}
-          </div>
 
           <div className="px-5 py-3 border-b border-gray-50">
             <p className="text-xs text-gray-400 mb-2">Documente legale</p>

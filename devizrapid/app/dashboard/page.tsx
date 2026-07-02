@@ -291,26 +291,6 @@ export default function Dashboard() {
     </a>
   )
 
-  const mercatorTileSmall = (
-    <a href="/pricing" className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-      <span className="text-xl">🧮</span>
-      <div>
-        <p className="font-semibold text-sm text-gray-900">Calculator Pret</p>
-        <p className="text-gray-400 text-xs">Adaos · TVA · PDF</p>
-      </div>
-    </a>
-  )
-
-  const fisaVoceTileSmall = (
-    <a href="/quick" className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
-      <span className="text-xl">🎙️</span>
-      <div>
-        <p className="font-semibold text-sm text-gray-900">Fisa Servicii Voce</p>
-        <p className="text-gray-400 text-xs">Dicteaza si genereaza</p>
-      </div>
-    </a>
-  )
-
   const calculePretTile = (
     <a href="/calcule" className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
       <span className="text-xl">💾</span>
@@ -434,33 +414,27 @@ export default function Dashboard() {
             <>
               {primaryModule === 'calculator' ? (
                 <>
+                  {/* Modul principal: Calculator Pret. Fisele raman accesibile, dar comprimate intr-un singur link. */}
                   <div className="grid grid-cols-1 gap-3">{mercatorTile}</div>
                   <div className="grid grid-cols-2 gap-3">{calculePretTile}</div>
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-gray-400 px-1">Vezi si Fise Servicii</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {fisaVoceTileSmall}
-                      {fiseServiciiTile}
-                      {serviciiTile}
-                      {clientiTile}
-                    </div>
-                  </div>
+                  <a href="/quotes" className="flex items-center justify-between bg-white rounded-2xl shadow-sm px-4 py-3 hover:shadow active:scale-95 transition-all">
+                    <span className="text-sm font-semibold text-gray-500">📋 Vezi si Fise Servicii</span>
+                    <span className="text-gray-300">→</span>
+                  </a>
                 </>
               ) : primaryModule === 'devize' ? (
                 <>
+                  {/* Modul principal: Fise Servicii. Calculatorul ramane accesibil, comprimat intr-un singur link. */}
                   <div className="grid grid-cols-1 gap-3">{fisaVoceTile}</div>
                   <div className="grid grid-cols-2 gap-3">
                     {fiseServiciiTile}
                     {serviciiTile}
                     {clientiTile}
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-gray-400 px-1">Vezi si Calculator Pret</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      {mercatorTileSmall}
-                      {calculePretTile}
-                    </div>
-                  </div>
+                  <a href="/pricing" className="flex items-center justify-between bg-white rounded-2xl shadow-sm px-4 py-3 hover:shadow active:scale-95 transition-all">
+                    <span className="text-sm font-semibold text-gray-500">🧮 Vezi si Calculator Pret</span>
+                    <span className="text-gray-300">→</span>
+                  </a>
                 </>
               ) : (
                 <>
@@ -479,12 +453,12 @@ export default function Dashboard() {
               {mode === 'pro' ? (
                 <button onClick={() => switchMode('artizan')}
                   className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
-                  Treci la modul Artizan (fara TVA)
+                  Comuta pe Simplu (fara TVA)
                 </button>
               ) : plan === 'pro' && (
                 <button onClick={() => switchMode('pro')}
                   className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all">
-                  Treci la modul Pro (TVA, firme multiple)
+                  Comuta pe Firma (cu TVA, mai multe firme)
                 </button>
               )}
             </>
