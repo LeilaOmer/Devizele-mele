@@ -22,8 +22,11 @@ export async function POST(req: NextRequest) {
   const productName = typeof body.product_name === 'string' ? body.product_name.trim() : ''
   const piecesPerBox = Math.round(Number(body.pieces_per_box))
 
-  if (!supplierName || !productName || !Number.isFinite(piecesPerBox) || piecesPerBox <= 1) {
-    return NextResponse.json({ error: 'Date invalide: furnizor, produs si numar de bucati (peste 1) sunt obligatorii.' }, { status: 400 })
+  // Plafon superior + lungime minima nume: o cutie reala are un numar rezonabil
+  // de bucati; fara plafon, o valoare absurda (ex 999) ar strica preturile.
+  if (!supplierName || supplierName.length > 120 || !productName || productName.length > 200
+    || !Number.isFinite(piecesPerBox) || piecesPerBox <= 1 || piecesPerBox > 500) {
+    return NextResponse.json({ error: 'Date invalide: furnizor, produs si numar de bucati (intre 2 si 500) sunt obligatorii.' }, { status: 400 })
   }
 
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY

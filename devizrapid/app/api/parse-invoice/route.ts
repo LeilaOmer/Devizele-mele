@@ -26,15 +26,18 @@ function normalizeName(s: string): string {
     .trim()
 }
 
-// Raporturi bucati/cutie invatate anterior (de orice user, pentru acelasi furnizor) —
-// au prioritate fata de ce ghiceste AI-ul din text, pentru ca sunt confirmate manual.
-async function getKnownRatios(supplierName: string): Promise<Map<string, number>> {
+// Raporturi bucati/cutie corectate manual anterior, DOAR de userul curent
+// (created_by = userId), pentru acelasi furnizor. Scoparea per-user, nu global:
+// altfel un user putea scrie un raport fals pe un furnizor comun si strica pe
+// tacute preturile calculate de toti ceilalti (otravire cross-tenant).
+async function getKnownRatios(supplierName: string, userId: string): Promise<Map<string, number>> {
   const map = new Map<string, number>()
   const name = supplierName?.trim()
   if (!name) return map
   const { data } = await getServiceRoleClient()
     .from('product_box_ratios')
     .select('product_name, pieces_per_box')
+    .eq('created_by', userId)
     .ilike('supplier_name', name)
   if (data) {
     for (const row of data as { product_name: string; pieces_per_box: number }[]) {
@@ -304,7 +307,7 @@ async function runVisionScan(
   // se intampla si la modelul de text daca nu era redus.
   const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages, 4000)
   const parsed = parseJson(raw)
-  const result = validateAndSanitize(parsed, await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : ''))
+  const result = validateAndSanitize(parsed, await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', userId))
   const items = result && Array.isArray((result as { items?: unknown[] }).items) ? (result as { items: unknown[] }).items : []
   if (items.length > 0) {
     await supabase.from('invoice_scan_logs').insert({ user_id: userId })
@@ -385,7 +388,7 @@ export async function POST(req: NextRequest) {
     // decat slice-ul de text de mai sus, ca sa nu taiem input-ul (ex: legenda TVA de la finalul unui bon).
     const raw = await callGroq('llama-3.3-70b-versatile', messages, 3000)
     const parsed = parseJson(raw)
-    const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '')
+    const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '', user.id)
     const result = validateAndSanitize(parsed, knownRatios)
     if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
     return NextResponse.json(result ?? { items: [] })

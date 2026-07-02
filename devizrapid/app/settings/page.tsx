@@ -163,14 +163,15 @@ export default function SettingsPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       const { data: existingServices } = await supabase.from('services').select('*').eq('user_id', session.user.id).is('company_id', null)
-      if (existingServices) {
-        await supabase.from('services').insert(existingServices.map(s => ({
+      if (existingServices && existingServices.length > 0) {
+        const { error } = await supabase.from('services').insert(existingServices.map(s => ({
           user_id: session.user.id,
           company_id: pendingCompanyId,
           name: s.name,
           unit: s.unit,
           price_per_unit: s.price_per_unit
         })))
+        if (error) alert('Firma s-a creat, dar nu s-au putut copia serviciile: ' + error.message)
       }
     }
     setPendingCompanyId(null)
@@ -194,7 +195,8 @@ export default function SettingsPage() {
 
   async function deleteCompany(id: string) {
     if (!confirm('Stergi firma? Fisele asociate raman dar fara firma.')) return
-    await supabase.from('companies').delete().eq('id', id)
+    const { error } = await supabase.from('companies').delete().eq('id', id)
+    if (error) { alert('Nu s-a putut sterge firma: ' + error.message); return }
     load()
   }
 

@@ -472,7 +472,12 @@ export default function QuoteDetailPage() {
     </div>
   );
 
-  const isPro = !!company || profile.account_type === "pro";
+  // Aceeasi definitie ca in TOATE caile de scriere (handleSave/handleDeleteItem/
+  // handleSaveDiscount/PDF): documentul are TVA doar daca fisa are o firma
+  // asociata. Daca render-ul ar folosi si account_type==='pro', o fisa fara
+  // firma (ex. dupa stergerea firmei) ar afisa un TVA de 21% pe care scrierea
+  // nu l-a salvat niciodata => TOTAL umflat, diferit de ce se salveaza.
+  const isPro = !!company;
   const emitent = getEmitent();
   const isFinalized = quote.status === "final";
   const st = ({ draft: { label: "Ciorna", color: "bg-gray-100 text-gray-600" }, final: { label: "Document Final", color: "bg-green-100 text-green-700" }, sent: { label: "Trimis", color: "bg-blue-100 text-blue-700" }, accepted: { label: "Acceptat", color: "bg-green-100 text-green-700" }, rejected: { label: "Respins", color: "bg-red-100 text-red-700" } } as Record<string, { label: string; color: string }>)[quote.status] ?? { label: quote.status, color: "bg-gray-100 text-gray-600" };

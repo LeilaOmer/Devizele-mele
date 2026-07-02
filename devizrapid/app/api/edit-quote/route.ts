@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyBearer } from '@/lib/apiAuth'
 
 export async function POST(req: NextRequest) {
+  const userId = await verifyBearer(req.headers.get('authorization'))
+  if (!userId) return NextResponse.json({ items: [] }, { status: 401 })
+
   const { command, items, services } = await req.json()
   const simple = services.map((s: any) => ({ id: s.id, name: s.name, unit: s.unit }))
 

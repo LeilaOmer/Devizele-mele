@@ -32,7 +32,8 @@ export default function CalculePage() {
   }, [router])
 
   async function handleDelete(id: string) {
-    await supabase.from('pricing_drafts').delete().eq('id', id)
+    const { error } = await supabase.from('pricing_drafts').delete().eq('id', id)
+    if (error) { alert('Nu s-a putut sterge calculul: ' + error.message); return }
     setDrafts(prev => prev.filter(d => d.id !== id))
   }
 

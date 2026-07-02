@@ -77,7 +77,9 @@ export default function Dashboard() {
       if (userPlan === 'pro') {
         let { data: cos } = await supabase.from('companies').select('id, name, cui').order('name')
 
-        if ((!cos || cos.length === 0) && prof?.company_name) {
+        // Auto-creare firma din profil DOAR pentru conturi efectiv Pro — altfel
+        // un cont Artizan (fara TVA/firme) ar capata pe tacute o firma nedorita.
+        if ((!cos || cos.length === 0) && prof?.company_name && dbAccountType === 'pro') {
           const { data: newCo, error: newCoErr } = await supabase.from('companies').insert({
             user_id: session.user.id,
             name: prof.company_name,

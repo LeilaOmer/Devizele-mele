@@ -34,7 +34,8 @@ export default function CompanyQuotesPage() {
   }
 
   async function handleDelete(qid: string) {
-    await supabase.from('quotes').delete().eq('id', qid)
+    const { error } = await supabase.from('quotes').delete().eq('id', qid)
+    if (error) { alert('Nu s-a putut sterge fisa: ' + error.message); return }
     load()
   }
 

@@ -1,6 +1,12 @@
 import { Resend } from 'resend'
 import { NextRequest, NextResponse } from 'next/server'
 
+// Escapeaza continutul introdus de user inainte de a-l pune in HTML-ul emailului,
+// ca sa nu poata injecta markup/tracking in inboxul admin.
+const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, c => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
+))
+
 export async function POST(req: NextRequest) {
   const resend = new Resend(process.env.RESEND_API_KEY)
   if (req.headers.get('x-notify-secret') !== process.env.NOTIFY_SECRET) {
@@ -18,7 +24,7 @@ export async function POST(req: NextRequest) {
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h2 style="color: #1d4ed8;">Feedback nou in Tarifator</h2>
         <div style="background: #f8fafc; border-left: 4px solid #1d4ed8; padding: 16px; border-radius: 4px; margin: 16px 0;">
-          <p style="margin: 0; color: #1e293b;">${record.message}</p>
+          <p style="margin: 0; color: #1e293b;">${esc(record.message)}</p>
         </div>
         <p style="color: #94a3b8; font-size: 12px;">
           Primit la ${new Date(record.created_at).toLocaleString('ro-RO')}

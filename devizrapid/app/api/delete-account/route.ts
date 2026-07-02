@@ -36,17 +36,30 @@ export async function POST(req: Request) {
     }
   }
 
-  // Delete user data in order (children first)
-  await admin.from('pricing_usage').delete().eq('user_id', user.id)
-  await admin.from('quote_items').delete().in(
-    'quote_id',
-    (await admin.from('quotes').select('id').eq('user_id', user.id)).data?.map(q => q.id) || []
-  )
-  await admin.from('quotes').delete().eq('user_id', user.id)
-  await admin.from('services').delete().eq('user_id', user.id)
-  await admin.from('clients').delete().eq('user_id', user.id)
-  await admin.from('companies').delete().eq('user_id', user.id)
-  await admin.from('profiles').delete().eq('id', user.id)
+  // Sterge TOATE datele userului (copiii intai). Colectam erorile in loc sa le
+  // ignoram: daca o stergere esueaza NU mai stergem contul de auth (altfel ar
+  // ramane date orfane cu userul disparut), ci raportam esecul.
+  const errors: string[] = []
+  const del = async (fn: () => PromiseLike<{ error: { message: string } | null }>) => {
+    const { error } = await fn()
+    if (error) errors.push(error.message)
+  }
+
+  const { data: quoteIds } = await admin.from('quotes').select('id').eq('user_id', user.id)
+  await del(() => admin.from('quote_items').delete().in('quote_id', quoteIds?.map(q => q.id) || []))
+  await del(() => admin.from('quotes').delete().eq('user_id', user.id))
+  await del(() => admin.from('pricing_usage').delete().eq('user_id', user.id))
+  await del(() => admin.from('pricing_drafts').delete().eq('user_id', user.id))
+  await del(() => admin.from('invoice_scan_logs').delete().eq('user_id', user.id))
+  await del(() => admin.from('feedback').delete().eq('user_id', user.id))
+  await del(() => admin.from('services').delete().eq('user_id', user.id))
+  await del(() => admin.from('clients').delete().eq('user_id', user.id))
+  await del(() => admin.from('companies').delete().eq('user_id', user.id))
+  await del(() => admin.from('profiles').delete().eq('id', user.id))
+
+  if (errors.length > 0) {
+    return NextResponse.json({ error: 'Nu s-au putut sterge toate datele: ' + errors.join('; ') }, { status: 500 })
+  }
 
   const { error: delErr } = await admin.auth.admin.deleteUser(user.id)
   if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
