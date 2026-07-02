@@ -340,6 +340,61 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
   return d
 }
 
+// PDF-uri scanate (poza incorporata direct, fara layer de text real) fac ca
+// pdf-parse sa intoarca text gol sau aproape gol — in loc sa trimitem asta
+// mai departe la modelul de text (esec silentios, JSON gol), randam prima
+// pagina ca imagine si o trecem pe calea de vedere, ca la o poza incarcata
+// direct. Esueaza natural (return null) daca PDF-ul chiar nu se poate randa,
+// caz in care ne intoarcem la comportamentul vechi (trimitem textul, oricat de putin).
+async function pdfToImageBase64(buf: Buffer): Promise<string | null> {
+  try {
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    const { createCanvas } = await import('@napi-rs/canvas')
+    const data = new Uint8Array(buf)
+    const pdf = await pdfjsLib.getDocument({ data }).promise
+    const page = await pdf.getPage(1)
+    const viewport = page.getViewport({ scale: 2.0 })
+    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height))
+    const ctx = canvas.getContext('2d')
+    // @napi-rs/canvas implementeaza un canvas/context compatibil, dar nu identic
+    // tipizat cu cel din lib.dom — pdf.js accepta la runtime orice context care
+    // se comporta la fel, de-aia castul peste toti parametrii.
+    await page.render({ canvasContext: ctx, viewport } as unknown as Parameters<typeof page.render>[0]).promise
+    return canvas.toBuffer('image/jpeg', 0.9).toString('base64')
+  } catch {
+    return null
+  }
+}
+
+async function runVisionScan(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  userId: string,
+  imageBase64: string,
+  mimeType: string,
+) {
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    {
+      role: 'user',
+      content: [
+        { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+        { type: 'text', text: 'Extrage furnizorul si produsele din acest document (factura, aviz sau bon fiscal) conform regulilor.' },
+      ],
+    },
+  ]
+  // max_tokens nu a mai fost ajustat aici de cand a fost setat, desi system
+  // prompt-ul s-a triplat de atunci (creste cu fiecare regula noua) — pe o
+  // factura densa (poza cu multe randuri), prompt+imagine+8192 rezervat
+  // poate depasi bugetul de tokeni/minut al modelului de vedere, la fel cum
+  // se intampla si la modelul de text daca nu era redus.
+  const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages, 4000)
+  const parsed = parseJson(raw)
+  const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '')
+  const result = validateAndSanitize(parsed, knownRatios)
+  if (result) await supabase.from('invoice_scan_logs').insert({ user_id: userId })
+  return NextResponse.json(result ?? { items: [], error: 'vision_failed' })
+}
+
 export async function POST(req: NextRequest) {
   // Auth check
   const authHeader = req.headers.get('authorization')
@@ -365,27 +420,7 @@ export async function POST(req: NextRequest) {
 
   try {
     if (body.imageBase64) {
-      const messages = [
-        { role: 'system', content: SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: `data:${body.mimeType || 'image/jpeg'};base64,${body.imageBase64}` } },
-            { type: 'text', text: 'Extrage furnizorul si produsele din acest document (factura, aviz sau bon fiscal) conform regulilor.' },
-          ],
-        },
-      ]
-      // max_tokens nu a mai fost ajustat aici de cand a fost setat, desi system
-      // prompt-ul s-a triplat de atunci (creste cu fiecare regula noua) — pe o
-      // factura densa (poza cu multe randuri), prompt+imagine+8192 rezervat
-      // poate depasi bugetul de tokeni/minut al modelului de vedere, la fel cum
-      // se intampla si la modelul de text daca nu era redus.
-      const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages, 4000)
-      const parsed = parseJson(raw)
-      const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '')
-      const result = validateAndSanitize(parsed, knownRatios)
-      if (result) await supabase.from('invoice_scan_logs').insert({ user_id: user.id })
-      return NextResponse.json(result ?? { items: [], error: 'vision_failed' })
+      return await runVisionScan(supabase, user.id, body.imageBase64, body.mimeType || 'image/jpeg')
     }
 
     let text = ''
@@ -397,6 +432,14 @@ export async function POST(req: NextRequest) {
         const pdfParse: (buf: Buffer) => Promise<{ text: string }> = require('pdf-parse/lib/pdf-parse.js')
         const parsed = await pdfParse(buf)
         text = parsed.text
+
+        // PDF scanat (poza bagata direct in PDF, fara text real) => pdf-parse
+        // intoarce aproape nimic. Router automat catre vedere, transparent
+        // pentru utilizator — nu mai afiseaza eroare, doar trece pe alta cale.
+        if (text.trim().length < 40) {
+          const imageBase64 = await pdfToImageBase64(buf)
+          if (imageBase64) return await runVisionScan(supabase, user.id, imageBase64, 'image/jpeg')
+        }
       } else {
         text = buf.toString('utf-8')
       }

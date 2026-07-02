@@ -9,6 +9,10 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  // pdfjs-dist + @napi-rs/canvas (randare PDF -> imagine, pentru PDF-uri scanate
+  // fara text) au binare native — le lasam externe bundler-ului Next, altfel
+  // risca sa fie ambalate gresit la build si sa pice doar in productie pe Vercel.
+  serverExternalPackages: ['pdfjs-dist', '@napi-rs/canvas'],
   async headers() {
     return [
       {
