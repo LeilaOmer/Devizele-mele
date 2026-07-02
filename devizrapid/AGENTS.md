@@ -9,3 +9,21 @@ This version has breaking changes — APIs, conventions, and file structure may 
 Inainte de a modifica logica de TVA, preturi, SGR, cutie/bucata, abonamente,
 numerotare fise sau scanare facturi, citeste `BUSINESS_RULES.md` — contine
 regulile de domeniu (contabile + de produs) pe care codul trebuie sa le respecte.
+
+# Disciplina de cod
+
+- **Nu rescrie cod care merge.** Prefera editari tintite fata de rescrieri; o
+  rescriere risca sa reintroduca bug-uri deja rezolvate.
+- **Nu duplica logica de business.** Reutilizeaza functiile/hook-urile/
+  componentele existente; extrage un helper comun in loc sa copiezi (ex.
+  `lib/apiAuth.ts`, `lib/plan.ts`, tile-urile partajate din dashboard).
+- **Schimbari mari sau arhitecturale => intai plan + confirmare.** Pentru
+  atingeri punctuale, mergi direct; pentru refactor pe mai multe fisiere sau
+  decizii de arhitectura, prezinta un plan si asteapta OK.
+- **Aritmetica preturilor se face in cod, nu de AI.** La scanare, modelul doar
+  citeste/transcrie; orice calcul (TVA, cutie/bucata, discount) e determinist in
+  cod. Nu muta calcule inapoi in prompt.
+- **Verifica inainte de a livra.** Ruleaza `npx tsc --noEmit` si `npm run build`
+  (din `devizrapid/`) inainte de commit — build-ul complet prinde ce `tsc` nu vede.
+- **Verifica orice scriere in Supabase** (`error`), nu o ignora — un esec silentios
+  arata succes fals in UI, dar datele nu se salveaza.
