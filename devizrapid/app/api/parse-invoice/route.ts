@@ -45,18 +45,18 @@ async function getKnownRatios(supplierName: string): Promise<Map<string, number>
 }
 
 const SYSTEM_PROMPT = `Esti asistent pentru comercianti romani. Extrage din documentul primit (factura, aviz sau bon fiscal de la casa de marcat) furnizorul si lista de produse. Raspunzi DOAR cu JSON, fara text, fara markdown.
-Format: {"supplier":"Nume Furnizor SRL","doc_type":"invoice","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","price_raw":0,"price_includes_vat":false,"already_per_piece":true,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0,"line_total":0,"quantity":1,"card_discount":0}]}
+Format: {"supplier":"Nume Furnizor SRL","doc_type":"invoice","discounts":{"11":0,"21":0},"items":[{"name":"denumire produs","unit":"buc","price_raw":0,"price_includes_vat":false,"pieces_per_box":1,"discount":0,"vat":21,"sgr":0,"line_total":0,"quantity":1,"card_discount":0}]}
 
 "doc_type" e "invoice" pentru factura/aviz (implicit), sau "receipt" pentru bon fiscal de la casa de marcat (vezi Regula 9) — completeaza-l intotdeauna.
 
-IMPORTANT — rolul tau e sa CITESTI si sa CLASIFICI, NU sa calculezi. Orice impartire, conversie de TVA sau calcul de pret se face separat, automat, dupa ce raspunzi tu. La factura/aviz ("doc_type":"invoice") tu doar:
+IMPORTANT — rolul tau e sa CITESTI si sa TRANSCRII, NU sa calculezi. Orice impartire, conversie de TVA, decizie cutie-vs-bucata sau calcul de pret se face separat, automat, dupa ce raspunzi tu. La factura/aviz ("doc_type":"invoice") tu doar:
 - copiezi EXACT numarul tiparit pe factura in "price_raw" (fara sa-l modifici cu nimic)
 - marchezi cu true/false daca acel numar contine sau nu TVA ("price_includes_vat")
-- marchezi cu true/false daca UM-ul EFECTIV al randului (coloana UM de pe factura, nu textul din denumire) e deja o unitate individuala precum Buc/ST/DZ ("already_per_piece")
-- extragi numarul de bucati per ambalaj in "pieces_per_box" (doar daca apare explicit scris, si doar cand already_per_piece=false)
-La bon fiscal ("doc_type":"receipt") completezi in schimb "line_total"/"quantity"/"card_discount" — vezi Regula 9, campurile de mai sus (price_raw, already_per_piece, pieces_per_box) nu se folosesc acolo.
+- copiezi in "unit" EXACT valoarea din coloana UM a randului, verbatim (ex: "Buc", "Cut", "kg", "ST") — NU o traduce si NU o deduce din denumire. Aceasta coloana decide (in cod) daca randul e cutie de impartit sau nu.
+- extragi in "pieces_per_box" numarul de bucati per ambalaj DOAR daca apare explicit scris in denumire (ex: "24BUC/CUT" => 24); altfel 1. Il completezi indiferent de UM — codul decide daca il foloseste.
+- completezi "quantity" (cantitatea) si "line_total" (valoarea randului, acelasi regim TVA ca price_raw) ori de cate ori exista coloane clare de cantitate si valoare — sunt supapa de verificare.
+La bon fiscal ("doc_type":"receipt") completezi in schimb "line_total"/"quantity"/"card_discount" — vezi Regula 9.
 NU face niciodata singur impartirea/conversia — modelele AI gresesc des la aritmetica din cap si strica preturile. Daca faci calculul tu insuti in loc sa raportezi numerele brute, rezultatul e considerat gresit.
-ATENTIE — cea mai frecventa greseala: cand already_per_piece=true (UM chiar e Buc pe factura), NICIODATA sa nu completezi pieces_per_box cu un numar mai mare ca 1, chiar daca denumirea produsului contine un text de genul "18 BUC/CUT" (aia e doar informatie despre ambalarea de la producator, nu inseamna ca acest rand trebuie impartit).
 
 Daca in imagine sunt vizibile mai multe documente/foi suprapuse (ex: o factura pusa peste alta, colturi de pagini din spate care se vad partial, o alta factura vizibila in fundal) => citeste STRICT documentul din prim-plan, cel mai clar si mai apropiat de camera. Ignora complet orice text din paginile suprapuse/din fundal, chiar daca e partial vizibil — nu il amesteca cu datele documentului principal.
 
@@ -140,26 +140,12 @@ REGULI OBLIGATORII:
 
 7. Nu folosi diacritice in text (a nu a, s nu s, t nu t, etc.).
 
-8. CUTII / BAX-URI / SET-URI cu produse individuale ambalate colectiv:
-   PASUL 0 — verifica INTAI coloana UM efectiva a randului (nu textul din denumire) si seteaza "already_per_piece": daca UM e deja Buc, ST, DZ sau alta unitate individuala => already_per_piece=true si pieces_per_box = 1 INTOTDEAUNA, oricat de mult ar semana denumirea cu un tipar de raport (ex: "104 GR FR PAD 18 BUC/CUT" cu UM=Buc pe factura => already_per_piece=true, pieces_per_box = 1, produsul e deja vandut pe bucata, "18 BUC/CUT" e doar o informatie despre ambalarea de la producator, NU un raport de aplicat). NU confunda un numar din DENUMIRE cu decizia despre UM — decizia despre UM vine STRICT din coloana UM a facturii, niciodata din text.
-   Restul Pasului 1-2 se aplica DOAR cand UM efectiv al randului e Cutie, Cut, Bax, Bx sau Set.
-
-   PASUL 1 — cauta in DENUMIREA produsului un raport explicit bucati-per-ambalaj: tipare ca "NNBUC/CUT", "NN B/CUT", "NNbuc/cut", "(NN buc/cut)", "NNB/CUT X ...", sau pur si simplu "NN BUC" langa denumire. Exemple: "35GR BANOFFEE 24BUC/CUT" => 24; "30G 30B/CUT" => 30; "40 G/24B" => 24; "(18 buc/cut)" => 18; "35 GR 24 BUC" => 24; "24B/CUT X 28G" => 24.
+8. pieces_per_box — numarul de bucati per ambalaj (folosit de cod DOAR daca UM-ul din "unit" e cutie/bax/set; tu doar il raportezi, nu decizi si nu imparti):
+   Cauta in DENUMIREA produsului un raport explicit bucati-per-ambalaj: tipare ca "NNBUC/CUT", "NN B/CUT", "NNbuc/cut", "(NN buc/cut)", "NNB/CUT X ...", sau pur si simplu "NN BUC" langa denumire. Exemple: "35GR BANOFFEE 24BUC/CUT" => 24; "30G 30B/CUT" => 30; "40 G/24B" => 24; "(18 buc/cut)" => 18; "35 GR 24 BUC" => 24; "24B/CUT X 28G" => 24.
    Daca denumirea e trunchiata si se termina brusc cu o paranteza deschisa urmata de un numar (ex: "...GLZ (18"), acel numar E raportul cautat — descrierea a fost taiata de spatiu pe factura, dar numarul e vizibil si valid. Foloseste-l.
+   Daca nu apare niciun numar de bucati in denumire => pieces_per_box = 1. NU inventa un raport si NU incerca sa-l deduci de la alt produs (potrivirea intre produse din aceeasi familie o face codul automat). NU imparti tu pretul la pieces_per_box — raportezi doar numarul gasit.
 
-   PASUL 2 — DACA nu gasesti niciun raport in denumirea PROPRIE a produsului, cauta in TOATA lista de produse a facturii (nu doar randul de deasupra sau de dedesubt) un alt produs care:
-      a) are ACELASI pret de cutie fara TVA (identic sau aproape identic) SI
-      b) are un nume din aceeasi familie (aceleasi primele 2-3 cuvinte din denumire, difera doar aroma/varianta/culoarea) SI
-      c) ACELA are un raport bucati/cutie gasit la Pasul 1.
-      Daca gasesti o asemenea potrivire => foloseste acelasi raport. Nu conteaza daca produsul-sursa e inainte sau dupa in lista.
-      Exemplu: "MAGURA MACARON 35GR CAPPUCCINO" nu are raport in nume, dar "MAGURA MACARON 35GR BANOFFEE 24BUC/CUT" de pe alt rand are acelasi pret de cutie si e din aceeasi familie de produs => foloseste pieces_per_box = 24 si pentru Cappuccino.
-
-   PASUL 3 — DACA tot nu gasesti niciun raport (nici in denumire, nici la un produs asemanator din factura) — produsul e descris DOAR prin greutate/volum total al ambalajului (ex: "1.3 KG", "450 GR"), fara nicio bucata individuala mentionata nicaieri => pieces_per_box = 1 (produsul se vinde ca intreaga cutie/bax, unitate unica).
-      Exemplu: "JUMBO 1.3 KG NAP DOINA" => pieces_per_box = 1.
-
-   IMPORTANT: NU imparti tu pretul la pieces_per_box, NU calcula pretul per bucata — doar raporteaza numarul gasit (sau 1 daca nu exista), impartirea se face automat dupa.
-
-9. BON FISCAL (bon de la casa de marcat, ex: Lidl, Kaufland, Auchan, Profi) — format DIFERIT de factura/aviz, cu campuri proprii, NU price_raw/already_per_piece/pieces_per_box:
+9. BON FISCAL (bon de la casa de marcat, ex: Lidl, Kaufland, Auchan, Profi) — format DIFERIT de factura/aviz, cu campuri proprii, NU price_raw/pieces_per_box:
    RECUNOASTERE — NU clasifica dupa antet cu "S.C. ... S.R.L." sau "Cod Fiscal C.I.F." (astea apar si pe orice factura normala, nu sunt semn de bon fiscal!). Seteaza "doc_type":"receipt" NUMAI cand documentul e clar un bon de casa de marcat: NU are nicaieri titlul "FACTURA" sau "AVIZ DE INSOTIRE A MARFII", produsele sunt insirate simplu unul dupa altul (nu intr-un tabel cu coloane aliniate), SI apare fie textul "BON FISCAL", fie o legenda finala cu litere de TVA (A/B/C/D + procente, gen "TVA A 21,00%" sau "B=21,00%"). Daca ai vreo indoiala => "doc_type":"invoice" (varianta implicita, sigura).
 
    Doua formate de layout, ambele posibile pe bon fiscal (citeste-le exact cum sunt tiparite, nu presupune):
@@ -256,87 +242,100 @@ function validateAndSanitize(data: unknown, knownRatios: Map<string, number>) {
   delete d.discounts
   delete d.doc_type
 
-  d.items = d.items
-    .filter((i: unknown) => {
-      if (!i || typeof i !== 'object') return false
-      const item = i as Record<string, unknown>
-      if (typeof item.name !== 'string' || item.name.trim() === '') return false
-      if (isReceipt) return typeof item.line_total === 'number' && item.line_total > 0
-      const hasPriceRaw = typeof item.price_raw === 'number' && item.price_raw > 0
-      const hasLineTotalQty = typeof item.line_total === 'number' && item.line_total > 0
-        && typeof item.quantity === 'number' && item.quantity > 0
-      return hasPriceRaw || hasLineTotalQty
-    })
-    .map((i: unknown) => {
-      const item = i as Record<string, unknown>
+  const filtered = (d.items as unknown[]).filter((i: unknown) => {
+    if (!i || typeof i !== 'object') return false
+    const item = i as Record<string, unknown>
+    if (typeof item.name !== 'string' || item.name.trim() === '') return false
+    if (isReceipt) return typeof item.line_total === 'number' && item.line_total > 0
+    const hasPriceRaw = typeof item.price_raw === 'number' && item.price_raw > 0
+    const hasLineTotalQty = typeof item.line_total === 'number' && item.line_total > 0
+      && typeof item.quantity === 'number' && item.quantity > 0
+    return hasPriceRaw || hasLineTotalQty
+  }) as Record<string, unknown>[]
+
+  if (isReceipt) {
+    d.items = filtered.map(item => {
       const vatNum = Number(item.vat)
       const vat = (vatNum > 0 && vatNum <= 15) ? 11 : 21
       const sgr = Number(item.sgr) === 0.5 ? 0.5 : 0
-
-      if (isReceipt) {
-        // Bon fiscal: pretul e mereu cu TVA inclus, iar impartirea la cantitate
-        // (buc sau kg cantarite) si scaderea reducerii de card de fidelitate se
-        // fac aici, deterministic — modelul doar citeste line_total/quantity/
-        // card_discount exact cum apar tiparite, fara sa le combine el insusi.
-        const lineTotal = Number(item.line_total) || 0
-        const quantity = Number(item.quantity) > 0 ? Number(item.quantity) : 1
-        const cardDiscount = Number(item.card_discount) > 0 ? Number(item.card_discount) : 0
-        const netTotal = Math.max(lineTotal - cardDiscount, 0)
-        const grossUnitPrice = netTotal / quantity
-        const supplierPrice = Math.round((grossUnitPrice / (1 + vat / 100)) * 10000) / 10000
-        const unit = typeof item.unit === 'string' && item.unit.trim() ? item.unit : 'buc'
-        return { name: item.name, unit, supplier_price: supplierPrice, vat, discount: 0, sgr }
-      }
-
-      const itemDiscount = Number(item.discount)
-      const discount = (itemDiscount > 0 && itemDiscount <= 100)
-        ? itemDiscount
-        : (globalDiscounts[vat] ?? 0)
-
-      // Toata aritmetica (scoatere TVA + impartire cutie/bax pe bucata) se face
-      // aici, deterministic in cod — modelul AI doar citeste si clasifica
-      // (price_raw, price_includes_vat, pieces_per_box), calculul lui de cap era nesigur.
-      const declaredPriceRaw = Number(item.price_raw)
-      // Supapa de siguranta: pe multe facturi extrase din PDF, cifrele de pe rand
-      // sunt lipite fara spatii (ex: "buc92169.4687183.36"), iar modelul poate
-      // "rupe" gresit price_raw dintr-o portiune aleatoare a sirului fara sa-si
-      // dea seama (ex: 69.46 in loc de 9.46). Daca avem si quantity si line_total
-      // citite separat, price corect = line_total / quantity il inlocuieste automat
-      // pe cel declarat, ori de cate ori nu se potrivesc.
+      // Bon fiscal: pretul e mereu cu TVA inclus, iar impartirea la cantitate
+      // (buc sau kg cantarite) si scaderea reducerii de card de fidelitate se
+      // fac aici, deterministic — modelul doar citeste line_total/quantity/
+      // card_discount exact cum apar tiparite, fara sa le combine el insusi.
       const lineTotal = Number(item.line_total) || 0
-      const quantity = Number(item.quantity) || 0
-      let priceRaw = declaredPriceRaw
-      if (lineTotal > 0 && quantity > 0) {
-        const derived = lineTotal / quantity
-        if (!(declaredPriceRaw > 0) || Math.abs(declaredPriceRaw - derived) > Math.max(derived * 0.03, 0.01)) {
-          priceRaw = derived
-        }
-      }
-      const priceExVat = item.price_includes_vat === true ? priceRaw / (1 + vat / 100) : priceRaw
-      // Siguranta determinista, in cod, nu doar in prompt: daca modelul insusi
-      // a raportat ca UM-ul de pe factura pentru randul asta era deja Buc/ST/DZ
-      // (already_per_piece), NU impartim niciodata, indiferent ce pieces_per_box
-      // a ghicit sau ce raport e cunoscut pentru acel nume de produs de la alte
-      // facturi — modelul repeta uneori aceasta greseala desi Regula 8 Pasul 0
-      // ii spune explicit sa nu o faca.
-      const alreadyPerPiece = item.already_per_piece === true
-      const knownPieces = knownRatios.get(normalizeName(String(item.name)))
-      const piecesPerBoxRaw = Math.round(Number(item.pieces_per_box))
-      const aiPieces = Number.isFinite(piecesPerBoxRaw) && piecesPerBoxRaw > 1 ? piecesPerBoxRaw : 1
-      // Un raport confirmat manual anterior (aceeasi factura/furnizor) e mai de incredere decat ghiceala AI-ului din text.
-      const piecesPerBox = alreadyPerPiece ? 1 : ((knownPieces && knownPieces > 1) ? knownPieces : aiPieces)
-      const supplierPrice = Math.round((priceExVat / piecesPerBox) * 10000) / 10000
-      const unit = piecesPerBox > 1 ? 'buc' : (typeof item.unit === 'string' && item.unit.trim() ? item.unit : 'buc')
-
-      return {
-        name: item.name,
-        unit,
-        supplier_price: supplierPrice,
-        vat,
-        discount,
-        sgr,
-      }
+      const quantity = Number(item.quantity) > 0 ? Number(item.quantity) : 1
+      const cardDiscount = Number(item.card_discount) > 0 ? Number(item.card_discount) : 0
+      const netTotal = Math.max(lineTotal - cardDiscount, 0)
+      const supplierPrice = Math.round((netTotal / quantity / (1 + vat / 100)) * 10000) / 10000
+      const unit = typeof item.unit === 'string' && item.unit.trim() ? item.unit : 'buc'
+      return { name: item.name, unit, supplier_price: supplierPrice, vat, discount: 0, sgr }
     })
+    return d
+  }
+
+  // Factura/aviz: prima trecere calculeaza pentru fiecare rand pretul de
+  // ambalaj fara TVA, daca UM-ul e o cutie/bax (=> se imparte pe bucata) si
+  // raportul propriu bucati/cutie. A doua trecere imparte, imprumutand raportul
+  // de la un produs "frate" (acelasi pret de cutie + aceeasi familie de nume)
+  // cand randul curent e cutie dar n-are raportul scris in denumire.
+  const prep = filtered.map(item => {
+    const vatNum = Number(item.vat)
+    const vat = (vatNum > 0 && vatNum <= 15) ? 11 : 21
+    const sgr = Number(item.sgr) === 0.5 ? 0.5 : 0
+    const itemDiscount = Number(item.discount)
+    const discount = (itemDiscount > 0 && itemDiscount <= 100) ? itemDiscount : (globalDiscounts[vat] ?? 0)
+
+    // Supapa de siguranta: pe facturi extrase din PDF cifrele de pe rand pot fi
+    // lipite fara spatii ("buc92169.4687183.36") si modelul poate rupe gresit
+    // price_raw. Daca avem quantity + line_total, price corect = line_total/quantity.
+    const declaredPriceRaw = Number(item.price_raw)
+    const lineTotal = Number(item.line_total) || 0
+    const quantity = Number(item.quantity) || 0
+    let priceRaw = declaredPriceRaw
+    if (lineTotal > 0 && quantity > 0) {
+      const derived = lineTotal / quantity
+      if (!(declaredPriceRaw > 0) || Math.abs(declaredPriceRaw - derived) > Math.max(derived * 0.03, 0.01)) {
+        priceRaw = derived
+      }
+    }
+    const priceExVat = item.price_includes_vat === true ? priceRaw / (1 + vat / 100) : priceRaw
+
+    // Decizia cutie-vs-bucata se ia DIN COLOANA UM (deterministic in cod), nu
+    // dintr-un boolean pe care modelul il ghicea des gresit: doar UM de tip
+    // cutie/bax/set se imparte pe bucata. "18 BUC/CUT" in denumire cand UM=Buc
+    // e doar info de ambalare, nu un raport de aplicat.
+    const umRaw = normalizeName(String(item.unit ?? ''))
+    const isBoxUnit = /^(cut|cutie|cutii|bax|bx|baxuri|set|seturi)\b/.test(umRaw)
+
+    const knownPieces = knownRatios.get(normalizeName(String(item.name)))
+    const piecesPerBoxRaw = Math.round(Number(item.pieces_per_box))
+    const aiPieces = Number.isFinite(piecesPerBoxRaw) && piecesPerBoxRaw > 1 ? piecesPerBoxRaw : 1
+    const ownRatio = (knownPieces && knownPieces > 1) ? knownPieces : aiPieces
+
+    // Cheia pentru potrivirea "fratelui": pret de cutie identic (la cent) +
+    // aceleasi prime 3 cuvinte din denumire (familie de produs).
+    const prefix = normalizeName(String(item.name)).split(' ').slice(0, 3).join(' ')
+    const siblingKey = Math.round(priceExVat * 100) + '|' + prefix
+
+    return { name: item.name, unit: item.unit, vat, discount, sgr, priceExVat, isBoxUnit, ownRatio, siblingKey }
+  })
+
+  const siblingRatios = new Map<string, number>()
+  for (const p of prep) {
+    if (p.isBoxUnit && p.ownRatio > 1 && !siblingRatios.has(p.siblingKey)) {
+      siblingRatios.set(p.siblingKey, p.ownRatio)
+    }
+  }
+
+  d.items = prep.map(p => {
+    const ratio = p.isBoxUnit
+      ? (p.ownRatio > 1 ? p.ownRatio : (siblingRatios.get(p.siblingKey) ?? 1))
+      : 1
+    const supplierPrice = Math.round((p.priceExVat / ratio) * 10000) / 10000
+    const rawUnit = String(p.unit ?? '').toLowerCase().trim()
+    const unit = p.isBoxUnit ? 'buc' : (rawUnit.startsWith('buc') || !rawUnit ? 'buc' : rawUnit)
+    return { name: p.name, unit, supplier_price: supplierPrice, vat: p.vat, discount: p.discount, sgr: p.sgr }
+  })
   return d
 }
 

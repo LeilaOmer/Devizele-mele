@@ -75,15 +75,16 @@ function mapItems(apiItems: ApiItem[]): Item[] {
   }))
 }
 
-// Cheia e doar denumirea (nu si pretul): cand combinam poza intreaga cu cele
-// doua jumatati, acelasi produs poate iesi cu preturi usor diferite intre surse
-// (una citita mai bine ca alta) — vrem UN singur exemplar, nu unul per varianta
-// de pret citita, altfel factura densa ar aparea cu produse duplicate.
+// Cheia = denumirea redusa la DOAR litere+cifre (fara spatii, punctuatie,
+// diacritice). Acelasi produs citit din doua felii suprapuse poate diferi prin
+// spatii/semne ("... /17 B" vs "...17B") — pe litere+cifre se potrivesc si se
+// unesc intr-un singur exemplar. Produse diferite (difera aroma/gramaj, care
+// sunt tot litere+cifre) raman distincte, deci nu le contopim gresit.
 function dedupeItems(items: Item[]): Item[] {
   const seen = new Set<string>()
   const out: Item[] = []
   for (const item of items) {
-    const key = item.name.trim().toLowerCase().replace(/\s+/g, ' ')
+    const key = item.name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
     if (seen.has(key)) continue
     seen.add(key)
     out.push(item)
