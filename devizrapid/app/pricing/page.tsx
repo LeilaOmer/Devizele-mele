@@ -6,6 +6,7 @@ import { getEffectiveLimits } from '@/lib/plan'
 import { getMonthlyCalcule, logCalcul } from '@/lib/usage'
 import { emptyItem } from '@/lib/pricing/calc'
 import { exportPDFContabil, exportPDFMagazin, sharePdfBlob, PdfResult } from '@/lib/pricing/pdf'
+import { renderPdfToImages } from '@/lib/pricing/pdfPreview'
 import { usePricingDraft } from './hooks/usePricingDraft'
 import { useInvoiceScan } from './hooks/useInvoiceScan'
 import { useVoiceInput } from './hooks/useVoiceInput'
@@ -19,6 +20,8 @@ export default function PricingPage() {
   const [usageInfo, setUsageInfo] = useState<{ calcule: number; limit: number; show: boolean } | null>(null)
   const [proCompanyName, setProCompanyName] = useState<string | null>(null)
   const [previewPdf, setPreviewPdf] = useState<{ url: string; result: PdfResult } | null>(null)
+  // null = inca se randeaza; [] = randare esuata (aratam buton de fallback).
+  const [previewImages, setPreviewImages] = useState<string[] | null>(null)
 
   useEffect(() => {
     if (localStorage.getItem('dashboardMode') === 'pro') {
@@ -65,6 +68,18 @@ export default function PricingPage() {
     const result = await exportFn()
     setPreviewPdf({ url: URL.createObjectURL(result.blob), result })
   }
+
+  // Randeaza PDF-ul la imagini cand se deschide preview-ul (merge si pe mobil,
+  // unde iframe-ul de PDF ramane gol).
+  useEffect(() => {
+    if (!previewPdf) { setPreviewImages(null); return }
+    let cancelled = false
+    setPreviewImages(null)
+    renderPdfToImages(previewPdf.result.blob)
+      .then(imgs => { if (!cancelled) setPreviewImages(imgs) })
+      .catch(() => { if (!cancelled) setPreviewImages([]) })
+    return () => { cancelled = true }
+  }, [previewPdf])
 
   function closePreview() {
     if (previewPdf) URL.revokeObjectURL(previewPdf.url)
@@ -148,7 +163,24 @@ export default function PricingPage() {
             <p className="text-sm font-bold text-gray-800">Verifica PDF-ul</p>
             <button onClick={closePreview} className="text-gray-400 text-2xl leading-none">×</button>
           </div>
-          <iframe src={previewPdf.url} title="Previzualizare PDF" className="flex-1 w-full bg-gray-100" />
+          <div className="flex-1 overflow-y-auto bg-gray-200 p-3 space-y-3">
+            {previewImages === null ? (
+              <p className="text-center text-sm text-gray-500 py-10">Se pregateste previzualizarea...</p>
+            ) : previewImages.length > 0 ? (
+              previewImages.map((src, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={src} alt={`Pagina ${i + 1}`} className="w-full rounded-lg shadow-sm bg-white" />
+              ))
+            ) : (
+              <div className="text-center py-10 space-y-3">
+                <p className="text-sm text-gray-500">Nu s-a putut afisa previzualizarea aici.</p>
+                <button onClick={() => window.open(previewPdf.url, '_blank')}
+                  className="px-5 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm">
+                  Deschide PDF-ul
+                </button>
+              </div>
+            )}
+          </div>
           <div className="bg-white px-4 py-3 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] shrink-0">
             <div className="max-w-2xl mx-auto flex gap-3">
               <button onClick={closePreview}
