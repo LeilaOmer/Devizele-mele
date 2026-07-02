@@ -258,7 +258,7 @@ export default function SettingsPage() {
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Modul principal pe dashboard</p>
           <div className="grid grid-cols-3 gap-2">
             {([
-              { value: 'calculator', icon: '🧮', label: 'Mercator' },
+              { value: 'calculator', icon: '🧮', label: 'Calculator Pret' },
               { value: 'devize', icon: '📋', label: 'Fise Servicii' },
               { value: 'both', icon: '✨', label: 'Amandoua' },
             ] as const).map(opt => (

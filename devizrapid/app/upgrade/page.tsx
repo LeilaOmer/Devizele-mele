@@ -51,7 +51,7 @@ function UpgradeContent() {
             </div>
           )}
           <h1 className="text-2xl font-bold text-gray-900">Alege abonamentul tau</h1>
-          <p className="text-sm text-gray-500">Fise Servicii (Artizan) si Calculator Pret (Mercator), fiecare cu limita lui.</p>
+          <p className="text-sm text-gray-500">Doua module: Fise Servicii si Calculator Pret. Fiecare abonament ridica limita pe unul sau pe ambele.</p>
           {promoActive && promoRemaining !== null && (
             <p className="text-xs font-bold text-green-600 pt-1">Primii 50 la pret redus · mai sunt {promoRemaining} locuri</p>
           )}

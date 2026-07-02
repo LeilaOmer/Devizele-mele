@@ -286,7 +286,7 @@ export default function Dashboard() {
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
       </svg>
-      <h2 className="font-bold text-lg leading-tight text-gray-900">Mercator</h2>
+      <h2 className="font-bold text-lg leading-tight text-gray-900">Calculator Pret</h2>
       <p className="text-amber-700 text-xs mt-1">Adaos · TVA · PDF</p>
     </a>
   )
@@ -295,8 +295,8 @@ export default function Dashboard() {
     <a href="/pricing" className="bg-white p-4 rounded-2xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-3">
       <span className="text-xl">🧮</span>
       <div>
-        <p className="font-semibold text-sm text-gray-900">Mercator</p>
-        <p className="text-gray-400 text-xs">Calculator de pret</p>
+        <p className="font-semibold text-sm text-gray-900">Calculator Pret</p>
+        <p className="text-gray-400 text-xs">Adaos · TVA · PDF</p>
       </div>
     </a>
   )
@@ -398,7 +398,7 @@ export default function Dashboard() {
             <div className="space-y-2">
               <button onClick={() => chooseModule('calculator')} disabled={choosingModule}
                 className="w-full text-left bg-white rounded-xl px-4 py-3 hover:bg-blue-100/50 active:scale-95 transition-all disabled:opacity-50">
-                <p className="text-sm font-bold text-gray-900">🧮 Mercator</p>
+                <p className="text-sm font-bold text-gray-900">🧮 Calculator de Pret</p>
                 <p className="text-xs text-gray-500 mt-0.5">Calculez preturi de vanzare din facturi de furnizor</p>
               </button>
               <button onClick={() => chooseModule('devize')} disabled={choosingModule}
@@ -455,7 +455,7 @@ export default function Dashboard() {
                     {clientiTile}
                   </div>
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-gray-400 px-1">Vezi si Mercator</p>
+                    <p className="text-xs font-semibold text-gray-400 px-1">Vezi si Calculator Pret</p>
                     <div className="grid grid-cols-2 gap-3">
                       {mercatorTileSmall}
                       {calculePretTile}
