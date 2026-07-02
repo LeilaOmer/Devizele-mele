@@ -5,7 +5,7 @@ import { Item } from '@/lib/pricing/calc'
 
 type ScanResult = { supplier: string; items: Item[] }
 type ApiItem = { name: string; unit: string; supplier_price: number; discount: number; vat: number; sgr: number }
-type ApiResult = { supplier?: string; items?: ApiItem[]; error?: string; detail?: string }
+type ApiResult = { supplier?: string; items?: ApiItem[]; error?: string; detail?: string; debug?: string }
 
 function readBase64(f: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -120,7 +120,7 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       status === 429 ? 'Ai atins limita de 50 scanari pe zi. Revino maine.' :
       data.error === 'groq_rate_limit' ? `Serverul AI este aglomerat. Asteapta 15 secunde si incearca din nou.${suffix}` :
       data.error === 'groq_too_large' ? `Factura e prea lunga/complexa pentru a fi citita dintr-o singura cerere. Incearca sa o imparti (scaneaza doar o parte din pagina sau doar o pagina din PDF).${suffix}` :
-      data.error === 'vision_failed' ? 'Poza neclara sau unghi dificil, chiar si dupa citirea pe felii. Incearca o poza mai apropiata, cu lumina mai buna, sau incarca PDF-ul daca il ai.' :
+      data.error === 'vision_failed' ? `Poza neclara sau unghi dificil, chiar si dupa citirea pe felii. Incearca o poza mai apropiata, cu lumina mai buna, sau incarca PDF-ul daca il ai.${data.debug ? ' [model: ' + data.debug + ']' : ''}` :
       `Eroare: ${data.error || 'necunoscuta'}`
   }
 
@@ -179,7 +179,10 @@ export function useInvoiceScan(onSuccess: (result: ScanResult) => void) {
       }
 
       if (firstFatal) { setError(errorMessage(firstFatal.status, firstFatal.data)); return }
-      setError(errorMessage(200, { error: 'vision_failed' }))
+      // Nimic gasit — aratam si un fragment din raspunsul brut al modelului
+      // (primul disponibil dintre felii) pentru diagnostic.
+      const debug = sliceRes.map(r => r.debug).find(Boolean)
+      setError(errorMessage(200, { error: 'vision_failed', debug }))
     } catch {
       setError('Eroare de retea. Verifica conexiunea si incearca din nou.')
     } finally {

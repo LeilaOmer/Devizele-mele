@@ -388,10 +388,20 @@ async function runVisionScan(
   // se intampla si la modelul de text daca nu era redus.
   const raw = await callGroq('meta-llama/llama-4-scout-17b-16e-instruct', messages, 4000)
   const parsed = parseJson(raw)
-  const knownRatios = await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : '')
-  const result = validateAndSanitize(parsed, knownRatios)
-  if (result) await supabase.from('invoice_scan_logs').insert({ user_id: userId })
-  return NextResponse.json(result ?? { items: [], error: 'vision_failed' })
+  const result = validateAndSanitize(parsed, await getKnownRatios(typeof parsed?.supplier === 'string' ? parsed.supplier : ''))
+  const items = result && Array.isArray((result as { items?: unknown[] }).items) ? (result as { items: unknown[] }).items : []
+  if (items.length > 0) {
+    await supabase.from('invoice_scan_logs').insert({ user_id: userId })
+    return NextResponse.json(result)
+  }
+  // Zero produse extrase — atasam un fragment din raspunsul BRUT al modelului
+  // ca sa putem diagnostica (parsare esuata? raspuns gol? alt format decat JSON?)
+  // fara acces la logurile serverului.
+  return NextResponse.json({
+    items: [],
+    error: 'vision_failed',
+    debug: (raw || '').replace(/\s+/g, ' ').trim().slice(0, 300) || '(raspuns gol de la model)',
+  })
 }
 
 export async function POST(req: NextRequest) {
