@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { trialInfo, getPromoEligible } from '@/lib/trial'
-import { getMonthlyCalcule, isPlanActive, logCalcul, FREE_CALCULE_LIMIT } from '@/lib/usage'
+import { getEffectiveLimits } from '@/lib/plan'
+import { getMonthlyCalcule, logCalcul } from '@/lib/usage'
 import { emptyItem } from '@/lib/pricing/calc'
 import { exportPDFContabil, exportPDFMagazin, sharePdfBlob, PdfResult } from '@/lib/pricing/pdf'
 import { usePricingDraft } from './hooks/usePricingDraft'
@@ -40,13 +40,10 @@ export default function PricingPage() {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return
-      const promoEligible = await getPromoEligible(session.user.id, session.access_token)
-      const t = trialInfo(session.user.created_at, promoEligible)
-      if (t.isActive) return
-      Promise.all([isPlanActive(session.user.id), getMonthlyCalcule(session.user.id)])
-        .then(([active, calcule]) => {
-          if (!active) setUsageInfo({ calcule, limit: FREE_CALCULE_LIMIT, show: true })
-        })
+      const { calcule: limit } = await getEffectiveLimits(session.user.id, session.user.created_at)
+      if (!Number.isFinite(limit)) return // nelimitat (pre-lansare sau abonament Mercator/Pro) — nu aratam contor
+      const calcule = await getMonthlyCalcule(session.user.id)
+      setUsageInfo({ calcule, limit, show: true })
     })
   }, [])
 
@@ -56,11 +53,10 @@ export default function PricingPage() {
   async function handleExport(exportFn: () => Promise<PdfResult>) {
     const { data: { session } } = await supabase.auth.getSession()
     if (session) {
-      const promoEligible = await getPromoEligible(session.user.id, session.access_token)
-      const t = trialInfo(session.user.created_at, promoEligible)
-      if (!t.isActive) {
-        const [active, calcule] = await Promise.all([isPlanActive(session.user.id), getMonthlyCalcule(session.user.id)])
-        if (!active && calcule >= FREE_CALCULE_LIMIT) { router.push('/upgrade?type=calcule'); return }
+      const { calcule: limit } = await getEffectiveLimits(session.user.id, session.user.created_at)
+      if (Number.isFinite(limit)) {
+        const calcule = await getMonthlyCalcule(session.user.id)
+        if (calcule >= limit) { router.push('/upgrade?type=calcule'); return }
         await logCalcul(session.user.id)
         setUsageInfo(prev => prev ? { ...prev, calcule: prev.calcule + 1 } : prev)
       }

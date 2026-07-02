@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getAccountStatus } from '@/lib/plan'
-import { getMonthlyFise, getMonthlyCalcule, FREE_FISE_LIMIT, FREE_CALCULE_LIMIT } from '@/lib/usage'
+import { getEffectiveLimits } from '@/lib/plan'
+import { getMonthlyFise, getMonthlyCalcule } from '@/lib/usage'
 import { PrimaryModule, setPrimaryModule } from '@/lib/module'
 import { useRouter } from 'next/navigation'
 
@@ -21,9 +21,9 @@ export default function Dashboard() {
   const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [artizanName, setArtizanName] = useState('')
-  const [trial, setTrial] = useState<{ daysLeft: number; isActive: boolean; urgency: 'ok' | 'warning' | 'critical' } | null>(null)
-  const [usage, setUsage] = useState<{ fise: number; calcule: number } | null>(null)
-  const [subscribed, setSubscribed] = useState(false)
+  // Banda de consum: doar cand exista o limita finita de aratat (nu pre-lansare,
+  // nu abonament nelimitat pe ambele module).
+  const [usage, setUsage] = useState<{ fise: number; fiseLimit: number; calcule: number; calculeLimit: number; freemium: boolean } | null>(null)
   const [loading, setLoading] = useState(true)
   const [showWelcome, setShowWelcome] = useState(false)
   const [primaryModule, setPrimaryModuleValue] = useState<PrimaryModule | null>(null)
@@ -40,10 +40,6 @@ export default function Dashboard() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
 
-      const { data: wasDeleted } = await supabase.rpc('is_account_deleted', {
-        user_email: session.user.email,
-      })
-
       let { data: prof } = await supabase
         .from('profiles').select('account_type, company_name, email, cui, address, phone, bank, iban, vat_rate, primary_module').eq('id', session.user.id).single()
       if (!prof) {
@@ -54,15 +50,16 @@ export default function Dashboard() {
       }
 
       const dbAccountType: 'artizan' | 'pro' = prof.account_type === 'pro' ? 'pro' : 'artizan'
-      const { trial: t, subscribed } = await getAccountStatus(session, { forceTrialInactive: !!wasDeleted })
-      setTrial(t)
-      setSubscribed(subscribed)
-      if (!t.isActive) {
+
+      // Banda de consum apare doar cand macar un modul are limita finita —
+      // pre-lansare (toti Pro) sau abonament complet nelimitat => nu o aratam.
+      const limits = await getEffectiveLimits(session.user.id, session.user.created_at)
+      if (Number.isFinite(limits.fise) || Number.isFinite(limits.calcule)) {
         const [fise, calcule] = await Promise.all([
           getMonthlyFise(session.user.id),
           getMonthlyCalcule(session.user.id),
         ])
-        setUsage({ fise, calcule })
+        setUsage({ fise, fiseLimit: limits.fise, calcule, calculeLimit: limits.calcule, freemium: limits.freemium })
       }
 
       // Comutarea Artizan/Pro ramane libera pentru toata lumea — singura
@@ -378,34 +375,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Trial — compact strip */}
-        {trial?.isActive && (
-          <div className={`px-4 py-2 rounded-xl flex items-center justify-between gap-3 ${
-            trial.urgency === 'critical' ? 'bg-red-50 border border-red-100' :
-            trial.urgency === 'warning'  ? 'bg-amber-50 border border-amber-100' :
-                                           'bg-green-50 border border-green-100'
-          }`}>
-            <p className={`text-xs font-semibold ${
-              trial.urgency === 'critical' ? 'text-red-700' :
-              trial.urgency === 'warning'  ? 'text-amber-700' : 'text-green-700'
-            }`}>
-              {trial.urgency === 'critical' ? '⚠️ Trial aproape de final' : '✓ Trial activ'} · {trial.daysLeft === 1 ? 'ultima zi' : `${trial.daysLeft} zile ramase`}
-            </p>
-            <span className={`text-xs font-medium shrink-0 ${
-              trial.urgency === 'critical' ? 'text-red-400' :
-              trial.urgency === 'warning'  ? 'text-amber-400' : 'text-green-500'
-            }`}>Acces complet</span>
-          </div>
-        )}
-
-        {/* Usage (dupa trial, fara abonament) */}
-        {trial && !trial.isActive && !subscribed && usage && (
+        {/* Consum lunar — doar cand macar un modul are limita finita (nu pre-lansare) */}
+        {usage && (
           <div className="px-4 py-2 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-between gap-3">
             <div className="flex gap-4 text-xs">
-              <span className="text-gray-500">Fise: <strong className={usage.fise >= FREE_FISE_LIMIT ? 'text-red-600' : 'text-gray-800'}>{usage.fise}/{FREE_FISE_LIMIT}</strong></span>
-              <span className="text-gray-500">Calcule: <strong className={usage.calcule >= FREE_CALCULE_LIMIT ? 'text-red-600' : 'text-gray-800'}>{usage.calcule}/{FREE_CALCULE_LIMIT}</strong></span>
+              <span className="text-gray-500">Fise: <strong className={Number.isFinite(usage.fiseLimit) && usage.fise >= usage.fiseLimit ? 'text-red-600' : 'text-gray-800'}>{Number.isFinite(usage.fiseLimit) ? `${usage.fise}/${usage.fiseLimit}` : 'nelimitat'}</strong></span>
+              <span className="text-gray-500">Calcule: <strong className={Number.isFinite(usage.calculeLimit) && usage.calcule >= usage.calculeLimit ? 'text-red-600' : 'text-gray-800'}>{Number.isFinite(usage.calculeLimit) ? `${usage.calcule}/${usage.calculeLimit}` : 'nelimitat'}</strong></span>
             </div>
-            <a href="/upgrade" className="text-xs font-bold text-blue-600 shrink-0">Upgrade →</a>
+            <div className="flex items-center gap-2 shrink-0">
+              {usage.freemium && <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">Prima luna</span>}
+              <a href="/upgrade" className="text-xs font-bold text-blue-600">Upgrade →</a>
+            </div>
           </div>
         )}
 

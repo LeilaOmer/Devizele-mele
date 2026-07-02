@@ -1,8 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { trialInfo, getPromoEligible } from '@/lib/trial'
-import { getMonthlyFise, isPlanActive, FREE_FISE_LIMIT } from '@/lib/usage'
+import { getEffectiveLimits } from '@/lib/plan'
+import { getMonthlyFise } from '@/lib/usage'
 import { nextQuoteNumber } from '@/lib/quoteNumber'
 import { useRouter } from 'next/navigation'
 
@@ -56,18 +56,14 @@ async function fetchData() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) { setLoading(false); return }
 
-    const promoEligible = await getPromoEligible(session.user.id, session.access_token)
-    const t = trialInfo(session.user.created_at, promoEligible)
-    if (!t.isActive) {
-      const [active, fise] = await Promise.all([
-        isPlanActive(session.user.id),
-        getMonthlyFise(session.user.id),
-      ])
-      if (!active && fise >= FREE_FISE_LIMIT) {
-        setLoading(false)
-        router.push('/upgrade?type=fise')
-        return
-      }
+    const [{ fise: fiseLimit }, fise] = await Promise.all([
+      getEffectiveLimits(session.user.id, session.user.created_at),
+      getMonthlyFise(session.user.id),
+    ])
+    if (fise >= fiseLimit) {
+      setLoading(false)
+      router.push('/upgrade?type=fise')
+      return
     }
 
     const user = session.user

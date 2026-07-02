@@ -1,8 +1,8 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { trialInfo, getPromoEligible } from '@/lib/trial'
-import { getMonthlyFise, isPlanActive, FREE_FISE_LIMIT } from '@/lib/usage'
+import { getEffectiveLimits } from '@/lib/plan'
+import { getMonthlyFise } from '@/lib/usage'
 import { nextQuoteNumber } from '@/lib/quoteNumber'
 import { useRouter } from 'next/navigation'
 
@@ -161,18 +161,14 @@ export default function QuickPage() {
     const user = session?.user
     if (!user) { setLoading(false); return }
 
-    const promoEligible = await getPromoEligible(user.id, session.access_token)
-    const t = trialInfo(user.created_at, promoEligible)
-    if (!t.isActive) {
-      const [active, fise] = await Promise.all([
-        isPlanActive(user.id),
-        getMonthlyFise(user.id),
-      ])
-      if (!active && fise >= FREE_FISE_LIMIT) {
-        setLoading(false)
-        router.push('/upgrade?type=fise')
-        return
-      }
+    const [{ fise: fiseLimit }, fise] = await Promise.all([
+      getEffectiveLimits(user.id, user.created_at),
+      getMonthlyFise(user.id),
+    ])
+    if (fise >= fiseLimit) {
+      setLoading(false)
+      router.push('/upgrade?type=fise')
+      return
     }
     let client_id = null
     if (preview.client_name) {

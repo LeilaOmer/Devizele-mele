@@ -79,11 +79,11 @@ export default function LoginPage() {
         {mode === 'signup' && (
           <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-center space-y-0.5">
             <p className="text-xs font-bold text-green-600 uppercase tracking-wide">Oferta Early Adopter</p>
-            <p className="text-sm font-semibold text-green-900">6 luni gratuit · Acces complet · Fara card</p>
-            <p className="text-xs text-green-600">Disponibil pentru primii 100 de utilizatori</p>
+            <p className="text-sm font-semibold text-green-900">Primii 50 · abonament la pret redus</p>
+            <p className="text-xs text-green-600">Prima luna gratuita, fara card la inscriere</p>
             {promoRemaining !== null && (
               <p className="text-xs font-bold text-green-700 pt-1">
-                {promoRemaining > 0 ? `Mai sunt ${promoRemaining} locuri disponibile` : 'Oferta s-a incheiat'}
+                {promoRemaining > 0 ? `Mai sunt ${promoRemaining} locuri la pret redus` : 'Oferta s-a incheiat'}
               </p>
             )}
           </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PrimaryModule, setPrimaryModule } from '@/lib/module'
+import { PlanTier, TIER_LABELS, PRELAUNCH } from '@/lib/plan'
 import { useRouter } from 'next/navigation'
 
 interface Company {
@@ -30,6 +31,7 @@ export default function SettingsPage() {
   const [form, setForm] = useState(emptyCompany())
   const [accountType, setAccountType] = useState<'artizan' | 'pro'>('artizan')
   const [primaryModule, setPrimaryModuleState] = useState<PrimaryModule>('both')
+  const [planTier, setPlanTier] = useState<PlanTier>('free')
   const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null)
@@ -56,6 +58,7 @@ export default function SettingsPage() {
       setAccountType(prof.account_type || 'artizan')
       setPrimaryModuleState((prof.primary_module as PrimaryModule | null) || 'both')
       setPlanActiveUntil(prof.plan_active_until || null)
+      setPlanTier((prof.plan_tier as PlanTier | null) || 'free')
       setProfileForm({
         company_name: prof.company_name || '',
         cui: prof.cui || '',
@@ -419,9 +422,11 @@ export default function SettingsPage() {
             <div>
               <p className="text-xs text-gray-400">Abonament</p>
               <p className="text-sm font-semibold text-gray-800">
-                {planActiveUntil && new Date(planActiveUntil) > new Date()
-                  ? `${accountType === 'pro' ? 'Pro' : 'Artizan'} · activ pana la ${new Date(planActiveUntil).toLocaleDateString('ro-RO')}`
-                  : 'Plan gratuit'}
+                {PRELAUNCH
+                  ? 'Pro · gratuit in perioada de lansare'
+                  : planActiveUntil && new Date(planActiveUntil) > new Date() && planTier !== 'free'
+                  ? `${TIER_LABELS[planTier]} · activ pana la ${new Date(planActiveUntil).toLocaleDateString('ro-RO')}`
+                  : 'Free'}
               </p>
             </div>
             {planActiveUntil && new Date(planActiveUntil) > new Date() && (

@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 
-export const FREE_FISE_LIMIT = 3
-export const FREE_CALCULE_LIMIT = 3
+// Limitele per tip de cont traiesc acum in lib/plan.ts (TIER_LIMITS). Aici raman
+// doar numararea consumului lunar (calendaristic) si verificarea abonamentului.
 
 function monthStart(): string {
   const now = new Date()
@@ -28,14 +28,4 @@ export async function getMonthlyCalcule(userId: string): Promise<number> {
 
 export async function logCalcul(userId: string): Promise<void> {
   await supabase.from('pricing_usage').insert({ user_id: userId })
-}
-
-export async function isPlanActive(userId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('profiles')
-    .select('plan_active_until')
-    .eq('id', userId)
-    .single()
-  if (!data?.plan_active_until) return false
-  return new Date(data.plan_active_until) > new Date()
 }
