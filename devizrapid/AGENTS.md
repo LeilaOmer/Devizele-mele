@@ -23,7 +23,15 @@ regulile de domeniu (contabile + de produs) pe care codul trebuie sa le respecte
 - **Aritmetica preturilor se face in cod, nu de AI.** La scanare, modelul doar
   citeste/transcrie; orice calcul (TVA, cutie/bucata, discount) e determinist in
   cod. Nu muta calcule inapoi in prompt.
+- **La debugging, NU schimba codul imediat.** Intai identifica: cauza probabila,
+  fisierele afectate si cum se reproduce. Explica diagnosticul, apoi propune fix-ul.
+  Un patch aruncat inainte de a intelege cauza reintroduce des alta problema.
+- **Nu modifica generarea PDF fara sa verifici layout-ul.** PDF-urile se fac cu
+  jsPDF programatic (`lib/pricing/pdf.ts`, `app/quotes/[id]`): cand schimbi
+  coloane/latimi, verifica ca totul incape pe pagina (A4/landscape) si nu se
+  suprapune, si uita-te la output-ul real, nu doar ca ruleaza.
 - **Verifica inainte de a livra.** Ruleaza `npx tsc --noEmit` si `npm run build`
   (din `devizrapid/`) inainte de commit — build-ul complet prinde ce `tsc` nu vede.
+  Mesajul de commit spune DE CE + CE se schimba; la schimbari importante, si riscul.
 - **Verifica orice scriere in Supabase** (`error`), nu o ignora — un esec silentios
   arata succes fals in UI, dar datele nu se salveaza.
